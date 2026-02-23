@@ -4,7 +4,7 @@
 ### Участники команды
  1. [Краснов Алексей](https://github.com/12alkry45)
  2. [Никитин Андрей](https://github.com/Andrew-71)
- 3. [Росоха Матвей]()
+ 3. [Росоха Матвей](https://github.com/Mr-None-rM)
  4. [Дмитрий Нагдасëв](https://github.com/27dimon27)
 
 
