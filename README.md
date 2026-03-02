@@ -9,10 +9,10 @@
 
 
 ### Внешние ссылки
- - [Figma]()
- - [Backend]()
+ - [Figma](https://www.figma.com/design/XdpojpCr8p456Vv35GXODO/WHITECROWSOFT-Hub?node-id=0-1&t=a3wQc2FAHk4Ad42A-1)
+ - [Backend](https://github.com/go-park-mail-ru/2026_1_WHITECROWSOFT)
  - [Deploy]()
- - [Jira]()
+ - [Jira](https://app.striveapp.ru/spaces/83929/165579/tasks)
 
 ### Правила оформления Pull Requests
   1. Ветка создается с названием `TADV-###`, где ### - номер задачи в jira.
