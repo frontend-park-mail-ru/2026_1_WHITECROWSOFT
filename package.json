@@ -1,0 +1,30 @@
+{
+  "name": "2026_1_whitecrowsoft",
+  "version": "1.0.0",
+  "description": "Репозиторий фронтенда команды WHITECROWSOFT с проектом Notion 🚀",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "format": "prettier --write \"./src/**/*.{js,jsx,ts,tsx}\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/frontend-park-mail-ru/2026_1_WHITECROWSOFT.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/frontend-park-mail-ru/2026_1_WHITECROWSOFT/issues"
+  },
+  "homepage": "https://github.com/frontend-park-mail-ru/2026_1_WHITECROWSOFT#readme",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.0.2",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "^17.4.0",
+    "prettier": "3.8.1",
+    "prettier-plugin-organize-imports": "^4.3.0"
+  }
+}
