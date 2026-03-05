@@ -1,8 +1,8 @@
-const SERVER_URL = 'http://localhost:8000'
+const SERVER_URL = 'http://localhost:8000';
 
-class Cleint {
+class Client {
     constructor() {
-        this.serverURL = SERVER_URL
+        this.serverURL = SERVER_URL;
     }
 
     async request(endpoint, options = {}) {
@@ -26,10 +26,14 @@ class Cleint {
 
             return await response.json();
         } catch (err) {
-            if (err.name === 'AbortError'){
-                throw new Error('Request timeout: 408')
+            if (err.name === 'AbortError') {
+                const timeoutError = new Error('Request timeout: 408');
+                timeoutError.cause = err;
+                throw timeoutError;
             }
-            throw new Error('Client error')
+            const clientError = new Error('Client error');
+            clientError.cause = err;
+            throw clientError;
         }
     }
 
@@ -60,4 +64,4 @@ class Cleint {
     }
 }
 
-export const client = new Cleint();
+export const client = new Client();
