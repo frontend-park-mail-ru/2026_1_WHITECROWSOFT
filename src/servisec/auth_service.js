@@ -16,7 +16,7 @@ export const authService = {
     async checkAuth() {
         try {
             return await client.get('/protected');
-        } catch {
+        } catch (_err) {
             return null;
         }
     },
