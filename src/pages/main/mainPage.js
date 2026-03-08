@@ -2,6 +2,7 @@ import Handlebars from 'handlebars';
 import { router } from '../../route/router.js';
 import { authService } from '../../services/authService.js';
 import { registerHelpers } from '../../utils/utils.js';
+import './mainPage.css';
 
 const mockData = {
 	searchQuery: '',

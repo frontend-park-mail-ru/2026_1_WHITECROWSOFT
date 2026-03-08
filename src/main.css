@@ -1,0 +1,83 @@
+:root {
+	--text: #062659;
+	--background: #fbf8f4;
+	--oceanic: #325a9b;
+	--pacific: #6482b1;
+	--cornflower: #417dde;
+	--faint-a: #adb4c1;
+	--faint-b: #706e7f;
+	--highlight: rgba(91, 116, 157, 0.15);
+	--danger-red: #a12427;
+
+	--font-main: 'Inter', sans-serif;
+	--size-base: 16px;
+	--size-label: 14px;
+	--size-small: 12px;
+}
+
+* {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	background-color: var(--background);
+	color: var(--text);
+	font-family: var(--font-main);
+	font-weight: 500;
+	font-size: var(--size-base);
+	line-height: 1.5;
+}
+
+h1,
+h5 {
+	margin: 0;
+}
+
+#app {
+	min-height: 100vh;
+}
+
+.mainContainer {
+	display: flex;
+	height: 100vh;
+	overflow: hidden;
+}
+
+.input,
+.searchInput,
+.noteTitleInput {
+	width: 100%;
+	padding: 8px 16px;
+	background: var(--background);
+	border: 1.25px solid var(--faint-a);
+	border-radius: 10px;
+	font-family: inherit;
+	font-size: 14px;
+	color: var(--text);
+	outline: none;
+	transition: all 0.2s ease;
+}
+
+.input:focus,
+.searchInput:focus {
+	border-color: var(--cornflower);
+	box-shadow: 0 0 0 1px var(--cornflower);
+}
+
+.btn {
+	padding: 10px 20px;
+	border-radius: 10px;
+	border: none;
+	background-color: var(--text);
+	color: #fff;
+	font-family: inherit;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.2s;
+}
+
+.btn:hover {
+	background-color: var(--oceanic);
+}

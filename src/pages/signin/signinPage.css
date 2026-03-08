@@ -1,0 +1,46 @@
+.signinPage {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 100vh;
+	padding: 20px;
+}
+
+.formContainer {
+	width: 100%;
+	max-width: 380px;
+	text-align: center;
+}
+
+.formFields {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	margin-bottom: 20px;
+	text-align: left;
+}
+
+.formInput {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.formLabel {
+	font-size: var(--size-label);
+	font-weight: 600;
+	margin-left: 4px;
+}
+
+.errorMessage,
+.fieldError {
+	color: var(--danger-red);
+	font-size: var(--size-small);
+	margin-top: 4px;
+}
+
+#signupLink {
+	margin-top: 20px;
+	font-size: var(--size-label);
+}
