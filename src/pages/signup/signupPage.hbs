@@ -1,0 +1,55 @@
+<div class="signupPage">
+    <header class="pageHeader">
+        {{> components/layout/logo }}
+    </header>
+
+    <main class="formContainer">
+        <h1 class="formTitle">Регистрация</h1>
+
+        <form id="signupForm" class="form" novalidate>
+            <div class="formError" data-error-container style="display: none;">
+                <span class="errorMessage" role="alert" data-error-text></span>
+            </div>
+
+            <div class="formFields">
+                {{> components/forms/input 
+                    name="username"
+                    label="Имя пользователя"
+                    type="text"
+                    value=formData.username
+                    placeholder="river_wyles"
+                }}
+                <span class="fieldError" data-field-error="username" style="display: none;" role="alert"></span>
+
+                {{> components/forms/input 
+                    name="password"
+                    label="Пароль"
+                    type="password"
+                    value=formData.password
+                    placeholder="********"
+                    autocomplete="off"
+                }}
+                <span class="fieldError" data-field-error="password" style="display: none;" role="alert"></span>
+            
+                {{> components/forms/input 
+                    name="passwordConfirm"
+                    label="Подтвердить пароль"
+                    type="password"
+                    value=formData.passwordConfirm
+                    placeholder="********"
+                    autocomplete="off"
+                }}
+                <span class="fieldError" data-field-error="passwordConfirm" style="display: none;" role="alert"></span>
+            </div>
+
+            {{> components/forms/button 
+                type="submit"
+                text="Создать аккаунт"
+                variant="primary"
+                className="submitButton"
+            }}
+        </form>
+
+        <p id="signinLink"> Есть аккаунт? <a href="/signin"> Войти</a></p>
+    </main>
+</div>
