@@ -1,4 +1,5 @@
-console.log('Запуск!');
+import { router } from './route/router.js';
 
-const app = document.getElementById('app');
-app.innerHTML = 'Working!';
+document.addEventListener('DOMContentLoaded', () => {
+	router.init();
+});
