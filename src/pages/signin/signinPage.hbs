@@ -1,45 +1,28 @@
 <div class="signinPage">
-    <header class="pageHeader">
-        {{> components/layout/logo }}
-    </header>
+	<header class="pageHeader">{{> components/layout/logo }}</header>
 
-    <main class="formContainer">
-        <h1 class="formTitle">Войдите в свой аккаунт</h1>
+	<main class="formContainer">
+		<h1 class="formTitle">Войдите в свой аккаунт</h1>
 
-        <form id="signinForm" class="form">
-            <div class="formError" data-error-container style="display: none;">
-                <span class="errorMessage" role="alert" data-error-text></span>
-            </div>
+		<form id="signinForm" class="authForm">
+			<div class="formFields">
+				{{> components/forms/input name="username" label="Имя пользователя"
+				type="text" value=formData.username placeholder="river_wyles" }}
 
-            <div class="formFields">
-                {{> components/forms/input 
-                    name="username"
-                    label="Имя пользователя"
-                    type="text"
-                    value=formData.username
-                    placeholder="river_wyles"
-                }}
-                <span class="fieldError" data-field-error="username" style="display: none;" role="alert"></span>
+				{{> components/forms/input name="password" label="Пароль"
+				type="password" value=formData.password placeholder="********"
+				autocomplete="current-password" }}
 
-                {{> components/forms/input 
-                    name="password"
-                    label="Пароль"
-                    type="password"
-                    value=formData.password
-                    placeholder="********"
-                    autocomplete="current-password"
-                }}
-                <span class="fieldError" data-field-error="password" style="display: none;" role="alert"></span>
-            </div>
+				<div class="formError" data-error-container style="visibility: hidden">
+					<span class="errorMessage" role="alert" data-error-text></span>
+				</div>
+			</div>
 
-            {{> components/forms/button 
-                type="submit"
-                text="Войти"
-                variant="primary"
-                className="submitButton"
-            }}
-        </form>
-
-        <p id="signupLink"> Нет аккаунта? <a href="/signup"> Создать</a></p>
-    </main>
+			<div class="formButtons">
+				{{> components/forms/button type="submit" text="Войти" variant="primary"
+				className="submitButton" }}
+				<span id="authLink">Нет аккаунта? <a href="/signup"> Создать</a><span/>
+			</div>
+		</form>
+	</main>
 </div>

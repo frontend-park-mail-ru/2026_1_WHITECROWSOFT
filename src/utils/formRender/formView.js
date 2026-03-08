@@ -35,10 +35,10 @@ export function createFormView(container, template) {
 		if (errorCache.container && errorCache.text) {
 			if (serverError) {
 				errorCache.text.textContent = serverError;
-				errorCache.container.style.display = 'block';
+				errorCache.container.style.visibility = 'visibile';
 			} else {
 				errorCache.text.textContent = '';
-				errorCache.container.style.display = 'none';
+				errorCache.container.style.visibility = 'hidden';
 			}
 		}
 
@@ -48,7 +48,7 @@ export function createFormView(container, template) {
 				field.input.classList.add('error');
 				if (field.error) {
 					field.error.textContent = message;
-					field.error.style.display = 'block';
+					field.error.style.visibility = 'visibile';
 				}
 			}
 		});
@@ -58,7 +58,7 @@ export function createFormView(container, template) {
 				field.input.classList.remove('error');
 				if (field.error) {
 					field.error.textContent = '';
-					field.error.style.display = 'none';
+					field.error.style.visibility = 'hidden';
 				}
 			}
 		});

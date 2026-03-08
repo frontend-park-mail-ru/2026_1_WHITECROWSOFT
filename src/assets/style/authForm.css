@@ -1,16 +1,20 @@
-.signinPage {
+.formContainer {
+	width: 100%;
+	text-align: center;
+
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
 	min-height: 100vh;
-	padding: 20px;
+	padding: 0px 20px;
+	gap: 14px;
 }
 
-.formContainer {
+.authForm {
 	width: 100%;
-	max-width: 380px;
-	text-align: center;
+	max-width: 300px;
+	margin: 0 auto;
 }
 
 .formFields {
@@ -21,16 +25,23 @@
 	text-align: left;
 }
 
+.formButtons {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	text-align: center;
+}
+
 .formInput {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
+	gap: 4px;
 }
 
 .formLabel {
 	font-size: var(--size-label);
 	font-weight: 600;
-	margin-left: 4px;
+	padding: 0px 15px;
 }
 
 .errorMessage,
@@ -40,11 +51,12 @@
 	margin-top: 4px;
 }
 
-#signupLink {
-	margin-top: 20px;
+#authLink {
+	margin-top: 10px;
 	font-size: var(--size-label);
 }
 
-#signupLink a, #signupLink a:hover  {
-    color: var(--text);
+#authLink a,
+#authLink a:hover {
+	color: var(--text);
 }

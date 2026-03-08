@@ -8,6 +8,7 @@ import { router } from '../../route/router.js';
 import { authService } from '../../services/authService.js';
 import { createFormRenderer } from '../../utils/formRender/formRenderer.js';
 import { registerPartials } from '../../utils/utils.js';
+import '../../assets/style/authForm.css';
 
 export async function initSignupPage() {
 	const user = await authService.checkAuth();

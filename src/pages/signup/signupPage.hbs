@@ -6,22 +6,22 @@
     <main class="formContainer">
         <h1 class="formTitle">Регистрация</h1>
 
-        <form id="signupForm" class="form" novalidate>
-            <div class="formError" data-error-container style="display: none;">
+        <form id="signupForm" class="authForm" novalidate>
+            <div class="formError" data-error-container style="visibility: hidden;">
                 <span class="errorMessage" role="alert" data-error-text></span>
             </div>
 
             <div class="formFields">
-                {{> components/forms/input 
+                {{> components/forms/input
                     name="username"
                     label="Имя пользователя"
                     type="text"
                     value=formData.username
                     placeholder="river_wyles"
                 }}
-                <span class="fieldError" data-field-error="username" style="display: none;" role="alert"></span>
+                <span class="fieldError" data-field-error="username" style="visibility: hidden;" role="alert"></span>
 
-                {{> components/forms/input 
+                {{> components/forms/input
                     name="password"
                     label="Пароль"
                     type="password"
@@ -29,9 +29,9 @@
                     placeholder="********"
                     autocomplete="off"
                 }}
-                <span class="fieldError" data-field-error="password" style="display: none;" role="alert"></span>
-            
-                {{> components/forms/input 
+                <span class="fieldError" data-field-error="password" style="visibility: hidden;" role="alert"></span>
+
+                {{> components/forms/input
                     name="passwordConfirm"
                     label="Подтвердить пароль"
                     type="password"
@@ -39,17 +39,19 @@
                     placeholder="********"
                     autocomplete="off"
                 }}
-                <span class="fieldError" data-field-error="passwordConfirm" style="display: none;" role="alert"></span>
+                <span class="fieldError" data-field-error="passwordConfirm" style="visibility: hidden;" role="alert"></span>
             </div>
 
-            {{> components/forms/button 
-                type="submit"
-                text="Создать аккаунт"
-                variant="primary"
-                className="submitButton"
-            }}
+            <div class="formButtons">
+                {{> components/forms/button
+                    type="submit"
+                    text="Создать аккаунт"
+                    variant="primary"
+                    className="submitButton"
+                }}
+                <span id="authLink"> Есть аккаунт? <a href="/signin"> Войти</a></span>
+            </div>
         </form>
 
-        <p id="signinLink"> Есть аккаунт? <a href="/signin"> Войти</a></p>
     </main>
 </div>

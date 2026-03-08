@@ -98,7 +98,7 @@ h5 {
 	border-radius: 10px;
 	border: none;
 	background-color: var(--text);
-	color: #fff;
+	color: var(--background);
 	font-family: inherit;
 	font-weight: 600;
 	cursor: pointer;
