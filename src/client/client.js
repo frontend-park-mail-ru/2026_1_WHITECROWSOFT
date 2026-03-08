@@ -18,57 +18,18 @@ class Client {
 				...options,
 			});
 
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-=======
->>>>>>> b843ce63c85232b9f6f6f044bd48a4c51bbe8a1a
-			if (!response.ok) {
-				throw new Error(`Request failed: ${response.status}`);
-			}
-
-			if (response.status === 204) return null;
-
-			return await response.json();
-		} catch (err) {
-			if (err.name === 'AbortError') {
-				const timeoutError = new Error('Request timeout: 408');
-				timeoutError.cause = err;
-				throw timeoutError;
-			}
-			const clientError = new Error('Client error');
-			clientError.cause = err;
-			throw clientError;
-		}
-	}
-
-	get(endpoint) {
-		return this.request(endpoint, { method: 'GET' });
-	}
-
-	post(endpoint, body = {}) {
-		return this.request(endpoint, {
-			method: 'POST',
-			body: JSON.stringify(body),
-		});
-	}
-
-	put(endpoint, body = {}) {
-		return this.request(endpoint, {
-			method: 'PUT',
-<<<<<<< HEAD
-=======
-			const responesData = await response.json().catch(() => null);
+			const responseData = await response.json().catch(() => null);
 
 			if (!response.ok) {
 				const error = new Error(`Request failed: ${response.status}`);
 				error.status = response.status;
-				error.data = responesData;
+				error.data = responseData;
 				throw error;
 			}
 
 			if (response.status === 204) return null;
 
-			return await responesData;
+			return await responseData;
 		} catch (err) {
 			if (err.status) {
 				throw err;
@@ -92,13 +53,10 @@ class Client {
 	post(endpoint, body = {}) {
 		return this.request(endpoint, {
 			method: 'POST',
->>>>>>> Stashed changes
 			body: JSON.stringify(body),
 		});
 	}
 
-<<<<<<< Updated upstream
-=======
 	put(endpoint, body = {}) {
 		return this.request(endpoint, {
 			method: 'PUT',
@@ -106,13 +64,6 @@ class Client {
 		});
 	}
 
->>>>>>> Stashed changes
-=======
-			body: JSON.stringify(body),
-		});
-	}
-
->>>>>>> b843ce63c85232b9f6f6f044bd48a4c51bbe8a1a
 	postForm(endpoint, formData) {
 		return this.request(endpoint, {
 			method: 'POST',
