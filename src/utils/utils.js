@@ -1,3 +1,5 @@
+import Handlebars from 'handlebars';
+
 export function el(tag, props = {}, children = []) {
 	const element = document.createElement(tag);
 
