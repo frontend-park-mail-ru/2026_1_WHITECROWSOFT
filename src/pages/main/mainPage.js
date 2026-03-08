@@ -14,14 +14,18 @@ const mockData = {
 		{ id: 'to-the-moon', title: 'To the Moon', preview: '' },
 		{ id: 'finding-paradise', title: 'Finding Paradise', preview: '' },
 		{ id: 'empty-note', title: 'Empty note', preview: '' },
-		{ id: 'travels', title: 'Путешествия', preview: '' },
-		{ id: 'extended-note', title: 'A note with an ext...', preview: '' },
+		{ id: 'travels', title: 'Travel', preview: '' },
+		{
+			id: 'extended-note',
+			title: 'A note with an extremely, obscenely long title',
+			preview: '',
+		},
 		{ id: 'impostor-factory', title: 'Impostor Factory', preview: '' },
 	],
 	activeNote: {
 		id: 'empty-note',
 		title: 'Empty note',
-		breadcrumb: 'Еще один набросок, сколько еще...',
+		breadcrumb: 'Empty note',
 		text: [
 			`There is no game like Outer Wilds. That doesn't stop fans from search for the elusive Wilds-like.
             One game that keeps popping up is The Forgotten City. Being very fond of flying into the sun and eating burned marshmallows,
@@ -66,6 +70,24 @@ export async function initMainPage() {
 	const container = document.querySelector('.mainContainer');
 	if (!container) return;
 
-	const sidebar = new Sidebar('sidebar-thing', mockData);
+	const updateUI = (newNoteId) => {
+		const selectedNote = state.notes.find((n) => n.id === newNoteId);
+		if (!selectedNote) return;
+
+		state.activeNoteId = newNoteId;
+		state.activeNote = { ...state.activeNote, ...selectedNote };
+
+		const titleEl = document.querySelector('.noteTitle');
+		const breadcrumbEl = document.querySelector('.currentItem');
+
+		if (titleEl) titleEl.textContent = selectedNote.title;
+		if (breadcrumbEl) breadcrumbEl.textContent = selectedNote.title;
+
+		document.querySelectorAll('[data-note-id]').forEach((el) => {
+			el.classList.toggle('active', el.dataset.noteId === newNoteId);
+		});
+	};
+
+	const sidebar = new Sidebar('sidebarContainer', state, (id) => updateUI(id));
 	await sidebar.init();
 }

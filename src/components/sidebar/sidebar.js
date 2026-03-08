@@ -4,10 +4,11 @@ import { authService } from '../../services/authService.js';
 import './sidebar.css';
 
 export class Sidebar {
-	constructor(containerSelector, initialState = {}) {
+	constructor(containerSelector, initialState = {}, onNoteClick) {
 		this.container = document.getElementById(containerSelector);
 		this.state = initialState;
 		this.template = null;
+		this.onNoteClick = onNoteClick;
 	}
 
 	async init() {
@@ -45,7 +46,9 @@ export class Sidebar {
 			const noteItem = e.target.closest('[data-note-id]');
 			if (noteItem) {
 				const noteId = noteItem.dataset.noteId;
-				console.log('Note clicked:', noteId);
+				if (this.onNoteClick) {
+					this.onNoteClick(noteId);
+				}
 			}
 		});
 	}
