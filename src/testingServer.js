@@ -1,8 +1,6 @@
 // server.js
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
-const url = require('url');
+import http from 'http';
+import process from 'process';
 
 const server = http.createServer((req, res) => {
 	console.log(`${req.method} ${req.url}`);
@@ -65,11 +63,6 @@ const server = http.createServer((req, res) => {
 		handleLogout(req, res);
 		return;
 	}
-
-	// ============================================
-	// ✅ STATIC FILES
-	// ============================================
-	serveStaticFile(req, res);
 });
 
 // ============================================
@@ -119,6 +112,7 @@ function handleSignin(req, res) {
 				}),
 			);
 		} catch (err) {
+			console.log(err);
 			res.writeHead(400, { 'Content-Type': 'application/json' });
 			res.end(JSON.stringify({ error: 'invalid JSON' }));
 		}
@@ -175,6 +169,7 @@ function handleSignup(req, res) {
 				}),
 			);
 		} catch (err) {
+			console.log(err);
 			res.writeHead(400, { 'Content-Type': 'application/json' });
 			res.end(JSON.stringify({ error: 'invalid JSON' }));
 		}
@@ -220,81 +215,6 @@ function handleLogout(req, res) {
 }
 
 // ============================================
-// 📁 STATIC FILE SERVER
-// ============================================
-
-function serveStaticFile(req, res) {
-	if (req.method !== 'GET') {
-		res.writeHead(405, { 'Content-Type': 'text/plain' });
-		return res.end('405 Method Not Allowed');
-	}
-
-	// Убираем query-параметры
-	const cleanUrl = req.url.split('?')[0].split('#')[0];
-
-	// Определяем путь к файлу
-	let filePath = '.' + cleanUrl;
-
-	// Если запрошен корень или маршрут без расширения — это SPA-роутинг
-	const hasExtension = /\.[a-z]+$/i.test(cleanUrl);
-
-	if (!hasExtension || filePath === './' || filePath === './index.html') {
-		filePath = './index.html';
-	}
-
-	// Определяем Content-Type
-	const extname = path.extname(filePath).toLowerCase();
-	const contentTypes = {
-		'.html': 'text/html',
-		'.js': 'text/javascript',
-		'.mjs': 'text/javascript',
-		'.css': 'text/css',
-		'.json': 'application/json',
-		'.png': 'image/png',
-		'.jpg': 'image/jpeg',
-		'.jpeg': 'image/jpeg',
-		'.gif': 'image/gif',
-		'.svg': 'image/svg+xml',
-		'.ico': 'image/x-icon',
-		'.hbs': 'text/plain',
-	};
-
-	const contentType = contentTypes[extname] || 'application/octet-stream';
-
-	console.log(`[Static] ${req.url} → ${filePath} → ${contentType}`);
-
-	fs.readFile(filePath, (err, content) => {
-		if (err) {
-			if (err.code === 'ENOENT') {
-				// Файл не найден
-				if (!hasExtension) {
-					// Для маршрутов без расширения — пробуем индекс ещё раз
-					fs.readFile('./index.html', (err2, content2) => {
-						if (err2) {
-							res.writeHead(404, { 'Content-Type': 'text/plain' });
-							res.end('404 - File not found');
-						} else {
-							res.writeHead(200, { 'Content-Type': 'text/html' });
-							res.end(content2, 'utf-8');
-						}
-					});
-				} else {
-					// Для файлов с расширением — честный 404
-					res.writeHead(404, { 'Content-Type': 'text/plain' });
-					res.end('404 - File not found: ' + req.url);
-				}
-			} else {
-				res.writeHead(500, { 'Content-Type': 'text/plain' });
-				res.end('500 - Server error: ' + err.code);
-			}
-		} else {
-			res.writeHead(200, { 'Content-Type': contentType });
-			res.end(content, 'utf-8');
-		}
-	});
-}
-
-// ============================================
 // 🔧 HELPER FUNCTIONS
 // ============================================
 
@@ -318,7 +238,6 @@ const PORT = process.env.PORT || 8000;
 
 server.listen(PORT, () => {
 	console.log('\n🚀 Server started on http://localhost:' + PORT);
-	console.log('📁 Serving static files from: ' + path.resolve('.'));
 	console.log('🔌 API endpoints:');
 	console.log('   GET  /ping');
 	console.log('   POST /signin');
