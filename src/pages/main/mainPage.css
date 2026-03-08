@@ -1,5 +1,3 @@
-
-
 .noteItemTitle {
 	flex: 1;
 	white-space: nowrap;
@@ -9,14 +7,39 @@
 
 .mainContent {
 	flex: 1;
-	padding: 40px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 64px 20px;
 	overflow-y: auto;
+	background-color: var(--background);
+
+	-webkit-mask-image: linear-gradient(
+		to bottom,
+		black 0%,
+		black calc(100% - 80px),
+		transparent 100%
+	);
+	mask-image: linear-gradient(
+		to bottom,
+		black 0%,
+		black calc(100% - 80px),
+		transparent 100%
+	);
+}
+
+.noteContent,
+.notePath {
+	width: 100%;
+	max-width: 740px;
 }
 
 .notePath {
-	font-size: var(--size-small);
+	display: flex;
+	gap: 8px;
+	margin-bottom: 16px;
+	font-size: var(--size-label);
 	color: var(--faint-b);
-	margin-bottom: 20px;
 }
 
 .pathItem.current {
@@ -28,16 +51,17 @@
 	margin-bottom: 30px;
 }
 
-.noteTitleInput {
+.noteTitle {
 	font-size: 2rem;
 	font-weight: 800;
-	border: none;
-	padding: 0;
-	background: transparent;
+	margin-bottom: 16px;
+	width: 100%;
+	text-align: left;
 }
 
 .noteBody {
-	font-size: 1.1rem;
-	line-height: 1.7;
-	color: #333;
+	width: 100%;
+	line-height: 1.6;
+	text-align: left;
+	/*white-space: pre-wrap; UNCOMMENT ME IF DB SAVES THIS! */
 }

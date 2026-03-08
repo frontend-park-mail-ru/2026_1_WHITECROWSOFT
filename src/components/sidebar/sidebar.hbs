@@ -1,51 +1,50 @@
 <aside class="sidebar">
-        <div class="sidebarHeader">
-            <h1 class="appTitle">Noterian</h1>
-             <button id="logoutBtn" class="logoutButton" style="margin-top:10px;padding:8px 16px;cursor:pointer">
-                Выйти
-            </button>
-        </div>
+	<div class="sidebarHeader">
+		<h1 class="appTitle">Noterian</h1>
+	</div>
 
-        <div class="sidebarContent">
-            <div class="searchSection">
-                <div class="searchBox">
-                    <button class="searchButton">🔍</button>
-                    <input
-                        type="text"
-                        class="searchInput"
-                        placeholder="Поиск"
-                        value="{{searchQuery}}"
-                    >
-                </div>
+	<div class="actionMenu">
+		<div class="searchBox">
+			<input
+				type="text"
+				class="searchInput"
+				placeholder="Поиск"
+				value="{{searchQuery}}"
+			/>
+		</div>
+		<button class="sidebarButton">
+			<span class="actionIcon">➕</span>
+			Главная
+		</button>
+		<button class="sidebarButton">
+			<span class="actionIcon">🗑️</span>
+			Библиотека
+		</button>
+		<button class="sidebarButton">
+			<span class="actionIcon">⚙️</span>
+			Настройки
+		</button>
+		<button id="logoutBtn" class="logoutButton sidebarButton">
+		    <span class="actionIcon">👋</span>
+            Выйти
+        </button>
+	</div>
 
-                <div class="actionMenu">
-                    <button class="sidebarButton">
-                        <span class="actionIcon">➕</span>
-                        Главная
-                    </button>
-                    <button class="sidebarButton">
-                        <span class="actionIcon">🗑️</span>
-                        Библиотека
-                    </button>
-                    <button class="sidebarButton">
-                        <span class="actionIcon"></span>
-                        Настройки
-                    </button>
-                </div>
-            </div>
+	<hr class="barrier" />
 
-            <div class="notesList">
-                {{#each notes}}
-                    <div class="noteItem {{#if (eq this.id ../activeNoteId)}}active{{/if}}"
-                        data-note-id="{{this.id}}">
-                        <span class="actionIcon">➕</span>
-                        <div class="noteItemTitle">{{this.title}}</div>
-                    </div>
-                {{else}}
-                    <div class="emptyNotes">
-                        <p>У вас пока нет заметок</p>
-                    </div>
-                {{/each}}
-            </div>
-        </div>
-    </aside>
+	<div class="notesList">
+		{{#each notes}}
+		<div
+			class="noteItem {{#if (eq this.id ../activeNoteId)}}active{{/if}}"
+			data-note-id="{{this.id}}"
+		>
+			<span class="actionIcon">➕</span>
+			<div class="noteItemTitle">{{this.title}}</div>
+		</div>
+		{{else}}
+		<div class="emptyNotes">
+			<p>У вас пока нет заметок</p>
+		</div>
+		{{/each}}
+	</div>
+</aside>

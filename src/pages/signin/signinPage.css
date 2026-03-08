@@ -44,3 +44,7 @@
 	margin-top: 20px;
 	font-size: var(--size-label);
 }
+
+#signupLink a, #signupLink a:hover  {
+    color: var(--text);
+}

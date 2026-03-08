@@ -15,6 +15,30 @@
 	--size-small: 12px;
 }
 
+@font-face {
+	font-family: 'Libre Caslon Text';
+	src: url('../assets/fonts/LibreCaslonText-Regular.woff2') format('woff2');
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Libre Caslon Text';
+	src: url('../assets/fonts/LibreCaslonText-Italic.woff2') format('woff2');
+	font-weight: 500;
+	font-style: italic;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Libre Caslon Text';
+	src: url('../assets/fonts/LibreCaslonText-Bold.woff2') format('woff2');
+	font-weight: 800;
+	font-style: normal;
+	font-display: swap;
+}
+
 * {
 	box-sizing: border-box;
 	margin: 0;
@@ -48,6 +72,8 @@ h5 {
 .input,
 .searchInput,
 .noteTitleInput {
+    min-width: 200px;
+    height: 35px;
 	width: 100%;
 	padding: 8px 16px;
 	background: var(--background);
@@ -80,4 +106,16 @@ h5 {
 
 .btn:hover {
 	background-color: var(--oceanic);
+}
+
+.pageHeader {
+	position: absolute;
+	top: 15px;
+	left: 30px;
+}
+
+.appTitle {
+	font-family: 'Libre Caslon Text', serif;
+	font-weight: 400;
+	font-size: 32px;
 }
