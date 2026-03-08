@@ -1,4 +1,5 @@
 import Handlebars from 'handlebars';
+import { Sidebar } from '../../components/sidebar/sidebar.js';
 import { router } from '../../route/router.js';
 import { authService } from '../../services/authService.js';
 import { registerHelpers } from '../../utils/utils.js';
@@ -65,28 +66,6 @@ export async function initMainPage() {
 	const container = document.querySelector('.mainContainer');
 	if (!container) return;
 
-	const logoutBtn = document.getElementById('logoutBtn');
-	if (logoutBtn) {
-		logoutBtn.addEventListener('click', async () => {
-			console.log('[MainPage] Logout clicked');
-			try {
-				await authService.logOut();
-				console.log('[MainPage] signOut() completed');
-				router.clearAuthCache();
-				router.replace('/signin');
-			} catch (err) {
-				console.error('[MainPage] Logout error:', err);
-				router.clearAuthCache();
-				router.replace('/signin');
-			}
-		});
-	}
-
-	container.addEventListener('click', (e) => {
-		const noteItem = e.target.closest('[data-note-id]');
-		if (noteItem) {
-			const noteId = noteItem.dataset.noteId;
-			console.log('Note clicked:', noteId);
-		}
-	});
+	const sidebar = new Sidebar('sidebar-thing', mockData);
+	await sidebar.init();
 }
