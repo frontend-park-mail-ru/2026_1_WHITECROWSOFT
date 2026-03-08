@@ -52,6 +52,7 @@ body {
 	font-weight: 500;
 	font-size: var(--size-base);
 	line-height: 1.5;
+	font-size: 16px;
 }
 
 h1,
@@ -72,8 +73,8 @@ h5 {
 .input,
 .searchInput,
 .noteTitleInput {
-    min-width: 200px;
-    height: 35px;
+	min-width: 200px;
+	height: 35px;
 	width: 100%;
 	padding: 8px 16px;
 	background: var(--background);
@@ -118,4 +119,9 @@ h5 {
 	font-family: 'Libre Caslon Text', serif;
 	font-weight: 400;
 	font-size: 32px;
+}
+
+.icon {
+	width: 15px;
+	height: 15px;
 }

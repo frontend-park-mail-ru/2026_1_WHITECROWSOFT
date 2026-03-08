@@ -13,21 +13,21 @@
 			/>
 		</div>
 		<button class="sidebarButton">
-			<span class="actionIcon">➕</span>
+			<img src="../../assets/icons/home.svg" class="icon" />
 			Главная
 		</button>
 		<button class="sidebarButton">
-			<span class="actionIcon">🗑️</span>
+			<img src="../../assets/icons/bookmark.svg" class="icon" />
 			Библиотека
 		</button>
 		<button class="sidebarButton">
-			<span class="actionIcon">⚙️</span>
+			<img src="../../assets/icons/settings.svg" class="icon" />
 			Настройки
 		</button>
 		<button id="logoutBtn" class="logoutButton sidebarButton">
-		    <span class="actionIcon">👋</span>
-            Выйти
-        </button>
+			<img src="../../assets/icons/logout.svg" class="icon" />
+			Выйти
+		</button>
 	</div>
 
 	<hr class="barrier" />
@@ -38,7 +38,7 @@
 			class="noteItem {{#if (eq this.id ../activeNoteId)}}active{{/if}}"
 			data-note-id="{{this.id}}"
 		>
-			<span class="actionIcon">➕</span>
+		    <img src="../../assets/icons/{{this.icon}}.svg" class="icon" />
 			<div class="noteItemTitle">{{this.title}}</div>
 		</div>
 		{{else}}
