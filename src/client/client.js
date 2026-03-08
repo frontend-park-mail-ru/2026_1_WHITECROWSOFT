@@ -18,7 +18,10 @@ class Client {
 				...options,
 			});
 
+<<<<<<< HEAD
 <<<<<<< Updated upstream
+=======
+>>>>>>> b843ce63c85232b9f6f6f044bd48a4c51bbe8a1a
 			if (!response.ok) {
 				throw new Error(`Request failed: ${response.status}`);
 			}
@@ -52,6 +55,7 @@ class Client {
 	put(endpoint, body = {}) {
 		return this.request(endpoint, {
 			method: 'PUT',
+<<<<<<< HEAD
 =======
 			const responesData = await response.json().catch(() => null);
 
@@ -103,6 +107,12 @@ class Client {
 	}
 
 >>>>>>> Stashed changes
+=======
+			body: JSON.stringify(body),
+		});
+	}
+
+>>>>>>> b843ce63c85232b9f6f6f044bd48a4c51bbe8a1a
 	postForm(endpoint, formData) {
 		return this.request(endpoint, {
 			method: 'POST',
