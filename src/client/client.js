@@ -1,10 +1,29 @@
+import { appError, createError } from "./appError";
+
 const SERVER_URL = 'http://localhost:8000';
 
+/**
+ * Класс дял клиента, выполняющего HTTP-запросы к серверу
+ * @class Client
+ * @classdesc Предоставляет методы для работы с API (GET, POST, PUT)
+*/
 class Client {
+	/**
+	 * Создает экземпляр клиента
+	 * @constructor
+	*/
 	constructor() {
 		this.serverURL = SERVER_URL;
 	}
 
+	/**
+	 * Отправляет HTTP запрос на сервер
+	 * @async
+	 * @param {string} endpoint - путь к контенту на сервере
+	 * @param {object} options - доплнительные параметры запроса
+	 * @returns {Promise<Object|null>} данные ответа от сервера или null при статусе 204
+	 * @throws {appError} ошибка запроса с полями status, data, cause
+	 */	
 	async request(endpoint, options = {}) {
 		const url = `${this.serverURL}${endpoint}`;
 
@@ -18,45 +37,60 @@ class Client {
 				...options,
 			});
 
-			const responseData = await response.json().catch(() => null);
+			const responesData = await response.json().catch(() => null);
 
 			if (!response.ok) {
-				const error = new Error(`Request failed: ${response.status}`);
-				error.status = response.status;
-				error.data = responseData;
-				throw error;
+				throw createError.fromResponse(response, responseData);
 			}
 
 			if (response.status === 204) return null;
 
-			return await responseData;
+			return await responesData;
 		} catch (err) {
-			if (err.status) {
+			if (err instanceof appError) {
 				throw err;
 			}
 			if (err.name === 'AbortError') {
-				const timeoutError = new Error('Request timeout: 408');
-				timeoutError.cause = err;
-				throw timeoutError;
+				throw createError.timeout(err);
 			}
-			const clientError = new Error('Client error');
-			clientError.status = 0;
-			clientError.cause = err;
-			throw clientError;
+			throw createError.client(err);
 		}
 	}
 
+	/**
+	 * Отправляет GET запрос на сервер
+	 * @async
+	 * @param {string} endpoint - путь к контенту на сервере
+	 * @returns {Promise<Object|null>} данные ответа от сервера
+	 * @throws {appError} ошибка запроса
+	*/	
 	get(endpoint) {
 		return this.request(endpoint, { method: 'GET' });
 	}
 
+	/**
+	 * Отправляет POST запрос на сервер
+	 * @async
+	 * @param {string} endpoint - путь к контенту на сервере
+	 * @param {object} body - данные для отправки
+	 * @returns {Promise<Object|null>} данные ответа от сервера
+	 * @throws {appError} ошибка запроса
+	*/	
 	post(endpoint, body = {}) {
 		return this.request(endpoint, {
 			method: 'POST',
 			body: JSON.stringify(body),
 		});
 	}
-
+	
+	/**
+	 * Отправляет PUT запрос на сервер
+	 * @async
+	 * @param {string} endpoint - путь к контенту на сервере
+	 * @param {object} body - данные для обновления или записи
+	 * @returns {Promise<Object|null>} данные ответа от сервера
+	 * @throws {appError} ошибка запроса
+	*/	
 	put(endpoint, body = {}) {
 		return this.request(endpoint, {
 			method: 'PUT',
@@ -64,6 +98,14 @@ class Client {
 		});
 	}
 
+	/**
+	 * Отправляет POST запрос c FormData на сервер
+	 * @async
+	 * @param {string} endpoint - путь к контенту на сервере
+	 * @param {FormData} formData - FormData объект с данными формы
+	 * @returns {Promise<Object|null>} данные ответа от сервера
+	 * @throws {appError} ошибка запроса
+	*/	
 	postForm(endpoint, formData) {
 		return this.request(endpoint, {
 			method: 'POST',
