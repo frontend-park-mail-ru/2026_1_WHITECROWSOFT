@@ -19,7 +19,7 @@ export async function initSignupPage() {
 	}
 
 	registerHelpers();
-	await registerPartials();
+	registerPartials();
 
 	const template = Handlebars.compile(templateText);
 
