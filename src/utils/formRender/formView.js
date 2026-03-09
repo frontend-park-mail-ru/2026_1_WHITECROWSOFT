@@ -35,7 +35,7 @@ export function createFormView(container, template) {
 		if (errorCache.container && errorCache.text) {
 			if (serverError) {
 				errorCache.text.textContent = serverError;
-				errorCache.container.style.visibility = 'visibile';
+				errorCache.container.style.visibility = 'visible';
 			} else {
 				errorCache.text.textContent = '';
 				errorCache.container.style.visibility = 'hidden';
@@ -48,7 +48,7 @@ export function createFormView(container, template) {
 				field.input.classList.add('error');
 				if (field.error) {
 					field.error.textContent = message;
-					field.error.style.visibility = 'visibile';
+					field.error.style.visibility = 'visible';
 				}
 			}
 		});

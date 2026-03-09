@@ -20,8 +20,8 @@
 .formFields {
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
-	margin-bottom: 20px;
+	gap: 1px;
+	margin-bottom: 14px;
 	text-align: left;
 }
 
@@ -35,7 +35,8 @@
 .formInput {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: 3px;
+	height: 83px;
 }
 
 .formLabel {
@@ -45,10 +46,20 @@
 }
 
 .errorMessage,
-.fieldError {
+.fieldError,
+.formError {
 	color: var(--danger-red);
 	font-size: var(--size-small);
-	margin-top: 4px;
+	margin-top: 2px;
+	height: 16px;
+}
+
+.fieldError {
+	padding: 0px 15px;
+}
+
+.formError {
+	text-align: center;
 }
 
 #authLink {

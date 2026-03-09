@@ -21,14 +21,12 @@ export function createFormEvents(container, actions, handlers) {
 		try {
 			await handlers.onSubmit(state.formData);
 			actions.submitEnd();
+			if (handlers.onSuccess) {
+				handlers.onSuccess();
+			}
 		} catch (error) {
 			const message = error?.data?.error || error?.message || 'Ошибка';
 			actions.submitError(message);
-		}
-
-		actions.submitEnd();
-		if (handlers.onSuccess) {
-			handlers.onSuccess();
 		}
 	}
 

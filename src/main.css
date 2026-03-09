@@ -87,6 +87,10 @@ h5 {
 	transition: all 0.2s ease;
 }
 
+.input.error {
+  border: 1.25px solid var(--danger-red);  
+}
+
 .input:focus,
 .searchInput:focus {
 	border-color: var(--cornflower);

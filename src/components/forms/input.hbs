@@ -17,4 +17,7 @@
 	</span>
 	{{/if}}
 	</div>
+	{{#if (eq witherror "true")}}
+	<span class="fieldError" data-field-error="{{name}}" style="visibility: hidden;" role="alert"></span>
+	{{/if}}
 </div>

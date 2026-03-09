@@ -7,10 +7,6 @@
         <h1 class="formTitle">Регистрация</h1>
 
         <form id="signupForm" class="authForm" novalidate>
-            <div class="formError" data-error-container style="visibility: hidden;">
-                <span class="errorMessage" role="alert" data-error-text></span>
-            </div>
-
             <div class="formFields">
                 {{> components/forms/input
                     name="username"
@@ -18,8 +14,8 @@
                     type="text"
                     value=formData.username
                     placeholder="river_wyles"
+                    witherror="true"
                 }}
-                <span class="fieldError" data-field-error="username" style="visibility: hidden;" role="alert"></span>
 
                 {{> components/forms/input
                     name="password"
@@ -28,8 +24,8 @@
                     value=formData.password
                     placeholder="********"
                     autocomplete="off"
+                    witherror="true"
                 }}
-                <span class="fieldError" data-field-error="password" style="visibility: hidden;" role="alert"></span>
 
                 {{> components/forms/input
                     name="passwordConfirm"
@@ -38,8 +34,12 @@
                     value=formData.passwordConfirm
                     placeholder="********"
                     autocomplete="off"
+                    witherror="true"
                 }}
-                <span class="fieldError" data-field-error="passwordConfirm" style="visibility: hidden;" role="alert"></span>
+
+            <div class="formError" data-error-container style="visibility: hidden;">
+                <span class="errorMessage" role="alert" data-error-text></span>
+            </div>
             </div>
 
             <div class="formButtons">
