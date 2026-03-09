@@ -60,3 +60,14 @@
 #authLink a:hover {
 	color: var(--text);
 }
+
+.inputWrapper {
+	position: relative;
+}
+
+.eyeIcon {
+	z-index: 9999;
+	position: absolute;
+	top: 30%;
+	right: 16px;
+}

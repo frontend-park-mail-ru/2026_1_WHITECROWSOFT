@@ -1,4 +1,5 @@
 import Handlebars from 'handlebars';
+import '../../assets/style/authForm.css';
 import {
 	validatePassword,
 	validatePasswordConfirm,
@@ -7,8 +8,7 @@ import {
 import { router } from '../../route/router.js';
 import { authService } from '../../services/authService.js';
 import { createFormRenderer } from '../../utils/formRender/formRenderer.js';
-import { registerPartials } from '../../utils/utils.js';
-import '../../assets/style/authForm.css';
+import { registerHelpers, registerPartials } from '../../utils/utils.js';
 
 export async function initSignupPage() {
 	const user = await authService.checkAuth();
@@ -17,6 +17,7 @@ export async function initSignupPage() {
 		return;
 	}
 
+	registerHelpers();
 	await registerPartials();
 
 	const response = await fetch('/pages/signup/signupPage.hbs');

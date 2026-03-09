@@ -76,7 +76,7 @@ h5 {
 	min-width: 200px;
 	height: 35px;
 	width: 100%;
-	padding: 8px 16px;
+	padding: 8px 40px 8px 16px;
 	background: var(--background);
 	border: 1.25px solid var(--faint-a);
 	border-radius: 10px;

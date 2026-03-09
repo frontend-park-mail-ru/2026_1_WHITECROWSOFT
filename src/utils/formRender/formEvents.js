@@ -40,8 +40,30 @@ export function createFormEvents(container, actions, handlers) {
 		}
 	}
 
+	function handlePasswordVisibility(button) {
+		return (e) => {
+			e.preventDefault();
+			const input =
+				button.parentElement.querySelector('input[name="password"]') ??
+				button.parentElement.querySelector('input[name="passwordConfirm"]');
+			const eyeOpen = button.querySelector('.eyeOpen');
+			const eyeClosed = button.querySelector('.eyeClosed');
+
+			if (input.type === 'password') {
+				input.type = 'text';
+				eyeOpen.style.display = 'none';
+				eyeClosed.style.display = 'block';
+			} else {
+				input.type = 'password';
+				eyeOpen.style.display = 'block';
+				eyeClosed.style.display = 'none';
+			}
+		};
+	}
+
 	function attach() {
 		const form = container?.querySelector('form');
+		const toggleBtns = container?.querySelectorAll('[data-toggle-password]');
 		if (!form) {
 			return;
 		}
@@ -50,10 +72,16 @@ export function createFormEvents(container, actions, handlers) {
 		form.addEventListener('input', handleInput);
 		form.addEventListener('submit', handleSubmit);
 		container?.addEventListener('click', handleNavigation);
+		toggleBtns?.forEach((btn) => {
+			btn.addEventListener('click', handlePasswordVisibility(btn));
+		});
 		cleanup = () => {
 			form.removeEventListener('input', handleInput);
 			form.removeEventListener('submit', handleSubmit);
 			container?.removeEventListener('click', handleNavigation);
+			toggleBtns?.forEach((btn) => {
+				btn.removeEventListener('click', handlePasswordVisibility(btn));
+			});
 		};
 	}
 

@@ -1,12 +1,20 @@
 <div class="formInput">
-    <label for={{name}} class="formLabel">{{label}}</label>
-    <input 
-        type="{{type}}"
-        name="{{name}}"
-        value="{{value}}"
-        placeholder="{{placeholder}}"
-        autocomplete={{autocomplete}}
-        required
-        class="input {{#if error}}error{{/if}}"
-    >
+	<label for="{{name}}" class="formLabel">{{label}}</label>
+	<div class="inputWrapper">
+	<input
+		type="{{type}}"
+		name="{{name}}"
+		value="{{value}}"
+		placeholder="{{placeholder}}"
+		autocomplete="{{autocomplete}}"
+		required
+		class="input {{#if error}}error{{/if}}"
+	/>
+	{{#if (eq type "password")}}
+	<span class="passwordToggle" data-toggle-password>
+	    <img src="../../assets/icons/visibility-off.svg" class="icon eyeOpen eyeIcon" />
+		<img src="../../assets/icons/visibility.svg" class="icon eyeClosed eyeIcon" style="display: none" />
+	</span>
+	{{/if}}
+	</div>
 </div>
