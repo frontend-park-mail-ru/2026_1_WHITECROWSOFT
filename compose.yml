@@ -1,14 +1,16 @@
 services:
   backend:
-    image: noterian:latest
-    restart: always
+    image: ghcr.io/go-park-mail-ru/2026_1_whitecrowsoft:latest
+    restart: unless-stopped
+    env_file: '.env'
     expose:
-      - '8000'
+      - '${PORT}'
 
   frontend:
-    build: .
-    restart: always
+    image: ghcr.io/frontend-park-mail-ru/2026_1_whitecrowsoft:latest
+    restart: unless-stopped
+    env_file: '.env'
     ports:
-      - '80:80'
+      - '${PORT_FRONT}:80'
     depends_on:
       - backend
