@@ -7,7 +7,9 @@
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "format": "prettier --write \"./src/**/*.{js,jsx,ts,tsx}\"",
-    "testserver": "node src/testingServer.js"
+    "testserver": "node src/testingServer.js",
+    "build": "vite build",
+    "dev": "vite"
   },
   "repository": {
     "type": "git",

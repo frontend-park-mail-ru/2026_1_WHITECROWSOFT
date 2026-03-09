@@ -1,4 +1,4 @@
-import { appError, createError } from "./appError";
+import { AppError, createError } from "./appError";
 
 const SERVER_URL = 'http://localhost:8000';
 
@@ -22,7 +22,7 @@ class Client {
 	 * @param {string} endpoint - путь к контенту на сервере
 	 * @param {object} options - доплнительные параметры запроса
 	 * @returns {Promise<Object|null>} данные ответа от сервера или null при статусе 204
-	 * @throws {appError} ошибка запроса с полями status, data, cause
+	 * @throws {AppError} ошибка запроса с полями status, data, cause
 	 */	
 	async request(endpoint, options = {}) {
 		const url = `${this.serverURL}${endpoint}`;
@@ -37,7 +37,7 @@ class Client {
 				...options,
 			});
 
-			const responesData = await response.json().catch(() => null);
+			const responseData = await response.json().catch(() => null);
 
 			if (!response.ok) {
 				throw createError.fromResponse(response, responseData);
@@ -45,9 +45,9 @@ class Client {
 
 			if (response.status === 204) return null;
 
-			return await responesData;
+			return await responseData;
 		} catch (err) {
-			if (err instanceof appError) {
+			if (err instanceof AppError) {
 				throw err;
 			}
 			if (err.name === 'AbortError') {
@@ -62,7 +62,7 @@ class Client {
 	 * @async
 	 * @param {string} endpoint - путь к контенту на сервере
 	 * @returns {Promise<Object|null>} данные ответа от сервера
-	 * @throws {appError} ошибка запроса
+	 * @throws {AppError} ошибка запроса
 	*/	
 	get(endpoint) {
 		return this.request(endpoint, { method: 'GET' });
@@ -74,7 +74,7 @@ class Client {
 	 * @param {string} endpoint - путь к контенту на сервере
 	 * @param {object} body - данные для отправки
 	 * @returns {Promise<Object|null>} данные ответа от сервера
-	 * @throws {appError} ошибка запроса
+	 * @throws {AppError} ошибка запроса
 	*/	
 	post(endpoint, body = {}) {
 		return this.request(endpoint, {
@@ -89,7 +89,7 @@ class Client {
 	 * @param {string} endpoint - путь к контенту на сервере
 	 * @param {object} body - данные для обновления или записи
 	 * @returns {Promise<Object|null>} данные ответа от сервера
-	 * @throws {appError} ошибка запроса
+	 * @throws {AppError} ошибка запроса
 	*/	
 	put(endpoint, body = {}) {
 		return this.request(endpoint, {
@@ -104,7 +104,7 @@ class Client {
 	 * @param {string} endpoint - путь к контенту на сервере
 	 * @param {FormData} formData - FormData объект с данными формы
 	 * @returns {Promise<Object|null>} данные ответа от сервера
-	 * @throws {appError} ошибка запроса
+	 * @throws {AppError} ошибка запроса
 	*/	
 	postForm(endpoint, formData) {
 		return this.request(endpoint, {

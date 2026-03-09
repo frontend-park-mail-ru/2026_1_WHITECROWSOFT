@@ -35,7 +35,7 @@ export class Sidebar {
 			throw new Error(`Failed to load template: ${response.status}`);
 		}
 		this.template = Handlebars.compile(await response.text());
-		render(this.container, this.template);
+		render(this.container, this.template(this.state));
 		this.bindEvents();
 	}
 

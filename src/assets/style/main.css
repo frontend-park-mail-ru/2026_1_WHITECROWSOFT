@@ -112,6 +112,9 @@ h5 {
 .btn:hover {
 	background-color: var(--oceanic);
 }
+.btn:active {
+	background-color: var(--cornflower);
+}
 
 .pageHeader {
 	position: absolute;
@@ -123,6 +126,10 @@ h5 {
 	font-family: 'Libre Caslon Text', serif;
 	font-weight: 400;
 	font-size: 32px;
+}
+
+.appStrapline {
+	color: var(--oceanic);
 }
 
 .icon {

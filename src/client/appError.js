@@ -1,10 +1,10 @@
 /**
  * Класс для ошибок приложения
- * @class appError
+ * @class AppError
  * @classdesc Единый формат ошибок для всего приложения
  * @extends Error
  */
-export class appError extends Error {
+export class AppError extends Error {
     constructor (message, data=null, cause=null, status) {
         super(message);
         this.name = 'clientError';
