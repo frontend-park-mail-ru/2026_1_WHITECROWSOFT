@@ -3,6 +3,7 @@ import { router } from '../../route/router.js';
 import { render } from '../../utils/utils.js';
 import { authService } from '../../services/authService.js';
 import './sidebar.css';
+import templateText from './sidebar.hbs?raw';
 
 /**
  * Класс дял боковой панели приложения
@@ -30,11 +31,7 @@ export class Sidebar {
 	 * @throws {Error} Если не удалось загрузить шаблон
 	*/
 	async init() {
-		const response = await fetch('/components/sidebar/sidebar.hbs');
-		if (!response.ok) {
-			throw new Error(`Failed to load template: ${response.status}`);
-		}
-		this.template = Handlebars.compile(await response.text());
+	  this.template = Handlebars.compile(templateText);
 		render(this.container, this.template(this.state));
 		this.bindEvents();
 	}

@@ -8,6 +8,7 @@ import { router } from '../../route/router.js';
 import { authService } from '../../services/authService.js';
 import { createFormRenderer } from '../../utils/formRender/formRenderer.js';
 import { registerHelpers, registerPartials } from '../../utils/utils.js';
+import templateText from './signinPage.hbs?raw';
 
 export async function initSigninPage() {
 	const user = await authService.checkAuth();
@@ -17,9 +18,8 @@ export async function initSigninPage() {
 	}
 
 	registerHelpers();
-	await registerPartials();
-	const response = await fetch('/pages/signin/signinPage.hbs');
-	const template = Handlebars.compile(await response.text());
+	registerPartials();
+	const template = Handlebars.compile(templateText);
 
 	const app = document.querySelector('#app');
 	if (!app) {

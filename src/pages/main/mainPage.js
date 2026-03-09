@@ -4,6 +4,7 @@ import { router } from '../../route/router.js';
 import { authService } from '../../services/authService.js';
 import { registerHelpers } from '../../utils/utils.js';
 import './mainPage.css';
+import templateText from './mainPage.hbs?raw';
 
 const mockData = {
 	searchQuery: '',
@@ -57,8 +58,7 @@ export async function initMainPage() {
 	}
 
 	registerHelpers();
-	const response = await fetch('/pages/main/mainPage.hbs');
-	const template = Handlebars.compile(await response.text());
+	const template = Handlebars.compile(templateText);
 
 	const app = document.querySelector('#app');
 	if (!app) return;

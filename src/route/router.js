@@ -1,5 +1,6 @@
 import { authService } from '../services/authService.js';
 import { getRoute } from './routes.js';
+const modules = import.meta.glob('../pages/**/*.js');
 
 export const router = {
 	_currentPath: null,
@@ -78,10 +79,16 @@ export const router = {
 		}
 
 		try {
-			const module = await import(route.component);
-			const initFn = module[route.init];
-			if (typeof initFn === 'function') {
-				await initFn();
+			const path = `../pages/${route.component}.js`;
+			const moduleLoader = modules[path];
+			if (moduleLoader) {
+				const module = await moduleLoader();
+				const initFn = module[route.init];
+				if (typeof initFn === 'function') {
+					await initFn();
+				}
+			} else {
+				throw new Error(`Module not found at ${path}`);
 			}
 		} catch (err) {
 			console.log(err);

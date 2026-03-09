@@ -33,16 +33,19 @@ export function render(container, content) {
 	}
 }
 
-export async function registerPartials() {
-	const logoResponse = await fetch('/components/layout/logo.hbs');
-	const logoTemplate = await logoResponse.text();
-	Handlebars.registerPartial('components/layout/logo', logoTemplate);
-	const inputResponse = await fetch('/components/forms/input.hbs');
-	const inputTemplate = await inputResponse.text();
-	Handlebars.registerPartial('components/forms/input', inputTemplate);
-	const buttonResponse = await fetch('/components/forms/button.hbs');
-	const buttonTemplate = await buttonResponse.text();
-	Handlebars.registerPartial('components/forms/button', buttonTemplate);
+const partials = import.meta.glob('../components/partials/**/*.hbs', {
+	query: '?raw',
+	import: 'default',
+	eager: true,
+});
+
+export function registerPartials() {
+	console.log(partials);
+	Object.entries(partials).forEach(([path, content]) => {
+		const name = path.replace('../', '').replace('.hbs', '');
+
+		Handlebars.registerPartial(name, content);
+	});
 	console.log('[Handlebars] Partials registered');
 }
 

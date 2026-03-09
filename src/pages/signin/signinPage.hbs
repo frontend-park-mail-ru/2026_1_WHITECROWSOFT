@@ -1,12 +1,12 @@
 <div class="signinPage">
-	<header class="pageHeader">{{> components/layout/logo }}</header>
+	<header class="pageHeader">{{> components/partials/layout/logo }}</header>
 
 	<main class="formContainer">
 		<h1 class="formTitle">Войдите в свой аккаунт</h1>
 
 		<form id="signinForm" class="authForm">
 			<div class="formFields">
-				{{> components/forms/input
+				{{> components/partials/forms/input
 				    name="username"
 					label="Имя пользователя"
 					type="text"
@@ -15,7 +15,7 @@
 					witherror="true"
 				}}
 
-				{{> components/forms/input
+				{{> components/partials/forms/input
 				    name="password"
 					label="Пароль"
 					type="password"
@@ -31,7 +31,7 @@
 			</div>
 
 			<div class="formButtons">
-				{{> components/forms/button type="submit" text="Войти" variant="primary"
+				{{> components/partials/forms/button type="submit" text="Войти" variant="primary"
 				className="submitButton" }}
 				<span id="authLink">Нет аккаунта? <a href="/signup"> Создать</a><span/>
 			</div>

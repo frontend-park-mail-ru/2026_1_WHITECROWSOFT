@@ -13,19 +13,19 @@
 			/>
 		</div>
 		<button class="sidebarButton">
-			<img src="../../assets/icons/home.svg" class="icon" />
+			<img src="/icons/home.svg" class="icon" />
 			Главная
 		</button>
 		<button class="sidebarButton">
-			<img src="../../assets/icons/bookmark.svg" class="icon" />
+			<img src="/icons/bookmark.svg" class="icon" />
 			Библиотека
 		</button>
 		<button class="sidebarButton">
-			<img src="../../assets/icons/settings.svg" class="icon" />
+			<img src="/icons/settings.svg" class="icon" />
 			Настройки
 		</button>
 		<button id="logoutBtn" class="logoutButton sidebarButton">
-			<img src="../../assets/icons/logout.svg" class="icon" />
+			<img src="/icons/logout.svg" class="icon" />
 			Выйти
 		</button>
 	</div>
@@ -38,7 +38,7 @@
 			class="noteItem {{#if (eq this.id ../activeNoteId)}}active{{/if}}"
 			data-note-id="{{this.id}}"
 		>
-			<img src="../../assets/icons/{{this.icon}}.svg" class="icon" />
+			<img src="/icons/{{this.icon}}.svg" class="icon" />
 			<div class="noteItemTitle">{{this.title}}</div>
 		</div>
 		{{else}}

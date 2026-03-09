@@ -1,12 +1,12 @@
 <div class="signupPage">
-	<header class="pageHeader">{{> components/layout/logo }}</header>
+	<header class="pageHeader">{{> components/partials/layout/logo }}</header>
 
 	<main class="formContainer">
 		<h1 class="formTitle">Регистрация</h1>
 
 		<form id="signupForm" class="authForm" novalidate>
 			<div class="formFields">
-				{{> components/forms/input
+				{{> components/partials/forms/input
 				    name="username"
 					label="Имя пользователя"
 					type="text"
@@ -15,7 +15,7 @@
 					witherror="true"
 				}}
 				
-				{{> components/forms/input
+				{{> components/partials/forms/input
 					name="password"
 					label="Пароль"
 					type="password"
@@ -25,7 +25,7 @@
 					witherror="true"
 				}}
 				
-				{{> components/forms/input
+				{{> components/partials/forms/input
 				    name="passwordConfirm"
 					label="Подтвердить пароль"
 					type="password"
@@ -41,7 +41,7 @@
 			</div>
 
 			<div class="formButtons">
-				{{> components/forms/button type="submit" text="Создать аккаунт"
+				{{> components/partials/forms/button type="submit" text="Создать аккаунт"
 				variant="primary" className="submitButton" }}
 				<span id="authLink"> Есть аккаунт? <a href="/signin"> Войти</a></span>
 			</div>

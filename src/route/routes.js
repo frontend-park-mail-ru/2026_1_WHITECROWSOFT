@@ -1,25 +1,25 @@
 export const routes = [
 	{
 		path: '/signin',
-		component: '/pages/signin/signinPage.js',
+		component: 'signin/signinPage',
 		init: 'initSigninPage',
 		guest: true,
 	},
 	{
 		path: '/signup',
-		component: '/pages/signup/signupPage.js',
+		component: 'signup/signupPage',
 		init: 'initSignupPage',
 		guest: true,
 	},
 	{
 		path: '/',
-		component: '/pages/main/mainPage.js',
+		component: 'main/mainPage',
 		init: 'initMainPage',
 		protected: true,
 	},
 	{
 		path: '*',
-		component: '/pages/not-found/notFoundPage.js',
+		component: 'not-found/notFoundPage',
 		init: 'initNotFoundPage',
 	},
 ];

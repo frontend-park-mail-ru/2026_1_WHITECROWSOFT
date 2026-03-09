@@ -1,6 +1,6 @@
 import { AppError, createError } from "./appError";
 
-const SERVER_URL = 'http://localhost:8000';
+const SERVER_URL = '/api';
 
 /**
  * Класс дял клиента, выполняющего HTTP-запросы к серверу
