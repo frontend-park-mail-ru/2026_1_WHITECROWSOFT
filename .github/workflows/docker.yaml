@@ -5,6 +5,9 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - 'main'
