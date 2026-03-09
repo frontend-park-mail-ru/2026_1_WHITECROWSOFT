@@ -1,5 +1,9 @@
 import Handlebars from 'handlebars';
 import '../../assets/style/authForm.css';
+import {
+	validatePassword,
+	validateUsername,
+} from '../../formValidators/validators.js';
 import { router } from '../../route/router.js';
 import { authService } from '../../services/authService.js';
 import { createFormRenderer } from '../../utils/formRender/formRenderer.js';
@@ -42,12 +46,14 @@ export async function initSigninPage() {
 		validate: (formData) => {
 			// NOTE: If you're signing in,
 			// your pass and username fits or it doesn't.
-			// Yes, this is just to eliminate the text. -Andrew
-			// const u = validateUsername(formData.username);
-			// const p = validatePassword(formData.password);
-			// if (!u.isValid) errors.username = u.error;
-			// if (!p.isValid) errors.password = p.error;
-			return {};
+			// If we'll have a "Forgot password?" prompt,
+			// we might have to eliminate this. -Andrew
+			const errors = {};
+			const u = validateUsername(formData.username);
+			const p = validatePassword(formData.password);
+			if (!u.isValid) errors.username = u.error;
+			if (!p.isValid) errors.password = p.error;
+			return errors;
 		},
 		onSubmit: async (formData) => {
 			await authService.signIn({

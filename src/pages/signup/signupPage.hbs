@@ -1,57 +1,50 @@
 <div class="signupPage">
-    <header class="pageHeader">
-        {{> components/layout/logo }}
-    </header>
+	<header class="pageHeader">{{> components/layout/logo }}</header>
 
-    <main class="formContainer">
-        <h1 class="formTitle">Регистрация</h1>
+	<main class="formContainer">
+		<h1 class="formTitle">Регистрация</h1>
 
-        <form id="signupForm" class="authForm" novalidate>
-            <div class="formFields">
-                {{> components/forms/input
-                    name="username"
-                    label="Имя пользователя"
-                    type="text"
-                    value=formData.username
-                    placeholder="river_wyles"
-                    witherror="true"
-                }}
+		<form id="signupForm" class="authForm" novalidate>
+			<div class="formFields">
+				{{> components/forms/input
+				    name="username"
+					label="Имя пользователя"
+					type="text"
+					value=formData.username
+					placeholder="river_wyles"
+					witherror="true"
+				}}
+				
+				{{> components/forms/input
+					name="password"
+					label="Пароль"
+					type="password"
+					value=formData.password
+					placeholder="********"
+					autocomplete="off"
+					witherror="true"
+				}}
+				
+				{{> components/forms/input
+				    name="passwordConfirm"
+					label="Подтвердить пароль"
+					type="password"
+					value=formData.passwordConfirm
+					placeholder="********"
+					autocomplete="off"
+					witherror="true"
+				}}
 
-                {{> components/forms/input
-                    name="password"
-                    label="Пароль"
-                    type="password"
-                    value=formData.password
-                    placeholder="********"
-                    autocomplete="off"
-                    witherror="true"
-                }}
+				<div class="formError" data-error-container style="visibility: hidden">
+					<span class="errorMessage" role="alert" data-error-text></span>
+				</div>
+			</div>
 
-                {{> components/forms/input
-                    name="passwordConfirm"
-                    label="Подтвердить пароль"
-                    type="password"
-                    value=formData.passwordConfirm
-                    placeholder="********"
-                    autocomplete="off"
-                    witherror="true"
-                }}
-
-            <div class="formError" data-error-container style="visibility: hidden;">
-                <span class="errorMessage" role="alert" data-error-text></span>
-            </div>
-            </div>
-
-            <div class="formButtons">
-                {{> components/forms/button
-                    type="submit"
-                    text="Создать аккаунт"
-                    variant="primary"
-                    className="submitButton"
-                }}
-                <span id="authLink"> Есть аккаунт? <a href="/signin"> Войти</a></span>
-            </div>
-        </form>
-
-    </main>
+			<div class="formButtons">
+				{{> components/forms/button type="submit" text="Создать аккаунт"
+				variant="primary" className="submitButton" }}
+				<span id="authLink"> Есть аккаунт? <a href="/signin"> Войти</a></span>
+			</div>
+		</form>
+	</main>
 </div>

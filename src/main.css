@@ -88,7 +88,7 @@ h5 {
 }
 
 .input.error {
-  border: 1.25px solid var(--danger-red);  
+	border: 1.25px solid var(--danger-red);
 }
 
 .input:focus,
@@ -128,4 +128,11 @@ h5 {
 .icon {
 	width: 15px;
 	height: 15px;
+}
+
+.pageHeader,
+.appTitle {
+	-ms-user-select: none;
+	-webkit-user-select: none;
+	user-select: none;
 }

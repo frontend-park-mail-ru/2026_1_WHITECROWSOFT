@@ -10,15 +10,15 @@ const mockData = {
 	activeNav: 'library',
 	activeNoteId: 'empty-note',
 	notes: [
-		{ id: 'projects', title: 'Projects', icon: 'empty-page' },
+		{ id: 'projects', title: 'Projects', icon: 'document' },
 		{ id: 'to-the-moon', title: 'To the Moon', icon: 'empty-page' },
 		{ id: 'finding-paradise', title: 'Finding Paradise', icon: 'plane' },
 		{ id: 'empty-note', title: 'Empty note', icon: 'empty-page' },
-		{ id: 'travels', title: 'Travel', icon: 'empty-page' },
+		{ id: 'travels', title: 'Travel', icon: 'document' },
 		{
 			id: 'extended-note',
 			title: 'A note with an extremely, obscenely long title',
-			icon: 'empty-page',
+			icon: 'document',
 		},
 		{ id: 'impostor-factory', title: 'Impostor Factory', icon: 'star-shine' },
 	],
