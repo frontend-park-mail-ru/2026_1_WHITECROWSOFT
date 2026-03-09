@@ -27,6 +27,7 @@
 
 .notesList {
 	overflow-y: scroll;
+	max-width: 100%;
 }
 
 .sidebarButton,
