@@ -79,7 +79,7 @@ export async function initMainPage() {
 		id: activeNote.note.id,
 		title: activeNote.note.title,
 		breadcrumb: activeNote.note.title,
-		text: activeNote.blocks.map(item => item.content).join("<br>")
+		text: activeNote.blocks.map(item => item.content).join("\n\n")
 	};
 
 	const state = { ...data };
@@ -102,7 +102,7 @@ export async function initMainPage() {
 
 		if (titleEl) titleEl.textContent = selectedNote.note.title;
 		if (breadcrumbEl) breadcrumbEl.textContent = selectedNote.note.title;
-		if (noteBody) noteBody.textContent = selectedNote.blocks.map(item => item.content).join("<br>");
+		if (noteBody) noteBody.textContent = selectedNote.blocks.map(item => item.content).join("\n\n");
 
 		document.querySelectorAll('[data-note-id]').forEach((el) => {
 			el.classList.toggle('active', el.dataset.noteId === newNoteId);
