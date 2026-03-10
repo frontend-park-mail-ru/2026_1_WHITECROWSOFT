@@ -26,7 +26,6 @@
 		black calc(100% - 80px),
 		transparent 100%
 	);
-    padding-bottom: 700px !important;
 }
 
 .noteContent,
@@ -65,4 +64,5 @@
 	line-height: 1.6;
 	text-align: left;
 	white-space: pre-wrap;
+    padding-bottom: 700px !important;
 }
