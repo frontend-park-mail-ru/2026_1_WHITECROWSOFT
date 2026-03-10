@@ -2,12 +2,25 @@ import { authService } from '../services/authService.js';
 import { getRoute } from './routes.js';
 const modules = import.meta.glob('../pages/**/*.js');
 
+
+/**
+ * Роутер для навигации между страницами
+ * @namespace router
+ * @property {string} _currentPath - текущий путь
+ * @property {boolean|null} _authCache - кэш статуса авторизации
+ * @property {number} _authCacheTime - время последней проверки авторизации
+ * @property {number} _AUTH_CACHE_MS - время жизни кэша (5000 мс)
+*/
 export const router = {
 	_currentPath: null,
 	_authCache: null,
 	_authCacheTime: 0,
 	_AUTH_CACHE_MS: 5000,
 
+	/**
+	 * Инициализирует роутер
+	 * @returns {void}
+	*/
 	init() {
 		window.addEventListener('popstate', (e) => {
 			this.handleRoute(e.state?.path || window.location.pathname);
@@ -42,18 +55,34 @@ export const router = {
 		this.handleRoute(window.location.pathname);
 	},
 
+	/**
+	 * Переводит на новый путь
+	 * @param {string} path - целевой путь
+	 * @returns {void}
+	*/
 	push(path) {
 		if (path === this._currentPath) return;
 		history.pushState({ path }, '', path);
 		this.handleRoute(path);
 	},
 
+	/**
+	 * Заменяет текущий путь
+	 * @param {string} path - целевой путь
+	 * @returns {void}
+	*/
 	replace(path) {
 		if (path === this._currentPath) return;
 		history.replaceState({ path }, '', path);
 		this.handleRoute(path);
 	},
 
+	/**
+	 * Обрабатывает маршрут и загружает соответствующую страницу
+	 * @async
+	 * @param {string} path - путь для обработки
+	 * @returns {Promise<void>}
+	*/
 	async handleRoute(path) {
 		if (path === this._currentPath) {
 			return;
@@ -125,6 +154,10 @@ export const router = {
 	// 	return { allowed: true, redirectTo: '' };
 	// },
 
+	/**
+	 * Очищает кэш авторизации
+	 * @returns {void}
+	*/
 	clearAuthCache() {
 		this._authCache = null;
 		this._authCacheTime = 0;

@@ -1,5 +1,12 @@
 import Handlebars from 'handlebars';
 
+/**
+ * Создает DOM элемент с заданными свойствами и дочерними элементами
+ * @param {string} tag - тег элемента
+ * @param {Object} [props={}] - свойства элемента (class, id, on* события и т.д.)
+ * @param {Array} [children=[]] - дочерние элементы
+ * @returns {HTMLElement} созданный элемент
+*/
 export function el(tag, props = {}, children = []) {
 	const element = document.createElement(tag);
 
@@ -24,6 +31,11 @@ export function el(tag, props = {}, children = []) {
 	return element;
 }
 
+/**
+ * Рендерит контент в указанный контейнер
+ * @param {HTMLElement} container - контейнер для рендеринга
+ * @param {string|Node} content - строка HTML или DOM элемент
+*/
 export function render(container, content) {
 	container.innerHTML = '';
 	if (typeof content === 'string') {
@@ -39,6 +51,9 @@ const partials = import.meta.glob('../components/partials/**/*.hbs', {
 	eager: true,
 });
 
+/**
+ * Регистрирует Handlebars partials из файлов .hbs
+*/
 export function registerPartials() {
 	console.log(partials);
 	Object.entries(partials).forEach(([path, content]) => {
@@ -49,6 +64,9 @@ export function registerPartials() {
 	console.log('[Handlebars] Partials registered');
 }
 
+/**
+ * Регистрирует Handlebars helpers для использования в шаблонах
+*/
 export function registerHelpers() {
 	Handlebars.registerHelper('eq', function (a, b) {
 		return a === b;

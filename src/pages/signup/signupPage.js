@@ -11,6 +11,17 @@ import { createFormRenderer } from '../../utils/formRender/formRenderer.js';
 import { registerHelpers, registerPartials } from '../../utils/utils.js';
 import templateText from './signupPage.hbs?raw';
 
+
+/**
+ * Инициализирует страницу регистрации
+ * @async
+ * @function initSignupPage
+ * @returns {Promise<void>}
+ * 
+ * @description
+ * Отображает форму входа, обрабатывает валидацию полей,
+ * отправку данных на сервер и перенаправление после успешной регистрации
+*/
 export async function initSignupPage() {
 	registerHelpers();
 	registerPartials();

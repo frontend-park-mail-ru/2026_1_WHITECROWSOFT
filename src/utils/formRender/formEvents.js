@@ -1,12 +1,27 @@
+/**
+ * Создает объект с методами для управления событиями формы
+ * @param {HTMLElement} container - DOM элемент контейнера формы
+ * @param {Object} actions - экшены для обновления состояния
+ * @param {Object} handlers - обработчики формы (валидация, отправка, навигация)
+ * @returns {Object} объект с методами attach и detach
+*/
 export function createFormEvents(container, actions, handlers) {
 	let cleanup = null;
 
+	/**
+	 * Обрабатывает изменение полей ввода
+	 * @param {Event} e - событие input
+	*/
 	function handleInput(e) {
 		const input = e.target.closest('input');
 		if (!input?.name) return;
 		actions.inputChange?.(input.name, input.value);
 	}
 
+	/**
+	 * Обрабатывает отправку формы
+	 * @param {Event} e - событие submit
+	*/
 	async function handleSubmit(e) {
 		e.preventDefault();
 		actions.submitStart();
@@ -30,6 +45,10 @@ export function createFormEvents(container, actions, handlers) {
 		}
 	}
 
+	/**
+	 * Обрабатывает клики по ссылкам навигации
+	 * @param {Event} e - событие click
+	*/
 	function handleNavigation(e) {
 		const link = e.target.closest('[data-link]');
 		if (link) {
@@ -38,6 +57,11 @@ export function createFormEvents(container, actions, handlers) {
 		}
 	}
 
+	/**
+	 * Создает обработчик для кнопки показа/скрытия пароля
+	 * @param {HTMLElement} button - кнопка переключения
+	 * @returns {Function} обработчик клика
+	*/
 	function handlePasswordVisibility(button) {
 		return (e) => {
 			e.preventDefault();
@@ -59,6 +83,9 @@ export function createFormEvents(container, actions, handlers) {
 		};
 	}
 
+	/**
+	 * Прикрепляет все обработчики событий к форме
+	*/
 	function attach() {
 		const form = container?.querySelector('form');
 		const toggleBtns = container?.querySelectorAll('[data-toggle-password]');
@@ -83,6 +110,9 @@ export function createFormEvents(container, actions, handlers) {
 		};
 	}
 
+	/**
+	 * Открепляет все обработчики событий
+	*/
 	function detach() {
 		cleanup?.();
 	}

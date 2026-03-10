@@ -10,6 +10,17 @@ import { createFormRenderer } from '../../utils/formRender/formRenderer.js';
 import { registerHelpers, registerPartials } from '../../utils/utils.js';
 import templateText from './signinPage.hbs?raw';
 
+
+/**
+ * Инициализирует страницу входа в систему
+ * @async
+ * @function initSigninPage
+ * @returns {Promise<void>}
+ * 
+ * @description
+ * Отображает форму входа, обрабатывает валидацию полей,
+ * отправку данных на сервер и перенаправление после успешного входа
+*/
 export async function initSigninPage() {
 	registerHelpers();
 	registerPartials();

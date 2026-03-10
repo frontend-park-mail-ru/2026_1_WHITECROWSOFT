@@ -3,6 +3,18 @@ import { createFormEvents } from './formEvents.js';
 import { createFormStore } from './formStore.js';
 import { createFormView } from './formView.js';
 
+/**
+ * Создает рендерер формы с состоянием, экшенами, событиями и представлением
+ * @param {Object} config - конфигурация формы
+ * @param {string} config.containerSelector - CSS селектор контейнера
+ * @param {Function} config.template - Handlebars шаблон формы
+ * @param {Object} config.initialState - начальное состояние формы
+ * @param {Function} config.validate - функция валидации формы
+ * @param {Function} config.onSubmit - функция отправки данных
+ * @param {Function} config.onSuccess - колбэк при успешной отправке
+ * @param {Function} config.onNavigate - колбэк для навигации
+ * @returns {Object} объект для управления формой
+*/
 export function createFormRenderer(config) {
 	const {
 		containerSelector,
@@ -21,6 +33,9 @@ export function createFormRenderer(config) {
 	let events = null;
 	let unsubscribe = null;
 
+	/**
+	 * Инициализирует форму и все её компоненты
+	*/
 	function init() {
 		container = document.querySelector(containerSelector);
 		if (!container) {
@@ -50,6 +65,9 @@ export function createFormRenderer(config) {
 		});
 	}
 
+	/**
+	 * Уничтожает форму и очищает все подписки и обработчики
+	*/
 	function destroy() {
 		unsubscribe?.();
 		events?.detach();
@@ -61,10 +79,19 @@ export function createFormRenderer(config) {
 		unsubscribe = null;
 	}
 
+	/**
+	 * Возвращает текущее состояние формы
+	 * @returns {Object} состояние формы
+	*/
 	function getState() {
 		return store?.getState();
 	}
 
+	/**
+	 * Отправляет действие (для отладки)
+	 * @param {string} type - тип действия
+	 * @param {*} payload - данные действия
+	*/
 	function dispatch(type, payload) {
 		console.log(`[Dispatch] ${type}`, payload);
 	}
