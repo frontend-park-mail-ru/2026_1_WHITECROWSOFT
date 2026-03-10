@@ -55,9 +55,7 @@ export async function initSigninPage() {
 			// we might have to eliminate this. -Andrew
 			const errors = {};
 			const u = validateUsername(formData.username);
-			const p = validatePassword(formData.password);
 			if (!u.isValid) errors.username = u.error;
-			if (!p.isValid) errors.password = p.error;
 			return errors;
 		},
 		onSubmit: async (formData) => {
