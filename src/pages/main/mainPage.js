@@ -50,6 +50,17 @@ import templateText from './mainPage.hbs?raw';
 // 	},
 // };
 
+
+/**
+ * Инициализирует главную страницу с заметками
+ * @async
+ * @function initMainPage
+ * @returns {Promise<void>}
+ * 
+ * @description
+ * Загружает список заметок, отображает активную заметку,
+ * создает боковую панель и настраивает переключение между заметками
+*/
 export async function initMainPage() {
 	registerHelpers();
 	const template = Handlebars.compile(templateText);

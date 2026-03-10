@@ -1,3 +1,8 @@
+/**
+ * Проверяет корректность имени пользователя
+ * @param {string} username - имя пользователя
+ * @returns {Object} результат валидации { isValid: boolean, error: string }
+*/
 export function validateUsername(username) {
 	if (!username) {
 		return {
@@ -19,6 +24,11 @@ export function validateUsername(username) {
 	};
 }
 
+/**
+ * Проверяет корректность пароля
+ * @param {string} password - пароль
+ * @returns {Object} результат валидации { isValid: boolean, error: string }
+*/
 export function validatePassword(password) {
 	if (!password) {
 		return {
@@ -54,6 +64,12 @@ export function validatePassword(password) {
 	};
 }
 
+/**
+ * Проверяет совпадение пароля и подтверждения
+ * @param {string} password - пароль
+ * @param {string} passwordConfirm - подтверждение пароля
+ * @returns {Object} результат валидации { isValid: boolean, error: string }
+*/
 export function validatePasswordConfirm(password, passwordConfirm) {
 	if (!passwordConfirm) {
 		return {

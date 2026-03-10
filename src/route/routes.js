@@ -1,3 +1,12 @@
+/**
+ * Массив маршрутов приложения
+ * @type {Array<Object>}
+ * @property {string} path - URL путь
+ * @property {string} component - путь к компоненту страницы
+ * @property {string} init - имя функции инициализации страницы
+ * @property {boolean} [guest] - доступно только для неавторизованных
+ * @property {boolean} [protected] - требует авторизации
+*/
 export const routes = [
 	{
 		path: '/signin',
@@ -24,6 +33,11 @@ export const routes = [
 	},
 ];
 
+/**
+ * Возвращает маршрут по пути
+ * @param {string} path - путь для поиска
+ * @returns {Object} найденный маршрут или маршрут по умолчанию (*)
+*/
 export function getRoute(path) {
 	return (
 		routes.find((r) => r.path === path) || routes.find((r) => r.path === '*')

@@ -1,8 +1,19 @@
 import { render } from '../utils.js';
 
+/**
+ * Создает объект для управления представлением формы
+ * @param {HTMLElement} container - DOM элемент контейнера
+ * @param {Function} template - Handlebars шаблон формы
+ * @returns {Object} объект с методами для работы с представлением
+*/
 export function createFormView(container, template) {
 	let errorCache = null;
 
+	/**
+	 * Кэширует DOM элементы для отображения ошибок
+	 * @private
+	 * @returns {Object} объект с кэшированными элементами
+	*/
 	function cacheErrorElements() {
 		const form = container.querySelector('form');
 		if (!form) return { container: null, text: null, fields: new Map() };
@@ -22,6 +33,10 @@ export function createFormView(container, template) {
 		return { container: errorContainer, text: errorText, fields };
 	}
 
+	/**
+	 * Полностью рендерит форму с текущим состоянием
+	 * @param {Object} state - состояние формы
+	*/
 	function renderFull(state) {
 		if (!container) return;
 		const html = template(state);
@@ -29,6 +44,11 @@ export function createFormView(container, template) {
 		errorCache = cacheErrorElements();
 	}
 
+	/**
+	 * Отображает ошибки валидации и серверные ошибки
+	 * @param {Object} [errors={}] - ошибки полей формы
+	 * @param {string} [serverError=''] - серверная ошибка
+	*/
 	function renderErrors(errors = {}, serverError = '') {
 		if (!errorCache) return;
 
@@ -64,10 +84,17 @@ export function createFormView(container, template) {
 		});
 	}
 
+	/**
+	 * Возвращает кэш элементов ошибок
+	 * @returns {Object|null} кэш элементов
+	*/
 	function getCache() {
 		return errorCache;
 	}
 
+	/**
+	 * Очищает контейнер и сбрасывает кэш
+	*/
 	function clear() {
 		errorCache = null;
 		if (container) container.innerHTML = '';
