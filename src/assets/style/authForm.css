@@ -79,7 +79,44 @@
 .eyeIcon {
 	z-index: 9999;
 	position: absolute;
-	top: 30%;
+	top: 10px;
 	right: 16px;
 	cursor: pointer;
+}
+
+.validatorIcon {
+    z-index: 9999;
+    position: absolute;
+    top: 30%;
+    right: -24px;
+    cursor: pointer
+}
+
+.validation-list {
+    z-index: 9999;
+	position: absolute;
+    top: -0px;
+    right: -250px;
+
+    list-style: none;
+    padding: 0;
+    margin: 0;
+
+    padding: 10px 10px;
+	background: var(--background);
+	border: 1.25px solid var(--faint-a);
+    border-radius: 10px;
+
+    font-size: 12px;
+}
+
+.requirement {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.2s ease;
+}
+
+.requirement .icon {
+    width: 12px;
 }

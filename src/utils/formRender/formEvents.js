@@ -1,3 +1,5 @@
+import { validatePasswordState } from '../../formValidators/validators';
+
 /**
  * Создает объект с методами для управления событиями формы
  * @param {HTMLElement} container - DOM элемент контейнера формы
@@ -83,12 +85,54 @@ export function createFormEvents(container, actions, handlers) {
 		};
 	}
 
+    function redrawPasswordValidator(input) {
+        const validatorContainer = input.parentElement.querySelector('[data-password-validator]');
+        const password = input.value;
+        const requirements = validatePasswordState(password);
+
+        validatorContainer.innerHTML = `
+            <ul class="validation-list">
+                ${requirements.map(req => `
+                    <li class="requirement">
+                        <img src="/icons/${req.isMet ? 'req_yes' : 'req_no'}.svg" class="icon" />
+                        
+                        ${req.label}
+                    </li>
+                `).join('')}
+            </ul>
+        `;
+    }
+
+    function handlePasswordValidator(input) {
+        // God, please forgive me for writing this function.
+        // Exam in an hour, so...
+        // const validatorContainer = input.parentElement.querySelector('[data-password-validator]');
+
+        return (e) => redrawPasswordValidator(input);
+
+    }
+
+    function hidePasswordValidator(input) {
+        return (e) => {
+            const validatorContainer = input.parentElement.querySelector('[data-password-validator]');
+            validatorContainer.style.display = "none";
+        }
+    }
+
+    function showPasswordValidator(input) {
+        return (e) => {
+            const validatorContainer = input.parentElement.querySelector('[data-password-validator]');
+            validatorContainer.style.display = "inline-block";
+        }
+    }
+
 	/**
 	 * Прикрепляет все обработчики событий к форме
 	*/
 	function attach() {
 		const form = container?.querySelector('form');
 		const toggleBtns = container?.querySelectorAll('[data-toggle-password]');
+        const regPasses = container?.querySelectorAll('[data-registration-password]');
 		if (!form) {
 			return;
 		}
@@ -100,6 +144,13 @@ export function createFormEvents(container, actions, handlers) {
 		toggleBtns?.forEach((btn) => {
 			btn.addEventListener('click', handlePasswordVisibility(btn));
 		});
+        regPasses?.forEach((input) => {
+            redrawPasswordValidator(input)
+            input.addEventListener('focus', showPasswordValidator(input))
+            input.addEventListener('blur', hidePasswordValidator(input))
+            input.addEventListener('input', handlePasswordValidator(input))
+        })
+
 		cleanup = () => {
 			form.removeEventListener('input', handleInput);
 			form.removeEventListener('submit', handleSubmit);
