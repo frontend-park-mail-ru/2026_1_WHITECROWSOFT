@@ -74,3 +74,19 @@
 
 	border: 1px solid #706e7f;
 }
+
+.searchBox {
+	position: relative;
+}
+
+.searchIcon {
+	z-index: 9999;
+	position: absolute;
+	top: 30%;
+	left: 16px;
+	cursor: pointer;
+}
+
+.searchInput {
+	padding-left: 40px;
+}
