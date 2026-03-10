@@ -70,13 +70,13 @@ export const router = {
 			return;
 		}
 
-		const authCheck = await this.checkAuth(route);
-		if (!authCheck.allowed) {
-			if (authCheck.redirectTo !== path) {
-				this.replace(authCheck.redirectTo);
-			}
-			return;
-		}
+		// const authCheck = await this.checkAuth(route);
+		// if (!authCheck.allowed) {
+		// 	if (authCheck.redirectTo !== path) {
+		// 		this.replace(authCheck.redirectTo);
+		// 	}
+		// 	return;
+		// }
 
 		try {
 			const path = `../pages/${route.component}.js`;
@@ -98,32 +98,32 @@ export const router = {
 		}
 	},
 
-	async checkAuth(route) {
-		const now = Date.now();
+	// async checkAuth(route) {
+	// 	const now = Date.now();
 
-		if (
-			this._authCache !== null &&
-			now - this._authCacheTime < this._AUTH_CACHE_MS
-		) {
-			return this._checkAuthLogic(route, this._authCache);
-		}
+	// 	if (
+	// 		this._authCache !== null &&
+	// 		now - this._authCacheTime < this._AUTH_CACHE_MS
+	// 	) {
+	// 		return this._checkAuthLogic(route, this._authCache);
+	// 	}
 
-		const isAuthenticated = await authService.checkAuth();
-		this._authCache = isAuthenticated;
-		this._authCacheTime = Date.now();
+	// 	const isAuthenticated = await authService.checkAuth();
+	// 	this._authCache = isAuthenticated;
+	// 	this._authCacheTime = Date.now();
 
-		return this._checkAuthLogic(route, isAuthenticated);
-	},
+	// 	return this._checkAuthLogic(route, isAuthenticated);
+	// },
 
-	_checkAuthLogic(route, isAuthenticated) {
-		if (route.protected && !isAuthenticated) {
-			return { allowed: false, redirectTo: '/signin' };
-		}
-		if (route.guest && isAuthenticated) {
-			return { allowed: false, redirectTo: '/' };
-		}
-		return { allowed: true, redirectTo: '' };
-	},
+	// _checkAuthLogic(route, isAuthenticated) {
+	// 	if (route.protected && !isAuthenticated) {
+	// 		return { allowed: false, redirectTo: '/signin' };
+	// 	}
+	// 	if (route.guest && isAuthenticated) {
+	// 		return { allowed: false, redirectTo: '/' };
+	// 	}
+	// 	return { allowed: true, redirectTo: '' };
+	// },
 
 	clearAuthCache() {
 		this._authCache = null;

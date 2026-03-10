@@ -12,12 +12,6 @@ import { registerHelpers, registerPartials } from '../../utils/utils.js';
 import templateText from './signupPage.hbs?raw';
 
 export async function initSignupPage() {
-	const user = await authService.checkAuth();
-	if (user) {
-		router.replace('/');
-		return;
-	}
-
 	registerHelpers();
 	registerPartials();
 

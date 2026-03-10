@@ -11,12 +11,6 @@ import { registerHelpers, registerPartials } from '../../utils/utils.js';
 import templateText from './signinPage.hbs?raw';
 
 export async function initSigninPage() {
-	const user = await authService.checkAuth();
-	if (user) {
-		router.replace('/');
-		return;
-	}
-
 	registerHelpers();
 	registerPartials();
 	const template = Handlebars.compile(templateText);

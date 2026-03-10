@@ -63,5 +63,5 @@
 	width: 100%;
 	line-height: 1.6;
 	text-align: left;
-	/*white-space: pre-wrap; UNCOMMENT ME IF DB SAVES THIS! */
+	white-space: pre-wrap;
 }

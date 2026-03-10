@@ -2,6 +2,38 @@ import { client } from '../client/client.js';
 import { router } from '../route/router.js';
 
 export const authService = {
+	async getNotes() {
+		try {
+			const result = client.get('/notes');
+			// router.clearAuthCache();
+			return result;
+		} catch (error) {
+			if (error?.status === 401 || error?.message?.includes('401')) {
+				console.debug('[Auth] User not authenticated (expected)');
+				return null;
+			}
+			console.warn('[Auth] Check failed:', error);
+			return null;
+		}
+	},
+
+	async getNote(noteID) {
+		try {
+			const result = client.get(`/notes/${noteID}`);
+			// if (result.status != 200) {
+			// 	throw new Error;
+			// }
+			return result;
+		} catch (error) {
+			if (error?.status === 401 || error?.message?.includes('401')) {
+				console.debug('[Auth] User not authenticated (expected)');
+				return null;
+			}
+			console.warn('[Auth] Check failed:', error);
+			return null;
+		}
+	},
+
 	async signUp(data) {
 		const result = client.post('/signup', data);
 		router.clearAuthCache();
