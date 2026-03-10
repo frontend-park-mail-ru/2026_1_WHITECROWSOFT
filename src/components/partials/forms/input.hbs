@@ -9,6 +9,7 @@
 			autocomplete="{{autocomplete}}"
 			required
 			class="input {{#if error}}error{{/if}}"
+            {{#if (eq withrequirements "true")}}data-registration-password{{/if}}
 		/>
 		{{#if (eq type "password")}}
 		<span class="passwordToggle" data-toggle-password>
@@ -23,6 +24,16 @@
 			/>
 		</span>
 		{{/if}}
+        {{#if (eq withrequirements "true") }}
+        <span class="validatorToggle" style="display:none" data-toggle-validator>
+			<img
+				src="/icons/validation.svg"
+				class="icon validatorIcon"
+			/>
+		</span>
+        <div class="passwordValidator" style="display:none" data-password-validator>
+        </div>
+        {{/if}}
 	</div>
 	{{#if (eq witherror "true")}}
 	<span
