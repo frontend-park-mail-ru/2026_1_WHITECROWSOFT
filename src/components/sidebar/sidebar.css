@@ -51,6 +51,10 @@
 	color: var(--text);
 }
 
+.sidebarButton-not-allowed {
+	cursor: not-allowed;
+}
+
 .sidebarButton.disabled {
 	pointer-events: none;
 }
