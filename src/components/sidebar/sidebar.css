@@ -26,7 +26,7 @@
 }
 
 .notesList {
-	overflow-y: scroll;
+	/* overflow-y: scroll; */
 	max-width: 100%;
 	width: 100%;
 }
