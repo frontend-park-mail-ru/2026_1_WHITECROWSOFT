@@ -6,7 +6,7 @@ export function validateUsername(username) {
 		};
 	}
 
-	if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+	if (!/^[a-zA-Zа-яА-Я0-9_]+$/.test(username)) {
 		return {
 			isValid: false,
 			error: 'Имя польхователя может содержать только буквы, цифры и _',
@@ -37,14 +37,14 @@ export function validatePassword(password) {
 	if (!/\d/.test(password)) {
 		return {
 			isValid: false,
-			error: 'Пароль должен содержать хотя бы одну цифру',
+			error: 'Нужна хотя бы одна заглавная буква и цифра',
 		};
 	}
 
-	if (!/[A-Z]/.test(password)) {
+	if (!/[A-ZА-Я]/.test(password)) {
 		return {
 			isValid: false,
-			error: 'Пароль должен содержать хотя бы одну заглавную букву',
+			error: 'Нужна хотя бы одна заглавная буква и цифра',
 		};
 	}
 
