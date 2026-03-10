@@ -58,6 +58,13 @@ export function validatePassword(password) {
 		};
 	}
 
+	if (/[!@#$%^&*()<>.,!?;:\[\]]{}/.test(password)) {
+		return {
+			isValid: false,
+			error: 'Пароль не жолжен содержать символы: !@#$%^&*()<>.,!?;:\[\]]{}'
+		}
+	}
+
 	return {
 		isValid: true,
 		error: '',
