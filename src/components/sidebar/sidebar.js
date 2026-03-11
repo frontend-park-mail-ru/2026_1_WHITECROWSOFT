@@ -31,7 +31,7 @@ export class Sidebar {
 	 * @throws {Error} Если не удалось загрузить шаблон
 	*/
 	async init() {
-	  this.template = Handlebars.compile(templateText);
+		this.template = Handlebars.compile(templateText);
 		render(this.container, this.template(this.state));
 		this.bindEvents();
 	}

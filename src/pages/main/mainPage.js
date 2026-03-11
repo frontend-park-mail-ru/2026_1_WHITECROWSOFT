@@ -27,11 +27,8 @@ export async function initMainPage() {
 	for (let i = 0; i < data.total; ++i) {
 		data.notes[i].icon = "document";
 	}
-	console.log(data);
-	console.log(data.notes[0].ID);
 
 	let activeNote = await authService.getNote(data.notes[0].ID);
-	console.log(activeNote);
 	data["activeNoteId"] = activeNote.note.ID;
 	data["activeNote"] = {
 		ID: activeNote.note.ID,
