@@ -36,11 +36,11 @@
 	<div class="notesList">
 		{{#each notes}}
 		<div
-			class="noteItem {{#if (eq this.id ../activeNoteId)}}active{{/if}}"
-			data-note-id="{{this.id}}"
+			class="noteItem {{#if (eq this.ID ../activeNoteId)}}active{{/if}}"
+			data-note-id="{{this.ID}}"
 		>
 			<img src="/icons/{{this.icon}}.svg" class="icon" />
-			<div class="noteItemTitle">{{this.title}}</div>
+			<div class="noteItemTitle">{{this.Title}}</div>
 		</div>
 		{{else}}
 		<div class="emptyNotes">

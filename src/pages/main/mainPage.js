@@ -27,13 +27,16 @@ export async function initMainPage() {
 	for (let i = 0; i < data.total; ++i) {
 		data.notes[i].icon = "document";
 	}
+	console.log(data);
+	console.log(data.notes[0].ID);
 
-	let activeNote = await authService.getNote(data.notes[0].id);
-	data["activeNoteId"] = activeNote.note.id;
+	let activeNote = await authService.getNote(data.notes[0].ID);
+	console.log(activeNote);
+	data["activeNoteId"] = activeNote.note.ID;
 	data["activeNote"] = {
-		id: activeNote.note.id,
-		title: activeNote.note.title,
-		breadcrumb: activeNote.note.title,
+		ID: activeNote.note.ID,
+		title: activeNote.note.Title,
+		breadcrumb: activeNote.note.Title,
 		text: activeNote.blocks.map(item => item.content).join("\n\n")
 	};
 
@@ -55,8 +58,8 @@ export async function initMainPage() {
 		const breadcrumbEl = document.querySelector('.currentItem');
 		const noteBody = document.querySelector('.noteBody');
 
-		if (titleEl) titleEl.textContent = selectedNote.note.title;
-		if (breadcrumbEl) breadcrumbEl.textContent = selectedNote.note.title;
+		if (titleEl) titleEl.textContent = selectedNote.note.Title;
+		if (breadcrumbEl) breadcrumbEl.textContent = selectedNote.note.Title;
 		if (noteBody) noteBody.textContent = selectedNote.blocks.map(item => item.content).join("\n\n");
 
 		document.querySelectorAll('[data-note-id]').forEach((el) => {
@@ -64,6 +67,6 @@ export async function initMainPage() {
 		});
 	};
 
-	const sidebar = new Sidebar('sidebarContainer', state, (id) => updateUI(id));
+	const sidebar = new Sidebar('sidebarContainer', state, (ID) => updateUI(ID));
 	await sidebar.init();
 }
