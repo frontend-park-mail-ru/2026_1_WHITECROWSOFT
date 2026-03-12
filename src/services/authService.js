@@ -89,17 +89,43 @@ export const authService = {
 	 * @async
 	 * @returns {Promise<Object|null>} данные пользователя или null
 	*/
-	async checkAuth() {
+	async getUserSession() {
 		try {
 			const user = await client.get('/protected');
 			return user;
 		} catch (error) {
 			if (error?.status === 401 || error?.message?.includes('401')) {
-				console.debug('[Auth] User not authenticated (expected)');
-				return null;
-			}
-			console.warn('[Auth] Check failed:', error);
-			return null;
+				return {
+					isAuthenticated: false,
+					user: null,
+					error: {
+						type: 'AUTH',
+						status: 401,
+						redirectTo: '/signin',
+						onSamePage: false
+					}
+				};
+			} 
+			if (error?.status >= 500) {
+				return {
+                    isAuthenticated: false,
+                    user: null,
+                    error: {
+                        type: 'SERVER',
+                        status: error.status,
+						onSamePage: true
+                    }
+                };
+			} 
+			return {
+                isAuthenticated: false,
+                user: null,
+                error: {
+                    type: 'NETWORK',
+                    status: error?.status || 0,
+					onSamePage: true
+                }
+            };
 		}
 	},
 };

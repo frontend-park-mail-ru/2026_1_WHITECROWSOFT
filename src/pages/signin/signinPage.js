@@ -1,9 +1,5 @@
 import Handlebars from 'handlebars';
 import '../../assets/style/authForm.css';
-import {
-	validatePassword,
-	validateUsername,
-} from '../../formValidators/validators.js';
 import { router } from '../../route/router.js';
 import { authService } from '../../services/authService.js';
 import { createFormRenderer } from '../../utils/formRender/formRenderer.js';
@@ -54,8 +50,8 @@ export async function initSigninPage() {
 			// If we'll have a "Forgot password?" prompt,
 			// we might have to eliminate this. -Andrew
 			const errors = {};
-			const u = validateUsername(formData.username);
-			if (!u.isValid) errors.username = u.error;
+			// const u = validateUsername(formData.username);
+			// if (!u.isValid) errors.username = u.error;
 			return errors;
 		},
 		onSubmit: async (formData) => {

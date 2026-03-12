@@ -36,7 +36,7 @@ export function validateUsernameState(username = '') {
         {
             id: 'chars',
             label: 'Только буквы, цифры и _',
-            error: 'Имя пользователя может содержать только буквы, цифры и _',
+            error: 'В имени могут быть только буквы, цифры и _',
             isMet: /^[a-zA-Zа-яА-Я0-9_]+$/.test(username)
         }
     ];
@@ -90,8 +90,8 @@ export function validatePasswordState(password = '') {
         {
             id: 'no_special',
             label: 'Не содержит спецсимволы',
-            error: 'Пароль не должен содержать символы: !@#$%^&*()<>.,!?;:\[\]]{}',
-            isMet: !/[!@#$%^&*()<>.,!?;:[\]{}]/.test(password)
+            error: 'Пароль не должен содержать символы: !@#$%^&*()<>.,!?;:[]{}',
+            isMet: !/[!@#$%^&*()<>.,!?;:\[\]{}]/.test(password)
         }
     ];
 }

@@ -103,24 +103,15 @@ export function createFormEvents(container, actions, handlers) {
         `;
     }
 
-    function handlePasswordValidator(input) {
-        // God, please forgive me for writing this function.
-        // Exam in an hour, so...
-        // const validatorContainer = input.parentElement.querySelector('[data-password-validator]');
-
-        return (e) => redrawPasswordValidator(input);
-
-    }
-
     function hidePasswordValidator(input) {
-        return (e) => {
+        return () => {
             const validatorContainer = input.parentElement.querySelector('[data-password-validator]');
             validatorContainer.style.display = "none";
         }
     }
 
     function showPasswordValidator(input) {
-        return (e) => {
+        return () => {
             const validatorContainer = input.parentElement.querySelector('[data-password-validator]');
             validatorContainer.style.display = "inline-block";
         }
