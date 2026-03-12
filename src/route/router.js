@@ -112,8 +112,7 @@ export const router = {
 		} catch (err) {
 			console.error('[Router] Failed to load module:', err);
 			if (path !== '*' && path !== '/signin') {
-				// this.replace('*');
-				this.replace('/signin');
+				this.replace('*');
 			}
 		}
 	},
@@ -124,63 +123,63 @@ export const router = {
 	 * @param {object} route - объект маршрута
 	 * @returns {Promise<object>} результат проверки доступа
 	 */
-	async checkAuth(route) {
-		const now = Date.now();
+	// async checkAuth(route) {
+	// 	const now = Date.now();
 
-		if (
-			this._sessionCache !== null &&
-			now - this._sessionCacheTime < this._SESSION_CACHE_MS
-		) {
-			return this._checkAuthLogic(route, this._sessionCache);
-		}
+	// 	if (
+	// 		this._sessionCache !== null &&
+	// 		now - this._sessionCacheTime < this._SESSION_CACHE_MS
+	// 	) {
+	// 		return this._checkAuthLogic(route, this._sessionCache);
+	// 	}
 
-		const session = await authService.getUserSession();
-		this._sessionCache = session;
-		this._sessionCacheTime = Date.now();
+	// 	const session = await authService.getUserSession();
+	// 	this._sessionCache = session;
+	// 	this._sessionCacheTime = Date.now();
 
-		return this._checkAuthLogic(route, session);
-	},
+	// 	return this._checkAuthLogic(route, session);
+	// },
 
-	/**
-	 * Оценивает доступ на основе сессии и типа маршрута
-	 * @private
-	 * @param {object} route - объект маршрута
-	 * @param {object} session - объект сессии { isAuthenticated, user, error }
-	 * @returns {object} результат проверки { allowed, redirectTo }
-	 */
-	_checkAuthLogic(route, session) {
-		const isAuthenticated = session.isAuthenticated;
-		const error = session.error;
+	// /**
+	//  * Оценивает доступ на основе сессии и типа маршрута
+	//  * @private
+	//  * @param {object} route - объект маршрута
+	//  * @param {object} session - объект сессии { isAuthenticated, user, error }
+	//  * @returns {object} результат проверки { allowed, redirectTo }
+	//  */
+	// _checkAuthLogic(route, session) {
+	// 	const isAuthenticated = session.isAuthenticated;
+	// 	const error = session.error;
 
-		if (error?.onSamePage) {
-			return {
-				allowed: true,
-				redirectTo: '',
-			};
-		}
-		if (error?.type === 'AUTH') {
-			return {
-				allowed: false,
-				redirect: error.redirectTo || '/signin',
-			};
-		}
-		if (route.protected && !isAuthenticated) {
-			return {
-				allowed: false,
-				redirectTo: session.error?.redirectTo || '/signin',
-			};
-		}
-		if (route.guest && isAuthenticated) {
-			return {
-				allowed: false,
-				redirectTo: '/',
-			};
-		}
-		return {
-			allowed: true,
-			redirectTo: '',
-		};
-	},
+	// 	if (error?.onSamePage) {
+	// 		return {
+	// 			allowed: true,
+	// 			redirectTo: '',
+	// 		};
+	// 	}
+	// 	if (error?.type === 'AUTH') {
+	// 		return {
+	// 			allowed: false,
+	// 			redirect: error.redirectTo || '/signin',
+	// 		};
+	// 	}
+	// 	if (route.protected && !isAuthenticated) {
+	// 		return {
+	// 			allowed: false,
+	// 			redirectTo: session.error?.redirectTo || '/signin',
+	// 		};
+	// 	}
+	// 	if (route.guest && isAuthenticated) {
+	// 		return {
+	// 			allowed: false,
+	// 			redirectTo: '/',
+	// 		};
+	// 	}
+	// 	return {
+	// 		allowed: true,
+	// 		redirectTo: '',
+	// 	};
+	// },
 
 	/**
 	 * Очищает кэш сессии
