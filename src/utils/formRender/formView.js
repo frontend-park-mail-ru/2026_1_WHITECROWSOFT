@@ -84,6 +84,37 @@ export function createFormView(container, template) {
 		});
 	}
 
+	function updatePasswordVisibility(showPassword, showPasswordConfirm) {
+		
+		const passwordInput = container.querySelector('input[name="password"]');
+		if (passwordInput) {
+			passwordInput.type = showPassword ? 'text' : 'password';
+			const passwordToggle = passwordInput.closest('.inputWrapper')?.querySelector('[data-toggle-password]');
+			if (passwordToggle) {
+				const eyeOpen = passwordToggle.querySelector('.eyeOpen');
+				const eyeClosed = passwordToggle.querySelector('.eyeClosed');
+				if (eyeOpen && eyeClosed) {
+					eyeOpen.style.display = showPassword ? 'none' : 'block';
+					eyeClosed.style.display = showPassword ? 'block' : 'none';
+				}
+			}
+		}
+
+		const confirmInput = container.querySelector('input[name="passwordConfirm"]');
+		if (confirmInput) {
+			confirmInput.type = showPasswordConfirm ? 'text' : 'password';
+			const confirmToggle = confirmInput.closest('.inputWrapper')?.querySelector('[data-toggle-password]');
+			if (confirmToggle) {
+				const eyeOpen = confirmToggle.querySelector('.eyeOpen');
+				const eyeClosed = confirmToggle.querySelector('.eyeClosed');
+				if (eyeOpen && eyeClosed) {
+					eyeOpen.style.display = showPasswordConfirm ? 'none' : 'block';
+					eyeClosed.style.display = showPasswordConfirm ? 'block' : 'none';
+				}
+			}
+		}
+	}
+
 	/**
 	 * Возвращает кэш элементов ошибок
 	 * @returns {Object|null} кэш элементов
@@ -100,5 +131,5 @@ export function createFormView(container, template) {
 		if (container) container.innerHTML = '';
 	}
 
-	return { renderFull, renderErrors, getCache, clear };
+	return { renderFull, renderErrors, updatePasswordVisibility, getCache, clear };
 }

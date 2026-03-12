@@ -38,6 +38,8 @@ export async function initSignupPage() {
 		errors: {},
 		serverError: '',
 		isSubmitting: false,
+		showPassword: false,
+		showPasswordConfirm: false,
 	});
 
 	const formRenderer = createFormRenderer({

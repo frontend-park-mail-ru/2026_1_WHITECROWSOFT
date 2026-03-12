@@ -9,6 +9,8 @@ export const ActionTypes = {
 	SUBMIT_ERROR: 'SUBMIT_ERROR',
 	VALIDATION_ERROR: 'VALIDATION_ERROR',
 	CLEAR_ERROR: 'CLEAR_ERROR',
+	TOGGLE_PASSWORD: 'TOGGLE_PASSWORD',
+	TOGGLE_PASSWORD_CONFIRM: 'TOGGLE_PASSWORD_CONFIRM',
 };
 
 /**
@@ -89,5 +91,24 @@ export function createFormActions(store) {
 				});
 			}
 		},
+
+		 
+        /**
+         * Переключает видимость пароля
+         */
+        togglePassword(fieldName) {
+            const state = store.getState();
+            if (fieldName === 'password') {
+				store.setState({
+					...state,
+					showPassword: !state.showPassword
+				});
+			} else if (fieldName === 'passwordConfirm') {
+				store.setState({
+					...state,
+					showPasswordConfirm: !state.showPasswordConfirm
+				});
+			}
+        },
 	};
 }

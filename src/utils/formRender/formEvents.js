@@ -68,20 +68,10 @@ export function createFormEvents(container, actions, handlers) {
 	function handlePasswordVisibility(button) {
 		return (e) => {
 			e.preventDefault();
-			const input =
-				button.parentElement.querySelector('input[name="password"]') ??
-				button.parentElement.querySelector('input[name="passwordConfirm"]');
-			const eyeOpen = button.querySelector('.eyeOpen');
-			const eyeClosed = button.querySelector('.eyeClosed');
-
-			if (input.type === 'password') {
-				input.type = 'text';
-				eyeOpen.style.display = 'none';
-				eyeClosed.style.display = 'block';
-			} else {
-				input.type = 'password';
-				eyeOpen.style.display = 'block';
-				eyeClosed.style.display = 'none';
+			const input = button.parentElement.querySelector('input[name="password"]') || 
+					      button.parentElement.querySelector('input[name="passwordConfirm"]');
+			if (input) {
+				actions.togglePassword(input.name);
 			}
 		};
 	}

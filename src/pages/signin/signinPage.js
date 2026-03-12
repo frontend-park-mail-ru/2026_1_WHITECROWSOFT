@@ -42,6 +42,8 @@ export async function initSigninPage() {
 			errors: {},
 			serverError: '',
 			isSubmitting: false,
+    		showPassword: false,
+			showPasswordConfirm: false,
 		},
 		validate: () => {
 			// no password validation required for login;

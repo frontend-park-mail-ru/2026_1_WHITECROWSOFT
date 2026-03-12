@@ -2,7 +2,7 @@
 	<label for="{{name}}" class="formLabel">{{label}}</label>
 	<div class="inputWrapper">
 		<input
-			type="{{type}}"
+			type="{{#if showPassword}}text{{else}}password{{/if}}"
 			name="{{name}}"
 			value="{{value}}"
 			placeholder="{{placeholder}}"
@@ -16,11 +16,20 @@
 			<img
 				src="/icons/visibility-off.svg"
 				class="icon eyeOpen eyeIcon"
+				style="display: {{#if (eq name "password")}}
+					{{#if ../showPassword}}none{{else}}block{{/if}}
+				{{else if (eq name "passwordConfirm")}}
+					{{#if ../showPasswordConfirm}}none{{else}}block{{/if}}
+				{{/if}}"
 			/>
 			<img
 				src="/icons/visibility.svg"
 				class="icon eyeClosed eyeIcon"
-				style="display: none"
+				style="display: {{#if (eq name "password")}}
+					{{#if ../showPassword}}block{{else}}none{{/if}}
+				{{else if (eq name "passwordConfirm")}}
+					{{#if ../showPasswordConfirm}}block{{else}}none{{/if}}
+				{{/if}}"
 			/>
 		</span>
 		{{/if}}
