@@ -90,8 +90,8 @@ export function validatePasswordState(password = '') {
 		{
 			id: 'no_special',
 			label: 'Не содержит спецсимволы',
-			error: 'Пароль не должен содержать символы: !@#$%^&*()<>.,!?;:[]]{}',
-			isMet: !/[!@#$%^&*()<>.,!?;:\[\]{}]/.test(password),
+			error: 'Недопустимы символы: !@#$%^&*()<>,?;:[]{}',
+			isMet: !/[!@#$%^&*()<>,!?;:\[\]{}]/.test(password),
 		},
 	];
 }
