@@ -1,4 +1,3 @@
-import { authService } from '../services/authService.js';
 import { getRoute } from './routes.js';
 const modules = import.meta.glob('../pages/**/*.js');
 
