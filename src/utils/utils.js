@@ -55,7 +55,6 @@ const partials = import.meta.glob('../components/partials/**/*.hbs', {
  * Регистрирует Handlebars partials из файлов .hbs
 */
 export function registerPartials() {
-	console.log(partials);
 	Object.entries(partials).forEach(([path, content]) => {
 		const name = path.replace('../', '').replace('.hbs', '');
 

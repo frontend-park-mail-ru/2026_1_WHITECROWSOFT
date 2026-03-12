@@ -45,14 +45,9 @@ export async function initSigninPage() {
 			isSubmitting: false,
 		},
 		validate: (formData) => {
-			// NOTE: If you're signing in,
-			// your pass and username fits or it doesn't.
-			// If we'll have a "Forgot password?" prompt,
-			// we might have to eliminate this. -Andrew
-			const errors = {};
-			// const u = validateUsername(formData.username);
-			// if (!u.isValid) errors.username = u.error;
-			return errors;
+            // no password validation required for login;
+            // either your password fits, or it doesn't.
+			return {};
 		},
 		onSubmit: async (formData) => {
 			await authService.signIn({

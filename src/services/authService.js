@@ -14,7 +14,7 @@ export const authService = {
 	async getNotes() {
 		try {
 			const result = client.get('/notes');
-			// router.clearAuthCache();
+			// router.clearSessionCache();
 			return result;
 		} catch (error) {
 			if (error?.status === 401 || error?.message?.includes('401')) {
@@ -57,7 +57,7 @@ export const authService = {
 	*/
 	async signUp(data) {
 		const result = client.post('/signup', data);
-		router.clearAuthCache();
+		router.clearSessionCache();
 		return result;
 	},
 
@@ -69,7 +69,7 @@ export const authService = {
 	*/
 	async signIn(data) {
 		const result = client.post('/signin', data);
-		router.clearAuthCache();
+		router.clearSessionCache();
 		return result;
 	},
 
@@ -80,7 +80,7 @@ export const authService = {
 	*/
 	async logOut() {
 		const result = client.post('/logout', {});
-		router.clearAuthCache();
+		router.clearSessionCache();
 		return result;
 	},
 

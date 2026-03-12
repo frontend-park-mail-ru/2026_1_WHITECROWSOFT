@@ -97,15 +97,6 @@ export const router = {
             }
             return;
         }
-
-        const accessCheck = await this.checkAuth(route);
-        if (!accessCheck.allowed) {
-            if (accessCheck.redirectTo && accessCheck.redirectTo !== path) {
-                this.replace(accessCheck.redirectTo);
-            }
-            return;
-        }
-
         try {
             const path = `../pages/${route.component}.js`;
             const moduleLoader = modules[path];
@@ -121,7 +112,8 @@ export const router = {
         } catch (err) {
             console.error('[Router] Failed to load module:', err);
             if (path !== '*' && path !== '/signin') {
-                this.replace('*');
+                // this.replace('*');
+                this.replace('/signin');
             }
         }
     },

@@ -1,13 +1,14 @@
 services:
   backend:
-    image: ghcr.io/go-park-mail-ru/2026_1_whitecrowsoft:latest
+    image: ghcr.io/go-park-mail-ru/2026_1_whitecrowsoft:main
     restart: unless-stopped
     env_file: '.env'
     expose:
       - '${PORT}'
 
   frontend:
-    image: ghcr.io/frontend-park-mail-ru/2026_1_whitecrowsoft:latest
+    build: .
+    # image: ghcr.io/frontend-park-mail-ru/2026_1_whitecrowsoft:latest
     restart: unless-stopped
     env_file: '.env'
     ports:
