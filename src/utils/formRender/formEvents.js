@@ -1,3 +1,4 @@
+import Handlebars from 'handlebars';
 import { validatePasswordState } from '../../formValidators/validators';
 
 /**
@@ -92,21 +93,11 @@ export function createFormEvents(container, actions, handlers) {
 		const password = input.value;
 		const requirements = validatePasswordState(password);
 
-		validatorContainer.innerHTML = `
-            <ul class="validation-list">
-                ${requirements
-									.map(
-										(req) => `
-                    <li class="requirement">
-                        <img src="/icons/${req.isMet ? 'req_yes' : 'req_no'}.svg" class="icon" />
-                        
-                        ${req.label}
-                    </li>
-                `,
-									)
-									.join('')}
-            </ul>
-        `;
+		const partial = Handlebars.partials['components/partials/forms/validator'];
+		const template =
+			typeof partial === 'function' ? partial : Handlebars.compile(partial);
+		const context = { requirements: requirements };
+		validatorContainer.innerHTML = template(context);
 	}
 
 	function handlePasswordValidator(input) {
