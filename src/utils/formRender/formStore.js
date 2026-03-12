@@ -2,7 +2,7 @@
  * Создает хранилище для управления состоянием формы
  * @param {Object} initialState - начальное состояние формы
  * @returns {Object} объект хранилища с методами доступа и подписки
-*/
+ */
 export function createFormStore(initialState) {
 	let state = { ...initialState };
 	const listeners = new Set();
@@ -10,7 +10,7 @@ export function createFormStore(initialState) {
 	/**
 	 * Возвращает копию текущего состояния
 	 * @returns {Object} текущее состояние
-	*/
+	 */
 	function getState() {
 		return { ...state };
 	}
@@ -18,7 +18,7 @@ export function createFormStore(initialState) {
 	/**
 	 * Обновляет состояние и уведомляет подписанных на него обработчиков
 	 * @param {Object} newState - новые значения для обновления
-	*/
+	 */
 	function setState(newState) {
 		state = { ...state, ...newState };
 		listeners.forEach((listener) => listener(state));
@@ -28,7 +28,7 @@ export function createFormStore(initialState) {
 	 * Подписывает обработчик на изменения состояния
 	 * @param {Function} listener - функция-обработчик
 	 * @returns {Function} функция для отписки
-	*/
+	 */
 	function subscribe(listener) {
 		listeners.add(listener);
 		return () => listeners.delete(listener);
@@ -36,7 +36,7 @@ export function createFormStore(initialState) {
 
 	/**
 	 * Сбрасывает состояние к начальному
-	*/
+	 */
 	function reset() {
 		state = { ...initialState };
 		listeners.forEach((listener) => listener(state));

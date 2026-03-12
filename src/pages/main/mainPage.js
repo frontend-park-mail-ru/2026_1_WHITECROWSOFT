@@ -11,11 +11,11 @@ import templateText from './mainPage.hbs?raw';
  * @async
  * @function initMainPage
  * @returns {Promise<void>}
- * 
+ *
  * @description
  * Загружает список заметок, отображает активную заметку,
  * создает боковую панель и настраивает переключение между заметками
-*/
+ */
 export async function initMainPage() {
 	registerHelpers();
 	const template = Handlebars.compile(templateText);
@@ -25,16 +25,16 @@ export async function initMainPage() {
 
 	let data = await authService.getNotes();
 	for (let i = 0; i < data.total; ++i) {
-		data.notes[i].icon = "document";
+		data.notes[i].icon = 'document';
 	}
 
 	let activeNote = await authService.getNote(data.notes[0].ID);
-	data["activeNoteId"] = activeNote.note.ID;
-	data["activeNote"] = {
+	data['activeNoteId'] = activeNote.note.ID;
+	data['activeNote'] = {
 		ID: activeNote.note.ID,
 		title: activeNote.note.Title,
 		breadcrumb: activeNote.note.Title,
-		text: activeNote.blocks.map(item => item.content).join("\n\n")
+		text: activeNote.blocks.map((item) => item.content).join('\n\n'),
 	};
 
 	const state = { ...data };
@@ -57,7 +57,10 @@ export async function initMainPage() {
 
 		if (titleEl) titleEl.textContent = selectedNote.note.Title;
 		if (breadcrumbEl) breadcrumbEl.textContent = selectedNote.note.Title;
-		if (noteBody) noteBody.textContent = selectedNote.blocks.map(item => item.content).join("\n\n");
+		if (noteBody)
+			noteBody.textContent = selectedNote.blocks
+				.map((item) => item.content)
+				.join('\n\n');
 
 		document.querySelectorAll('[data-note-id]').forEach((el) => {
 			el.classList.toggle('active', el.dataset.noteId === newNoteId);

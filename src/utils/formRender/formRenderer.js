@@ -14,7 +14,7 @@ import { createFormView } from './formView.js';
  * @param {Function} config.onSuccess - колбэк при успешной отправке
  * @param {Function} config.onNavigate - колбэк для навигации
  * @returns {Object} объект для управления формой
-*/
+ */
 export function createFormRenderer(config) {
 	const {
 		containerSelector,
@@ -35,7 +35,7 @@ export function createFormRenderer(config) {
 
 	/**
 	 * Инициализирует форму и все её компоненты
-	*/
+	 */
 	function init() {
 		container = document.querySelector(containerSelector);
 		if (!container) {
@@ -67,7 +67,7 @@ export function createFormRenderer(config) {
 
 	/**
 	 * Уничтожает форму и очищает все подписки и обработчики
-	*/
+	 */
 	function destroy() {
 		unsubscribe?.();
 		events?.detach();
@@ -82,7 +82,7 @@ export function createFormRenderer(config) {
 	/**
 	 * Возвращает текущее состояние формы
 	 * @returns {Object} состояние формы
-	*/
+	 */
 	function getState() {
 		return store?.getState();
 	}
@@ -91,7 +91,7 @@ export function createFormRenderer(config) {
 	 * Отправляет действие (для отладки)
 	 * @param {string} type - тип действия
 	 * @param {*} payload - данные действия
-	*/
+	 */
 	function dispatch(type, payload) {
 		console.log(`[Dispatch] ${type}`, payload);
 	}

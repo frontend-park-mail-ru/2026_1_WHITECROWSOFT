@@ -1,7 +1,7 @@
 /**
  * Константы типов действий для формы
  * @enum {string}
-*/
+ */
 export const ActionTypes = {
 	INPUT_CHANGE: 'INPUT_CHANGE',
 	SUBMIT_START: 'SUBMIT_START',
@@ -15,14 +15,14 @@ export const ActionTypes = {
  * Создает набор экшенов для управления формой
  * @param {Object} store - хранилище состояния
  * @returns {Object} объект с экшенами формы
-*/
+ */
 export function createFormActions(store) {
 	return {
 		/**
 		 * Обновляет значение поля формы
 		 * @param {string} fieldName - имя поля
 		 * @param {*} value - новое значение
-		*/
+		 */
 		inputChange(fieldName, value) {
 			const state = store.getState();
 			store.setState({
@@ -35,7 +35,7 @@ export function createFormActions(store) {
 
 		/**
 		 * Устанавливает состояние отправки формы
-		*/
+		 */
 		submitStart() {
 			store.setState({
 				isSubmitting: true,
@@ -46,7 +46,7 @@ export function createFormActions(store) {
 
 		/**
 		 * Завершает состояние отправки формы
-		*/
+		 */
 		submitEnd() {
 			store.setState({
 				isSubmitting: false,
@@ -56,7 +56,7 @@ export function createFormActions(store) {
 		/**
 		 * Устанавливает ошибку сервера
 		 * @param {string} message - сообщение об ошибке
-		*/
+		 */
 		submitError(message) {
 			store.setState({
 				isSubmitting: false,
@@ -67,7 +67,7 @@ export function createFormActions(store) {
 		/**
 		 * Устанавливает ошибки валидации
 		 * @param {Object} errors - объект с ошибками полей
-		*/
+		 */
 		validationError(errors) {
 			store.setState({
 				isSubmitting: false,
@@ -78,7 +78,7 @@ export function createFormActions(store) {
 		/**
 		 * Очищает ошибку конкретного поля
 		 * @param {string} fieldName - имя поля
-		*/
+		 */
 		clearError(fieldName) {
 			const state = store.getState();
 			if (state.errors?.[fieldName]) {

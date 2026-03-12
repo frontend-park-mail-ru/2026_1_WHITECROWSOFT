@@ -6,17 +6,16 @@ import { createFormRenderer } from '../../utils/formRender/formRenderer.js';
 import { registerHelpers, registerPartials } from '../../utils/utils.js';
 import templateText from './signinPage.hbs?raw';
 
-
 /**
  * Инициализирует страницу входа в систему
  * @async
  * @function initSigninPage
  * @returns {Promise<void>}
- * 
+ *
  * @description
  * Отображает форму входа, обрабатывает валидацию полей,
  * отправку данных на сервер и перенаправление после успешного входа
-*/
+ */
 export async function initSigninPage() {
 	registerHelpers();
 	registerPartials();
@@ -44,9 +43,9 @@ export async function initSigninPage() {
 			serverError: '',
 			isSubmitting: false,
 		},
-		validate: (formData) => {
-            // no password validation required for login;
-            // either your password fits, or it doesn't.
+		validate: () => {
+			// no password validation required for login;
+			// either your password fits, or it doesn't.
 			return {};
 		},
 		onSubmit: async (formData) => {

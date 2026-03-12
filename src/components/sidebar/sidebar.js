@@ -1,7 +1,7 @@
 import Handlebars from 'handlebars';
 import { router } from '../../route/router.js';
-import { render } from '../../utils/utils.js';
 import { authService } from '../../services/authService.js';
+import { render } from '../../utils/utils.js';
 import './sidebar.css';
 import templateText from './sidebar.hbs?raw';
 
@@ -10,14 +10,14 @@ import templateText from './sidebar.hbs?raw';
  * @class SideBar
  * @classdesc Управляет отображением и взаимодействием с боковой панелью,
  * содержит список заметок, инструменты и кнопку выхода
-*/
+ */
 export class Sidebar {
 	/**
 	 * Создаёт экземпляр боковой панели
 	 * @param {string} containerSelector - ID элемнта контейнера
 	 * @param {Object} initialState - начальное состояние панели
-	 * @param {Function} onNoteClick - функция, вызываемая при нажатии на заметку 
-	*/
+	 * @param {Function} onNoteClick - функция, вызываемая при нажатии на заметку
+	 */
 	constructor(containerSelector, initialState = {}, onNoteClick) {
 		this.container = document.getElementById(containerSelector);
 		this.state = initialState;
@@ -29,7 +29,7 @@ export class Sidebar {
 	 * Инициализирует боковую панель
 	 * @async
 	 * @throws {Error} Если не удалось загрузить шаблон
-	*/
+	 */
 	async init() {
 		this.template = Handlebars.compile(templateText);
 		render(this.container, this.template(this.state));
@@ -38,10 +38,10 @@ export class Sidebar {
 
 	/**
 	 * Навешивает обработчики событий на элементы панели
-	 * @private 
+	 * @private
 	 * @listens click#logoutBtn - Клик по кнопке выхода
-	 * @listens click#[data-note-id] - Клик по элементу заметки 
-	*/
+	 * @listens click#[data-note-id] - Клик по элементу заметки
+	 */
 	bindEvents() {
 		const logoutBtn = document.getElementById('logoutBtn');
 		if (logoutBtn) {

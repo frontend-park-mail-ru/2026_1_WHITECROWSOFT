@@ -4,13 +4,13 @@ import { router } from '../route/router.js';
 /**
  * Сервис для работы с авторизацией и заметками
  * @namespace authService
-*/
+ */
 export const authService = {
 	/**
 	 * Получает список всех заметок пользователя
 	 * @async
 	 * @returns {Promise<Array|null>} список заметок или null при ошибке
-	*/
+	 */
 	async getNotes() {
 		try {
 			const result = client.get('/notes');
@@ -31,7 +31,7 @@ export const authService = {
 	 * @async
 	 * @param {string} noteID - идентификатор заметки
 	 * @returns {Promise<Object|null>} данные заметки или null при ошибке
-	*/
+	 */
 	async getNote(noteID) {
 		try {
 			const result = client.get(`/notes/${noteID}`);
@@ -54,7 +54,7 @@ export const authService = {
 	 * @async
 	 * @param {Object} data - данные для регистрации
 	 * @returns {Promise<Object>} результат регистрации
-	*/
+	 */
 	async signUp(data) {
 		const result = client.post('/signup', data);
 		router.clearSessionCache();
@@ -66,7 +66,7 @@ export const authService = {
 	 * @async
 	 * @param {Object} data - данные для входа
 	 * @returns {Promise<Object>} результат входа
-	*/
+	 */
 	async signIn(data) {
 		const result = client.post('/signin', data);
 		router.clearSessionCache();
@@ -77,7 +77,7 @@ export const authService = {
 	 * Выполняет выход пользователя
 	 * @async
 	 * @returns {Promise<Object>} результат выхода
-	*/
+	 */
 	async logOut() {
 		const result = client.post('/logout', {});
 		router.clearSessionCache();
@@ -88,7 +88,7 @@ export const authService = {
 	 * Проверяет статус авторизации
 	 * @async
 	 * @returns {Promise<Object|null>} данные пользователя или null
-	*/
+	 */
 	async getUserSession() {
 		try {
 			const user = await client.get('/protected');
@@ -102,30 +102,30 @@ export const authService = {
 						type: 'AUTH',
 						status: 401,
 						redirectTo: '/signin',
-						onSamePage: false
-					}
+						onSamePage: false,
+					},
 				};
-			} 
+			}
 			if (error?.status >= 500) {
 				return {
-                    isAuthenticated: false,
-                    user: null,
-                    error: {
-                        type: 'SERVER',
-                        status: error.status,
-						onSamePage: true
-                    }
-                };
-			} 
+					isAuthenticated: false,
+					user: null,
+					error: {
+						type: 'SERVER',
+						status: error.status,
+						onSamePage: true,
+					},
+				};
+			}
 			return {
-                isAuthenticated: false,
-                user: null,
-                error: {
-                    type: 'NETWORK',
-                    status: error?.status || 0,
-					onSamePage: true
-                }
-            };
+				isAuthenticated: false,
+				user: null,
+				error: {
+					type: 'NETWORK',
+					status: error?.status || 0,
+					onSamePage: true,
+				},
+			};
 		}
 	},
 };

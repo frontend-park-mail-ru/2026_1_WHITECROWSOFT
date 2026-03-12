@@ -9,7 +9,7 @@
 	--highlight: rgba(91, 116, 157, 0.15);
 	--danger-red: #a12427;
 
-	--font-main: 'Inter', sans-serif;
+	--font-main: 'Inter', Helvetica, sans-serif;
 	--size-base: 16px;
 	--size-label: 14px;
 	--size-small: 12px;
@@ -54,8 +54,6 @@
 	font-style: italic;
 	font-display: swap;
 }
-
-
 
 * {
 	box-sizing: border-box;

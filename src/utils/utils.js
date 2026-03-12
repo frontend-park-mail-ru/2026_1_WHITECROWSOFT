@@ -6,7 +6,7 @@ import Handlebars from 'handlebars';
  * @param {Object} [props={}] - свойства элемента (class, id, on* события и т.д.)
  * @param {Array} [children=[]] - дочерние элементы
  * @returns {HTMLElement} созданный элемент
-*/
+ */
 export function el(tag, props = {}, children = []) {
 	const element = document.createElement(tag);
 
@@ -35,7 +35,7 @@ export function el(tag, props = {}, children = []) {
  * Рендерит контент в указанный контейнер
  * @param {HTMLElement} container - контейнер для рендеринга
  * @param {string|Node} content - строка HTML или DOM элемент
-*/
+ */
 export function render(container, content) {
 	container.innerHTML = '';
 	if (typeof content === 'string') {
@@ -53,7 +53,7 @@ const partials = import.meta.glob('../components/partials/**/*.hbs', {
 
 /**
  * Регистрирует Handlebars partials из файлов .hbs
-*/
+ */
 export function registerPartials() {
 	Object.entries(partials).forEach(([path, content]) => {
 		const name = path.replace('../', '').replace('.hbs', '');
@@ -65,7 +65,7 @@ export function registerPartials() {
 
 /**
  * Регистрирует Handlebars helpers для использования в шаблонах
-*/
+ */
 export function registerHelpers() {
 	Handlebars.registerHelper('eq', function (a, b) {
 		return a === b;

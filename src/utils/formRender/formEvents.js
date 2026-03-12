@@ -6,14 +6,14 @@ import { validatePasswordState } from '../../formValidators/validators';
  * @param {Object} actions - экшены для обновления состояния
  * @param {Object} handlers - обработчики формы (валидация, отправка, навигация)
  * @returns {Object} объект с методами attach и detach
-*/
+ */
 export function createFormEvents(container, actions, handlers) {
 	let cleanup = null;
 
 	/**
 	 * Обрабатывает изменение полей ввода
 	 * @param {Event} e - событие input
-	*/
+	 */
 	function handleInput(e) {
 		const input = e.target.closest('input');
 		if (!input?.name) return;
@@ -23,7 +23,7 @@ export function createFormEvents(container, actions, handlers) {
 	/**
 	 * Обрабатывает отправку формы
 	 * @param {Event} e - событие submit
-	*/
+	 */
 	async function handleSubmit(e) {
 		e.preventDefault();
 		actions.submitStart();
@@ -50,7 +50,7 @@ export function createFormEvents(container, actions, handlers) {
 	/**
 	 * Обрабатывает клики по ссылкам навигации
 	 * @param {Event} e - событие click
-	*/
+	 */
 	function handleNavigation(e) {
 		const link = e.target.closest('[data-link]');
 		if (link) {
@@ -63,7 +63,7 @@ export function createFormEvents(container, actions, handlers) {
 	 * Создает обработчик для кнопки показа/скрытия пароля
 	 * @param {HTMLElement} button - кнопка переключения
 	 * @returns {Function} обработчик клика
-	*/
+	 */
 	function handlePasswordVisibility(button) {
 		return (e) => {
 			e.preventDefault();
@@ -85,49 +85,61 @@ export function createFormEvents(container, actions, handlers) {
 		};
 	}
 
-    function redrawPasswordValidator(input) {
-        const validatorContainer = input.parentElement.querySelector('[data-password-validator]');
-        const password = input.value;
-        const requirements = validatePasswordState(password);
+	function redrawPasswordValidator(input) {
+		const validatorContainer = input.parentElement.querySelector(
+			'[data-password-validator]',
+		);
+		const password = input.value;
+		const requirements = validatePasswordState(password);
 
-        validatorContainer.innerHTML = `
+		validatorContainer.innerHTML = `
             <ul class="validation-list">
-                ${requirements.map(req => `
+                ${requirements
+									.map(
+										(req) => `
                     <li class="requirement">
                         <img src="/icons/${req.isMet ? 'req_yes' : 'req_no'}.svg" class="icon" />
                         
                         ${req.label}
                     </li>
-                `).join('')}
+                `,
+									)
+									.join('')}
             </ul>
         `;
-    }
+	}
 
-    function handlePasswordValidator(input) {
-        return () => redrawPasswordValidator(input);
-    }
+	function handlePasswordValidator(input) {
+		return () => redrawPasswordValidator(input);
+	}
 
-    function hidePasswordValidator(input) {
-        return () => {
-            const validatorContainer = input.parentElement.querySelector('[data-password-validator]');
-            validatorContainer.style.display = "none";
-        }
-    }
+	function hidePasswordValidator(input) {
+		return () => {
+			const validatorContainer = input.parentElement.querySelector(
+				'[data-password-validator]',
+			);
+			validatorContainer.style.display = 'none';
+		};
+	}
 
-    function showPasswordValidator(input) {
-        return () => {
-            const validatorContainer = input.parentElement.querySelector('[data-password-validator]');
-            validatorContainer.style.display = "block";
-        }
-    }
+	function showPasswordValidator(input) {
+		return () => {
+			const validatorContainer = input.parentElement.querySelector(
+				'[data-password-validator]',
+			);
+			validatorContainer.style.display = 'block';
+		};
+	}
 
 	/**
 	 * Прикрепляет все обработчики событий к форме
-	*/
+	 */
 	function attach() {
 		const form = container?.querySelector('form');
 		const toggleBtns = container?.querySelectorAll('[data-toggle-password]');
-        const regPasses = container?.querySelectorAll('[data-registration-password]');
+		const regPasses = container?.querySelectorAll(
+			'[data-registration-password]',
+		);
 		if (!form) {
 			return;
 		}
@@ -139,12 +151,12 @@ export function createFormEvents(container, actions, handlers) {
 		toggleBtns?.forEach((btn) => {
 			btn.addEventListener('click', handlePasswordVisibility(btn));
 		});
-        regPasses?.forEach((input) => {
-            redrawPasswordValidator(input)
-            input.addEventListener('focus', showPasswordValidator(input))
-            input.addEventListener('blur', hidePasswordValidator(input))
-            input.addEventListener('input', handlePasswordValidator(input))
-        })
+		regPasses?.forEach((input) => {
+			redrawPasswordValidator(input);
+			input.addEventListener('focus', showPasswordValidator(input));
+			input.addEventListener('blur', hidePasswordValidator(input));
+			input.addEventListener('input', handlePasswordValidator(input));
+		});
 
 		cleanup = () => {
 			form.removeEventListener('input', handleInput);
@@ -158,7 +170,7 @@ export function createFormEvents(container, actions, handlers) {
 
 	/**
 	 * Открепляет все обработчики событий
-	*/
+	 */
 	function detach() {
 		cleanup?.();
 	}
