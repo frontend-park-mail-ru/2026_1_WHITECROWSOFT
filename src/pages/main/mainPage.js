@@ -1,7 +1,7 @@
 import Handlebars from 'handlebars';
 import { Sidebar } from '../../components/sidebar/sidebar.js';
 import { router } from '../../route/router.js';
-import { authService } from '../../services/authService.js';
+import { noteService } from '../../services/noteService.js';
 import { registerHelpers } from '../../utils/utils.js';
 import './mainPage.css';
 import templateText from './mainPage.hbs?raw';
@@ -23,12 +23,12 @@ export async function initMainPage() {
 	const app = document.querySelector('#app');
 	if (!app) return;
 
-	let data = await authService.getNotes();
+	let data = await noteService.getNotes();
 	for (let i = 0; i < data.total; ++i) {
 		data.notes[i].icon = 'document';
 	}
 
-	let activeNote = await authService.getNote(data.notes[0].ID);
+	let activeNote = await noteService.getNote(data.notes[0].ID);
 	data['activeNoteId'] = activeNote.note.ID;
 	data['activeNote'] = {
 		ID: activeNote.note.ID,
@@ -45,7 +45,7 @@ export async function initMainPage() {
 	if (!container) return;
 
 	const updateUI = async (newNoteId) => {
-		const selectedNote = await authService.getNote(newNoteId);
+		const selectedNote = await noteService.getNote(newNoteId);
 		if (!selectedNote) {
 			router.replace('/signin');
 			return;

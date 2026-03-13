@@ -39,9 +39,7 @@ export function createFormEvents(container, actions, handlers) {
 		try {
 			await handlers.onSubmit(state.formData);
 			actions.submitEnd();
-			if (handlers.onSuccess) {
-				handlers.onSuccess();
-			}
+			handlers.onSuccess?.();
 		} catch (error) {
 			const message = error?.data?.error || error?.message || 'Ошибка';
 			actions.submitError(message);
@@ -68,8 +66,9 @@ export function createFormEvents(container, actions, handlers) {
 	function handlePasswordVisibility(button) {
 		return (e) => {
 			e.preventDefault();
-			const input = button.parentElement.querySelector('input[name="password"]') || 
-					      button.parentElement.querySelector('input[name="passwordConfirm"]');
+			const input =
+				button.parentElement.querySelector('input[name="password"]') ||
+				button.parentElement.querySelector('input[name="passwordConfirm"]');
 			if (input) {
 				actions.togglePassword(input.name);
 			}
