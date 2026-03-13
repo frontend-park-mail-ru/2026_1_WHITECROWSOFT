@@ -56,7 +56,7 @@ export function validateUsernameState(username = '') {
 		{
 			id: 'minLen',
 			label: 'Максимальная длина имени',
-			error: 'Максимальная длина имени- 60 символа',
+			error: 'Максимальная длина имени - 60 символа',
 			isMet: username.length < 60,
 		},
 		{
@@ -104,7 +104,7 @@ export function validatePasswordState(password = '') {
 		},
 		{
 			id: 'no_special',
-			label: 'Не содержит спецсимволы',
+			label: 'Не содержит символы: /@;<>',
 			error: 'Недопустимы символы: /@;<>',
 			isMet: !/[///@;<>]/.test(password),
 		},

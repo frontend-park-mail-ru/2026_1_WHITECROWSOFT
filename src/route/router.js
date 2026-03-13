@@ -109,7 +109,7 @@ export const router = {
 				throw new Error(`Module not found at ${path}`);
 			}
 		} catch (err) {
-			if (err?.status === 401 ) {
+			if (err?.status === 401) {
 				this.replace('/signin');
 			}
 		}
