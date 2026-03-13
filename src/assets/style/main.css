@@ -1,0 +1,165 @@
+:root {
+	--text: #062659;
+	--background: #fbf8f4;
+	--oceanic: #325a9b;
+	--pacific: #6482b1;
+	--cornflower: #417dde;
+	--faint-a: #adb4c1;
+	--faint-b: #706e7f;
+	--highlight: rgba(91, 116, 157, 0.15);
+	--danger-red: #a12427;
+
+	--font-main: 'Inter', Helvetica, sans-serif;
+	--size-base: 16px;
+	--size-label: 14px;
+	--size-small: 12px;
+}
+
+@font-face {
+	font-family: 'Libre Caslon Text';
+	src: url('/fonts/librecaslon/LibreCaslonText-Regular.woff2') format('woff2');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Libre Caslon Text';
+	src: url('/fonts/librecaslon/LibreCaslonText-Italic.woff2') format('woff2');
+	font-weight: 400;
+	font-style: italic;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Libre Caslon Text';
+	src: url('/fonts/librecaslon/LibreCaslonText-Bold.woff2') format('woff2');
+	font-weight: 800;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Inter';
+	src: url('/fonts/inter/inter.woff2') format('woff2');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Inter';
+	src: url('/fonts/inter/inter_italic.woff2') format('woff2');
+	font-weight: 400;
+	font-style: italic;
+	font-display: swap;
+}
+
+* {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	background-color: var(--background);
+	color: var(--text);
+	font-family: var(--font-main);
+	font-weight: 500;
+	font-size: var(--size-base);
+	line-height: 1.5;
+	font-size: 16px;
+}
+
+h1,
+h5 {
+	margin: 0;
+}
+
+#app {
+	min-height: 100vh;
+}
+
+.mainContainer {
+	display: flex;
+	height: 100vh;
+	overflow: hidden;
+}
+
+.input,
+.searchInput,
+.noteTitleInput {
+	min-width: 200px;
+	height: 35px;
+	width: 100%;
+	padding: 8px 40px 8px 16px;
+	background: var(--background);
+	border: 1.25px solid var(--faint-a);
+	border-radius: 10px;
+	font-family: inherit;
+	font-size: 14px;
+	color: var(--text);
+	outline: none;
+	transition: all 0.2s ease;
+}
+
+.input::placeholder {
+    color: var(--faint-a);
+}
+
+.input.error {
+	border: 1.25px solid var(--danger-red);
+}
+
+.input:focus,
+.searchInput:focus {
+	border-color: var(--cornflower);
+	box-shadow: 0 0 0 1px var(--cornflower);
+}
+
+.btn {
+	padding: 10px 20px;
+	border-radius: 10px;
+	border: none;
+	background-color: var(--text);
+	color: var(--background);
+	font-family: inherit;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.2s;
+}
+
+.btn:hover {
+	background-color: var(--oceanic);
+}
+.btn:active {
+	background-color: var(--cornflower);
+}
+
+.pageHeader {
+	position: absolute;
+	top: 15px;
+	left: 30px;
+}
+
+.appTitle {
+	font-family: 'Libre Caslon Text', serif;
+	font-weight: 400;
+	font-size: 32px;
+}
+
+.appStrapline {
+	color: var(--oceanic);
+}
+
+.icon {
+	width: 15px;
+	height: 15px;
+}
+
+.pageHeader,
+.appTitle {
+	-ms-user-select: none;
+	-webkit-user-select: none;
+	user-select: none;
+}

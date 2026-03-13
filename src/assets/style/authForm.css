@@ -1,0 +1,122 @@
+.formContainer {
+	width: 100%;
+	text-align: center;
+
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 100vh;
+	padding: 0px 20px;
+	gap: 14px;
+}
+
+.authForm {
+	width: 100%;
+	max-width: 300px;
+	margin: 0 auto;
+}
+
+.formFields {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	margin-bottom: 14px;
+	text-align: left;
+}
+
+.formButtons {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	text-align: center;
+}
+
+.formInput {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	height: 83px;
+}
+
+.formLabel {
+	font-size: var(--size-label);
+	font-weight: 600;
+	padding: 0px 15px;
+}
+
+.errorMessage,
+.fieldError,
+.formError {
+	color: var(--danger-red);
+	font-size: var(--size-small);
+	margin-top: 2px;
+	height: 16px;
+}
+
+.fieldError {
+	padding: 0px 15px;
+}
+
+.formError {
+	text-align: center;
+}
+
+#authLink {
+	margin-top: 10px;
+	font-size: var(--size-label);
+}
+
+#authLink a,
+#authLink a:hover {
+	color: var(--text);
+}
+
+.inputWrapper {
+	position: relative;
+}
+
+.eyeIcon {
+	z-index: 9999;
+	position: absolute;
+	top: 10px;
+	right: 16px;
+	cursor: pointer;
+}
+
+.validatorIcon {
+    z-index: 9999;
+    position: absolute;
+    top: 30%;
+    right: -24px;
+    cursor: pointer
+}
+
+.validation-list {
+    z-index: 9999;
+	position: absolute;
+    top: -0px;
+    right: -250px;
+
+    list-style: none;
+    padding: 0;
+    margin: 0;
+
+    padding: 10px 10px;
+	background: var(--background);
+	border: 1.25px solid var(--faint-a);
+    border-radius: 10px;
+
+    font-size: 12px;
+}
+
+.requirement {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.2s ease;
+}
+
+.requirement .icon {
+    width: 12px;
+}

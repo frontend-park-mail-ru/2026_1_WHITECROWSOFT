@@ -1,0 +1,52 @@
+<div class="signupPage">
+	<header class="pageHeader">{{> components/partials/layout/logo }}</header>
+
+	<main class="formContainer">
+		<h1 class="formTitle">Регистрация</h1>
+
+		<form id="signupForm" class="authForm" novalidate>
+			<div class="formFields">
+				{{> components/partials/forms/input
+				    name="username"
+					label="Имя пользователя"
+					type="text"
+					value=formData.username
+					placeholder="Ваш логин"
+					witherror="true"
+				}}
+				
+				{{> components/partials/forms/input
+					name="password"
+					label="Пароль"
+					type="password"
+					value=formData.password
+					placeholder="Ваш пароль"
+					autocomplete="off"
+					witherror="true"
+                    withrequirements="true"
+				}}
+				
+				{{> components/partials/forms/input
+				    name="passwordConfirm"
+					label="Подтвердить пароль"
+					type="password"
+					value=formData.passwordConfirm
+					placeholder="Ваш пароль"
+					autocomplete="off"
+					witherror="true"
+                    withrequirements="true"
+				}}
+
+				<div class="formError" data-error-container style="visibility: hidden">
+					<span class="errorMessage" role="alert" data-error-text></span>
+				</div>
+			</div>
+
+			<div class="formButtons">
+				{{> components/partials/forms/button type="submit" text="Создать аккаунт"
+				variant="primary" className="submitButton" }}
+				<span id="authLink"> Есть аккаунт? <a href="/signin"> Войти</a></span>
+			</div>
+		</form>
+	</main>
+</div>

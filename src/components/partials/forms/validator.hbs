@@ -1,0 +1,8 @@
+<ul class="validation-list">
+    {{#each requirements}}
+        <li class="requirement">
+            <img src="/icons/{{#if isMet}}req_yes{{else}}req_no{{/if}}.svg" class="icon" />
+            {{label}}
+        </li>
+    {{/each}}
+</ul>

@@ -1,0 +1,49 @@
+<div class="formInput">
+	<label for="{{name}}" class="formLabel">{{label}}</label>
+	<div class="inputWrapper">
+		<input
+			type="{{#if showPassword}}text{{else}}password{{/if}}"
+			name="{{name}}"
+			value="{{value}}"
+			placeholder="{{placeholder}}"
+			autocomplete="{{autocomplete}}"
+			required
+			class="input {{#if error}}error{{/if}}"
+            {{#if (eq withrequirements "true")}}data-registration-password{{/if}}
+		/>
+		{{#if (eq type "password")}}
+		<span class="passwordToggle" data-toggle-password>
+			<img
+				src="/icons/visibility-off.svg"
+				class="icon eyeOpen eyeIcon"
+				style="display: {{#if (eq name "password")}}
+					{{#if ../showPassword}}none{{else}}block{{/if}}
+				{{else if (eq name "passwordConfirm")}}
+					{{#if ../showPasswordConfirm}}none{{else}}block{{/if}}
+				{{/if}}"
+			/>
+			<img
+				src="/icons/visibility.svg"
+				class="icon eyeClosed eyeIcon"
+				style="display: {{#if (eq name "password")}}
+					{{#if ../showPassword}}block{{else}}none{{/if}}
+				{{else if (eq name "passwordConfirm")}}
+					{{#if ../showPasswordConfirm}}block{{else}}none{{/if}}
+				{{/if}}"
+			/>
+		</span>
+		{{/if}}
+        {{#if (eq withrequirements "true") }}
+        <div class="passwordValidator" style="display:none" data-password-validator>
+        </div>
+        {{/if}}
+	</div>
+	{{#if (eq witherror "true")}}
+	<span
+		class="fieldError"
+		data-field-error="{{name}}"
+		style="visibility: hidden"
+		role="alert"
+	></span>
+	{{/if}}
+</div>

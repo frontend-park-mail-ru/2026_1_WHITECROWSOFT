@@ -1,0 +1,18 @@
+# Зависимости
+node_modules/
+
+# Переменные окружения
+.env
+.env.local
+
+# Системные файлы Mac
+.DS_Store
+
+# Логи
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Папки с билдами
+dist/
+build/

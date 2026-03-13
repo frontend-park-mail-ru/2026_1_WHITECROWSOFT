@@ -1,0 +1,22 @@
+<div class="mainContainer">
+	<div id="sidebarContainer"></div>
+
+	<main class="mainContent">
+		{{#if activeNote}}
+		<div class="notePath">
+			<span class="pathItem">Библиотека</span>
+			<span class="pathSeparator">/</span>
+			<span class="pathItem currentItem">{{activeNote.title}}</span>
+		</div>
+
+		<article class="noteContent">
+			<h1 class="noteTitle">{{activeNote.title}}</h1>
+			<div class="noteBody">{{activeNote.text}}</div>
+		</article>
+		{{else}}
+		<div class="emptyState">
+			<p>Выберите заметку из списка</p>
+		</div>
+		{{/if}}
+	</main>
+</div>
