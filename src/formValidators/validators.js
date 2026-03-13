@@ -48,10 +48,22 @@ export function validateUsernameState(username = '') {
 			isMet: username.length > 0,
 		},
 		{
+			id: 'minLen',
+			label: 'Минимальная длина имени',
+			error: 'Минимальная длина имени - 4 символа',
+			isMet: username.length >= 4,
+		},
+		{
+			id: 'minLen',
+			label: 'Максимальная длина имени',
+			error: 'Максимальная длина имени- 60 символа',
+			isMet: username.length < 60,
+		},
+		{
 			id: 'chars',
-			label: 'Только буквы, цифры и _',
-			error: 'В имени могут быть только буквы, цифры и _',
-			isMet: /^[a-zA-Zа-яА-Я0-9_]+$/.test(username),
+			label: 'Только буквы, цифры и .-_',
+			error: 'В имени могут быть только буквы, цифры и .-_',
+			isMet: /^[a-zA-Zа-яА-Я0-9._-]+$/.test(username),
 		},
 	];
 }
@@ -93,8 +105,8 @@ export function validatePasswordState(password = '') {
 		{
 			id: 'no_special',
 			label: 'Не содержит спецсимволы',
-			error: 'Недопустимы символы: !@#$%^&*()<>,?;:[]{}',
-			isMet: !/[!@#$%^&*()<>,!?;:[\]{}]/.test(password),
+			error: 'Недопустимы символы: /@;<>',
+			isMet: !/[///@;<>]/.test(password),
 		},
 	];
 }

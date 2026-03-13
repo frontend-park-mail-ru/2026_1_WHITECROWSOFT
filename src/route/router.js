@@ -109,9 +109,8 @@ export const router = {
 				throw new Error(`Module not found at ${path}`);
 			}
 		} catch (err) {
-			console.error('[Router] Failed to load module:', err);
-			if (path !== '*' && path !== '/signin') {
-				this.replace('*');
+			if (err?.status === 401 ) {
+				this.replace('/signin');
 			}
 		}
 	},
