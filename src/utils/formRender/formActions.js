@@ -92,23 +92,22 @@ export function createFormActions(store) {
 			}
 		},
 
-		 
-        /**
-         * Переключает видимость пароля
-         */
-        togglePassword(fieldName) {
-            const state = store.getState();
-            if (fieldName === 'password') {
+		/**
+		 * Переключает видимость пароля
+		 */
+		togglePassword(fieldName) {
+			const state = store.getState();
+			if (fieldName === 'password') {
 				store.setState({
 					...state,
-					showPassword: !state.showPassword
+					showPassword: !state.showPassword,
 				});
 			} else if (fieldName === 'passwordConfirm') {
 				store.setState({
 					...state,
-					showPasswordConfirm: !state.showPasswordConfirm
+					showPasswordConfirm: !state.showPasswordConfirm,
 				});
 			}
-        },
+		},
 	};
 }

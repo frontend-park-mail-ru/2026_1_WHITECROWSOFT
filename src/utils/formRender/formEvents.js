@@ -68,8 +68,9 @@ export function createFormEvents(container, actions, handlers) {
 	function handlePasswordVisibility(button) {
 		return (e) => {
 			e.preventDefault();
-			const input = button.parentElement.querySelector('input[name="password"]') || 
-					      button.parentElement.querySelector('input[name="passwordConfirm"]');
+			const input =
+				button.parentElement.querySelector('input[name="password"]') ||
+				button.parentElement.querySelector('input[name="passwordConfirm"]');
 			if (input) {
 				actions.togglePassword(input.name);
 			}

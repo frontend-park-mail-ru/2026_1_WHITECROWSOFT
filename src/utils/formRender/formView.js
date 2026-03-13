@@ -85,11 +85,12 @@ export function createFormView(container, template) {
 	}
 
 	function updatePasswordVisibility(showPassword, showPasswordConfirm) {
-		
 		const passwordInput = container.querySelector('input[name="password"]');
 		if (passwordInput) {
 			passwordInput.type = showPassword ? 'text' : 'password';
-			const passwordToggle = passwordInput.closest('.inputWrapper')?.querySelector('[data-toggle-password]');
+			const passwordToggle = passwordInput
+				.closest('.inputWrapper')
+				?.querySelector('[data-toggle-password]');
 			if (passwordToggle) {
 				const eyeOpen = passwordToggle.querySelector('.eyeOpen');
 				const eyeClosed = passwordToggle.querySelector('.eyeClosed');
@@ -100,10 +101,14 @@ export function createFormView(container, template) {
 			}
 		}
 
-		const confirmInput = container.querySelector('input[name="passwordConfirm"]');
+		const confirmInput = container.querySelector(
+			'input[name="passwordConfirm"]',
+		);
 		if (confirmInput) {
 			confirmInput.type = showPasswordConfirm ? 'text' : 'password';
-			const confirmToggle = confirmInput.closest('.inputWrapper')?.querySelector('[data-toggle-password]');
+			const confirmToggle = confirmInput
+				.closest('.inputWrapper')
+				?.querySelector('[data-toggle-password]');
 			if (confirmToggle) {
 				const eyeOpen = confirmToggle.querySelector('.eyeOpen');
 				const eyeClosed = confirmToggle.querySelector('.eyeClosed');
@@ -131,5 +136,11 @@ export function createFormView(container, template) {
 		if (container) container.innerHTML = '';
 	}
 
-	return { renderFull, renderErrors, updatePasswordVisibility, getCache, clear };
+	return {
+		renderFull,
+		renderErrors,
+		updatePasswordVisibility,
+		getCache,
+		clear,
+	};
 }

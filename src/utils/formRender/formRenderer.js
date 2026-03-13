@@ -58,7 +58,10 @@ export function createFormRenderer(config) {
 
 		unsubscribe = store.subscribe((state) => {
 			view.renderErrors(state.errors, state.serverError);
-			view.updatePasswordVisibility(state.showPassword, state.showPasswordConfirm);
+			view.updatePasswordVisibility(
+				state.showPassword,
+				state.showPasswordConfirm,
+			);
 			if (state.isSubmitting) {
 				view.renderFull(state);
 				events.attach();
