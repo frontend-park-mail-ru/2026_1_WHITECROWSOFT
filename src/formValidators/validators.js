@@ -27,11 +27,11 @@
  * @returns {ValidationResult} результат валидации
  */
 function createValidator(requirements) {
-    const firstFail = requirements.find(r => !r.isMet);
-    return {
-        isValid: !firstFail,
-        error: firstFail?.error ?? ''
-    };
+	const firstFail = requirements.find((r) => !r.isMet);
+	return {
+		isValid: !firstFail,
+		error: firstFail?.error ?? '',
+	};
 }
 
 /**
@@ -62,7 +62,7 @@ export function validateUsernameState(username = '') {
  * @returns {ValidationResult} результат валидации
  */
 export function validateUsername(username = '') {
-    return createValidator(validateUsernameState(username));
+	return createValidator(validateUsernameState(username));
 }
 
 /**
@@ -105,7 +105,7 @@ export function validatePasswordState(password = '') {
  * @returns {ValidationResult} результат валидации
  */
 export function validatePassword(password = '') {
-    return createValidator(validatePasswordState(password));
+	return createValidator(validatePasswordState(password));
 }
 
 /**
@@ -138,5 +138,7 @@ export function validatePasswordConfirmState(password, passwordConfirm) {
  * @returns {ValidationResult} результат валидации
  */
 export function validatePasswordConfirm(password, passwordConfirm) {
-    return createValidator(validatePasswordConfirmState(password, passwordConfirm));
+	return createValidator(
+		validatePasswordConfirmState(password, passwordConfirm),
+	);
 }
