@@ -1,6 +1,6 @@
-<div class="formInput">
-	<label for="{{name}}" class="formLabel">{{label}}</label>
-	<div class="inputWrapper">
+<div class="form__input">
+	<label for="{{name}}" class="input__label">{{label}}</label>
+	<div class="input__wrapper">
 		<input
 			type="{{#if showPassword}}text{{else}}password{{/if}}"
 			name="{{name}}"
@@ -8,14 +8,14 @@
 			placeholder="{{placeholder}}"
 			autocomplete="{{autocomplete}}"
 			required
-			class="input {{#if error}}error{{/if}}"
+			class="input {{#if error}}input--error{{/if}}"
             {{#if (eq withrequirements "true")}}data-registration-password{{/if}}
 		/>
 		{{#if (eq type "password")}}
 		<span class="passwordToggle" data-toggle-password>
 			<img
 				src="/icons/visibility-off.svg"
-				class="icon eyeOpen eyeIcon"
+				class="icon input__eyeIcon input__eyeIcon--open"
 				style="display: {{#if (eq name "password")}}
 					{{#if ../showPassword}}none{{else}}block{{/if}}
 				{{else if (eq name "passwordConfirm")}}
@@ -24,7 +24,7 @@
 			/>
 			<img
 				src="/icons/visibility.svg"
-				class="icon eyeClosed eyeIcon"
+				class="icon input__eyeIcon input__eyeIcon--closed"
 				style="display: {{#if (eq name "password")}}
 					{{#if ../showPassword}}block{{else}}none{{/if}}
 				{{else if (eq name "passwordConfirm")}}
@@ -34,13 +34,13 @@
 		</span>
 		{{/if}}
         {{#if (eq withrequirements "true") }}
-        <div class="passwordValidator" style="display:none" data-password-validator>
+        <div class="validator" style="display:none" data-password-validator>
         </div>
         {{/if}}
 	</div>
 	{{#if (eq witherror "true")}}
 	<span
-		class="fieldError"
+		class="input__error"
 		data-field-error="{{name}}"
 		style="visibility: hidden"
 		role="alert"

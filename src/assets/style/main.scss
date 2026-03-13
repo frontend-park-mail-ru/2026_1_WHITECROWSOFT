@@ -86,10 +86,8 @@ h5 {
 	overflow: hidden;
 }
 
-.input,
-.searchInput,
-.noteTitleInput {
-	min-width: 200px;
+.input {
+    min-width: 200px;
 	height: 35px;
 	width: 100%;
 	padding: 8px 40px 8px 16px;
@@ -101,20 +99,43 @@ h5 {
 	color: var(--text);
 	outline: none;
 	transition: all 0.2s ease;
-}
 
-.input::placeholder {
-    color: var(--faint-a);
-}
+    &::placeholder {
+        color: var(--faint-a);
+    }
 
-.input.error {
-	border: 1.25px solid var(--danger-red);
-}
+    &--error {
+        border: 1.25px solid var(--danger-red);
+    }
+    &__error {
+        color: var(--danger-red);
+        font-size: var(--size-small);
+        margin-top: 2px;
+        height: 16px;
+        padding: 0px 15px;
+    }
 
-.input:focus,
-.searchInput:focus {
-	border-color: var(--cornflower);
-	box-shadow: 0 0 0 1px var(--cornflower);
+    &:focus {
+        border-color: var(--cornflower);
+	    box-shadow: 0 0 0 1px var(--cornflower);
+    }
+
+    &__label {
+        font-size: var(--size-label);
+        font-weight: 600;
+        padding: 0px 15px;
+    }
+
+    &__wrapper {
+	    position: relative;
+    }
+    &__eyeIcon {
+        z-index: 9999;
+        position: absolute;
+        top: 10px;
+        right: 16px;
+        cursor: pointer;
+    }
 }
 
 .btn {
@@ -127,13 +148,14 @@ h5 {
 	font-weight: 600;
 	cursor: pointer;
 	transition: background 0.2s;
-}
 
-.btn:hover {
-	background-color: var(--oceanic);
-}
-.btn:active {
-	background-color: var(--cornflower);
+    &:hover {
+        background-color: var(--oceanic);
+    }
+
+    &:active {
+        background-color: var(--cornflower);
+    }
 }
 
 .pageHeader {
@@ -142,24 +164,23 @@ h5 {
 	left: 30px;
 }
 
-.appTitle {
-	font-family: 'Libre Caslon Text', serif;
-	font-weight: 400;
-	font-size: 32px;
-}
+.logo {
+    -ms-user-select: none;
+	-webkit-user-select: none;
+	user-select: none;
 
-.appStrapline {
-	color: var(--oceanic);
+    &__title {
+        font-family: 'Libre Caslon Text', serif;
+        font-weight: 400;
+        font-size: 32px;
+    }
+
+    &__strapline {
+        color: var(--oceanic);
+    }
 }
 
 .icon {
 	width: 15px;
 	height: 15px;
-}
-
-.pageHeader,
-.appTitle {
-	-ms-user-select: none;
-	-webkit-user-select: none;
-	user-select: none;
 }

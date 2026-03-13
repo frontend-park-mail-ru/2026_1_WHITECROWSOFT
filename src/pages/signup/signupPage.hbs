@@ -1,11 +1,11 @@
 <div class="signupPage">
 	<header class="pageHeader">{{> components/partials/layout/logo }}</header>
 
-	<main class="formContainer">
-		<h1 class="formTitle">Регистрация</h1>
+	<main class="form">
+		<h1 class="form__title">Регистрация</h1>
 
-		<form id="signupForm" class="authForm" novalidate>
-			<div class="formFields">
+		<form id="signupForm" class="form__auth" novalidate>
+			<div class="form__fields">
 				{{> components/partials/forms/input
 				    name="username"
 					label="Имя пользователя"
@@ -37,15 +37,15 @@
                     withrequirements="true"
 				}}
 
-				<div class="formError" data-error-container style="visibility: hidden">
-					<span class="errorMessage" role="alert" data-error-text></span>
+				<div class="form__error" data-error-container style="visibility: hidden">
+					<span class="form__errorMessage" role="alert" data-error-text></span>
 				</div>
 			</div>
 
-			<div class="formButtons">
+			<div class="form__buttons">
 				{{> components/partials/forms/button type="submit" text="Создать аккаунт"
-				variant="primary" className="submitButton" }}
-				<span id="authLink"> Есть аккаунт? <a href="/signin"> Войти</a></span>
+				variant="primary" className="btn--submit" }}
+				<span class="form__authLink"> Есть аккаунт? <a href="/signin"> Войти</a></span>
 			</div>
 		</form>
 	</main>

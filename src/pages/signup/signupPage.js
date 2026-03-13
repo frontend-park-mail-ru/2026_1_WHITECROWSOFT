@@ -1,5 +1,5 @@
 import Handlebars from 'handlebars';
-import '../../assets/style/authForm.css';
+import '../../assets/style/authForm.scss';
 import {
 	validatePassword,
 	validatePasswordConfirm,

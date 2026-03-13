@@ -1,11 +1,11 @@
 <div class="signinPage">
 	<header class="pageHeader">{{> components/partials/layout/logo }}</header>
 
-	<main class="formContainer">
-		<h1 class="formTitle">Войдите в свой аккаунт</h1>
+	<main class="form">
+		<h1 class="form__title">Войдите в свой аккаунт</h1>
 
-		<form id="signinForm" class="authForm">
-			<div class="formFields">
+		<form id="signinForm" class="form__auth">
+			<div class="form__fields">
 				{{> components/partials/forms/input
 				    name="username"
 					label="Имя пользователя"
@@ -25,15 +25,15 @@
 					witherror="true"
 				}}
 
-				<div class="formError" data-error-container style="visibility: hidden">
-					<span class="errorMessage" role="alert" data-error-text></span>
+				<div class="form__error" data-error-container style="visibility: hidden">
+					<span class="form__errorMessage" role="alert" data-error-text></span>
 				</div>
 			</div>
 
-			<div class="formButtons">
+			<div class="form__buttons">
 				{{> components/partials/forms/button type="submit" text="Войти" variant="primary"
-				className="submitButton" }}
-				<span id="authLink">Нет аккаунта? <a href="/signup"> Создать</a><span/>
+				className="btn--submit" }}
+				<span class="form__authLink">Нет аккаунта? <a href="/signup"> Создать</a><span/>
 			</div>
 		</form>
 	</main>

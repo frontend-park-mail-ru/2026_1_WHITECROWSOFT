@@ -3,8 +3,8 @@ import { Sidebar } from '../../components/sidebar/sidebar.js';
 import { router } from '../../route/router.js';
 import { noteService } from '../../services/noteService.js';
 import { registerHelpers } from '../../utils/utils.js';
-import './mainPage.css';
 import templateText from './mainPage.hbs?raw';
+import './mainPage.scss';
 
 /**
  * Инициализирует главную страницу с заметками
@@ -51,9 +51,11 @@ export async function initMainPage() {
 			return;
 		}
 
-		const titleEl = document.querySelector('.noteTitle');
-		const breadcrumbEl = document.querySelector('.currentItem');
-		const noteBody = document.querySelector('.noteBody');
+		const titleEl = document.querySelector('.note__title');
+		const breadcrumbEl = document.querySelector(
+			'.note__breadcrumbItem--current',
+		);
+		const noteBody = document.querySelector('.note__body');
 
 		if (titleEl) titleEl.textContent = selectedNote.note.Title;
 		if (breadcrumbEl) breadcrumbEl.textContent = selectedNote.note.Title;

@@ -2,8 +2,8 @@ import Handlebars from 'handlebars';
 import { router } from '../../route/router.js';
 import { authService } from '../../services/authService.js';
 import { render } from '../../utils/utils.js';
-import './sidebar.css';
 import templateText from './sidebar.hbs?raw';
+import './sidebar.scss';
 
 /**
  * Класс дял боковой панели приложения
