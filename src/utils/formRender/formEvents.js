@@ -39,9 +39,7 @@ export function createFormEvents(container, actions, handlers) {
 		try {
 			await handlers.onSubmit(state.formData);
 			actions.submitEnd();
-			if (handlers.onSuccess) {
-				handlers.onSuccess();
-			}
+			handlers.onSuccess?.();
 		} catch (error) {
 			const message = error?.data?.error || error?.message || 'Ошибка';
 			actions.submitError(message);
@@ -77,6 +75,11 @@ export function createFormEvents(container, actions, handlers) {
 		};
 	}
 
+	/**
+	 * Обновляет отображение валидатора пароля на основе текущего значения поля
+	 * @param {HTMLInputElement} input - Поле ввода пароля
+	 * @returns {void}
+	 */
 	function redrawPasswordValidator(input) {
 		const validatorContainer = input.parentElement.querySelector(
 			'[data-password-validator]',
@@ -91,10 +94,20 @@ export function createFormEvents(container, actions, handlers) {
 		validatorContainer.innerHTML = template(context);
 	}
 
+	/**
+	 * Создает функцию-обработчик для обновления валидатора пароля
+	 * @param {HTMLInputElement} input - Поле ввода пароля
+	 * @returns {Function} Функция, вызывающая redrawPasswordValidator с переданным input
+	 */
 	function handlePasswordValidator(input) {
 		return () => redrawPasswordValidator(input);
 	}
 
+	/**
+	 * Создает функцию для скрытия валидатора пароля
+	 * @param {HTMLInputElement} input - Поле ввода пароля
+	 * @returns {Function} Функция, скрывающая валидатор
+	 */
 	function hidePasswordValidator(input) {
 		return () => {
 			const validatorContainer = input.parentElement.querySelector(
@@ -104,6 +117,11 @@ export function createFormEvents(container, actions, handlers) {
 		};
 	}
 
+	/**
+	 * Создает функцию для отображения валидатора пароля
+	 * @param {HTMLInputElement} input - Поле ввода пароля
+	 * @returns {Function} Функция, показывающая валидатор
+	 */
 	function showPasswordValidator(input) {
 		return () => {
 			const validatorContainer = input.parentElement.querySelector(

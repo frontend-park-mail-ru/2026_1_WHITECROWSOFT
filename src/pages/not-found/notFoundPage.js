@@ -1,12 +1,37 @@
+import Handlebars from 'handlebars';
+import { router } from '../../route/router.js';
+import { registerHelpers, registerPartials } from '../../utils/utils.js';
+import templateText from './notFoundPage.hbs?raw';
+
+/**
+ * Инициализирует страницу 404
+ * @function initNotFoundPage
+ */
 export function initNotFoundPage() {
+	registerHelpers();
+	registerPartials();
+	const template = Handlebars.compile(templateText);
 	const app = document.querySelector('#app');
-	if (app) {
-		app.innerHTML = `
-            <div style="text-align:center;padding:50px">
-                <h1>404</h1>
-                <p>Страница не найдена</p>
-                <a href="/">Вернуться на главную</a>
-            </div>
-        `;
+	if (!app) {
+		return;
 	}
+	app.innerHTML = template({});
+	attachEvents(app);
+}
+
+/**
+ * Навешивает обработчики событий
+ * @param {HTMLElement} app - контейнер страницы
+ */
+function attachEvents(app) {
+	app.addEventListener('click', (e) => {
+		const link = e.target.closest('[data-link]');
+		if (link) {
+			e.preventDefault();
+			const target = link.dataset.link;
+			if (target === 'home') {
+				router.push('/');
+			}
+		}
+	});
 }

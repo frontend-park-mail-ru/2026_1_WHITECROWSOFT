@@ -7,6 +7,8 @@
 			value="{{value}}"
 			placeholder="{{placeholder}}"
 			autocomplete="{{autocomplete}}"
+            {{#if minlength}}minlength="{{minlength}}"{{/if}}
+            {{#if maxlength}}maxlength="{{maxlength}}"{{/if}}
 			required
 			class="input {{#if error}}input--error{{/if}}"
             {{#if (eq withrequirements "true")}}data-registration-password{{/if}}

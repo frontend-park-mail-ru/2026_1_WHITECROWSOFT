@@ -50,11 +50,11 @@ export class Sidebar {
 				try {
 					await authService.logOut();
 					console.log('[MainPage] signOut() completed');
-					router.clearSessionCache();
+					// router.clearSessionCache();
 					router.replace('/signin');
 				} catch (err) {
 					console.error('[MainPage] Logout error:', err);
-					router.clearSessionCache();
+					// router.clearSessionCache();
 					router.replace('/signin');
 				}
 			});

@@ -99,12 +99,10 @@ export function createFormActions(store) {
 			const state = store.getState();
 			if (fieldName === 'password') {
 				store.setState({
-					...state,
 					showPassword: !state.showPassword,
 				});
 			} else if (fieldName === 'passwordConfirm') {
 				store.setState({
-					...state,
 					showPasswordConfirm: !state.showPasswordConfirm,
 				});
 			}
