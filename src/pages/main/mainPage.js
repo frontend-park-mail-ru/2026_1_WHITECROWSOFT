@@ -34,7 +34,7 @@ export async function initMainPage() {
 		ID: activeNote.note.ID,
 		title: activeNote.note.Title,
 		breadcrumb: activeNote.note.Title,
-		text: activeNote.blocks.map((item) => item.content).join('\n\n'),
+		text: activeNote.blocks.map((item) => item.Content).join('\n\n'),
 	};
 
 	const state = { ...data };
@@ -59,7 +59,7 @@ export async function initMainPage() {
 		if (breadcrumbEl) breadcrumbEl.textContent = selectedNote.note.Title;
 		if (noteBody)
 			noteBody.textContent = selectedNote.blocks
-				.map((item) => item.content)
+				.map((item) => item.Content)
 				.join('\n\n');
 
 		document.querySelectorAll('[data-note-id]').forEach((el) => {
