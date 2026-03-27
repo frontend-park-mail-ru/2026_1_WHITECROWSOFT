@@ -1,46 +1,46 @@
 <aside class="sidebar">
-	<div class="sidebarHeader">
-		<h1 class="appTitle">Noterian</h1>
+	<div class="sidebar__header">
+		<h1 class="logo__title">Noterian</h1>
 	</div>
 
-	<div class="actionMenu">
-		<div class="searchBox disabled">
-		    <img src="/icons/search.svg" class="icon searchIcon" />
+	<div class="sidebar__actionMenu">
+		<div class="search disabled">
+		    <img src="/icons/search.svg" class="icon search__icon" />
 			<input
 				type="text"
-				class="searchInput"
+				class="input search__input"
 				placeholder="Поиск"
 				value="{{searchQuery}}"
 			/>
 		</div>
-		<button class="sidebarButton disabled">
+		<button class="sidebar__btn disabled">
 			<img src="/icons/home.svg" class="icon" />
 			Главная
 		</button>
-		<button class="sidebarButton disabled">
+		<button class="sidebar__btn disabled">
 			<img src="/icons/bookmark.svg" class="icon" />
 			Библиотека
 		</button>
-		<button class="sidebarButton disabled">
+		<button class="sidebar__btn disabled">
 			<img src="/icons/settings.svg" class="icon" />
 			Настройки
 		</button>
-		<button id="logoutBtn" class="logoutButton sidebarButton">
+		<button id="logoutBtn" class="logoutButton sidebar__btn">
 			<img src="/icons/logout.svg" class="icon" />
 			Выйти
 		</button>
 	</div>
 
-	<hr class="barrier" />
+	<hr class="sidebar__barrier" />
 
-	<div class="notesList">
+	<div class="sidebar__notesList">
 		{{#each notes}}
 		<div
-			class="noteItem {{#if (eq this.ID ../activeNoteId)}}active{{/if}}"
-			data-note-id="{{this.ID}}"
+			class="sidebar__noteItem {{#if (eq this.id ../activeNoteId)}}active{{/if}}"
+			data-note-id="{{this.id}}"
 		>
 			<img src="/icons/{{this.icon}}.svg" class="icon" />
-			<div class="noteItemTitle">{{this.Title}}</div>
+			<div class="sidebar__noteItemTitle">{{this.title}}</div>
 		</div>
 		{{else}}
 		<div class="emptyNotes">
