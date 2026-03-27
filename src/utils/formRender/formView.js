@@ -65,7 +65,7 @@ export function createFormView(container, template) {
 		Object.entries(errors).forEach(([fieldName, message]) => {
 			const field = errorCache.fields.get(fieldName);
 			if (field) {
-				field.input.classList.add('error');
+				field.input.classList.add('input--error');
 				if (field.error) {
 					field.error.textContent = message;
 					field.error.style.visibility = 'visible';
@@ -75,7 +75,7 @@ export function createFormView(container, template) {
 
 		errorCache.fields.forEach((field, fieldName) => {
 			if (!errors[fieldName]) {
-				field.input.classList.remove('error');
+				field.input.classList.remove('input--error');
 				if (field.error) {
 					field.error.textContent = '';
 					field.error.style.visibility = 'hidden';
@@ -89,11 +89,13 @@ export function createFormView(container, template) {
 		if (passwordInput) {
 			passwordInput.type = showPassword ? 'text' : 'password';
 			const passwordToggle = passwordInput
-				.closest('.inputWrapper')
+				.closest('.input__wrapper')
 				?.querySelector('[data-toggle-password]');
 			if (passwordToggle) {
-				const eyeOpen = passwordToggle.querySelector('.eyeOpen');
-				const eyeClosed = passwordToggle.querySelector('.eyeClosed');
+				const eyeOpen = passwordToggle.querySelector('.input__eyeIcon--open');
+				const eyeClosed = passwordToggle.querySelector(
+					'.input__eyeIcon--closed',
+				);
 				if (eyeOpen && eyeClosed) {
 					eyeOpen.style.display = showPassword ? 'none' : 'block';
 					eyeClosed.style.display = showPassword ? 'block' : 'none';
@@ -107,11 +109,13 @@ export function createFormView(container, template) {
 		if (confirmInput) {
 			confirmInput.type = showPasswordConfirm ? 'text' : 'password';
 			const confirmToggle = confirmInput
-				.closest('.inputWrapper')
+				.closest('.input__wrapper')
 				?.querySelector('[data-toggle-password]');
 			if (confirmToggle) {
-				const eyeOpen = confirmToggle.querySelector('.eyeOpen');
-				const eyeClosed = confirmToggle.querySelector('.eyeClosed');
+				const eyeOpen = confirmToggle.querySelector('.input__eyeIcon--open');
+				const eyeClosed = confirmToggle.querySelector(
+					'.input__eyeIcon--closed',
+				);
 				if (eyeOpen && eyeClosed) {
 					eyeOpen.style.display = showPasswordConfirm ? 'none' : 'block';
 					eyeClosed.style.display = showPasswordConfirm ? 'block' : 'none';

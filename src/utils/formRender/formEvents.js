@@ -165,6 +165,11 @@ export function createFormEvents(container, actions, handlers) {
 			toggleBtns?.forEach((btn) => {
 				btn.removeEventListener('click', handlePasswordVisibility(btn));
 			});
+			regPasses?.forEach((input) => {
+				input.removeEventListener('focus', showPasswordValidator(input));
+				input.removeEventListener('blur', hidePasswordValidator(input));
+				input.removeEventListener('input', handlePasswordValidator(input));
+			});
 		};
 	}
 
