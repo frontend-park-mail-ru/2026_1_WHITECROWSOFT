@@ -3,7 +3,7 @@ import { AppError, createError } from './appError';
 const SERVER_URL = '/api';
 
 /**
- * Класс дял клиента, выполняющего HTTP-запросы к серверу
+ * Класс для клиента, выполняющего HTTP-запросы к серверу
  * @class Client
  * @classdesc Предоставляет методы для работы с API (GET, POST, PUT)
  */
@@ -111,6 +111,12 @@ class Client {
 			method: 'POST',
 			body: formData,
 			headers: {},
+		});
+	}
+
+	delete(endpoint) {
+		return this.request(endpoint, {
+			method: 'DELETE',
 		});
 	}
 }
