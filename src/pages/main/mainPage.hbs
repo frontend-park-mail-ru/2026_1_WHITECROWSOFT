@@ -1,22 +1,28 @@
-<div class="mainContainer">
-	<div id="sidebarContainer"></div>
-
-	<main class="mainContent">
-		{{#if activeNote}}
-		<div class="notePath">
-			<span class="pathItem">Библиотека</span>
-			<span class="pathSeparator">/</span>
-			<span class="pathItem currentItem">{{activeNote.title}}</span>
+{{#if activeNote}}
+	<div class="notePath">
+		<span class="pathItem">Библиотека</span>
+		<span class="pathSeparator">/</span>
+		<span class="pathItem currentItem">{{activeNote.title}}</span>		
+	</div>
+		
+	<article class="noteContent">
+		<h1 class="noteTitle">{{activeNote.title}}</h1>
+		<div class="noteBody">
+			{{#each activeBlocks}}
+			<div class="block" data-block-id="{{id}}" contenteditable="true">{{content}}</div>
+			{{/each}}
 		</div>
-
-		<article class="noteContent">
-			<h1 class="noteTitle">{{activeNote.title}}</h1>
-			<div class="noteBody">{{activeNote.text}}</div>
-		</article>
-		{{else}}
-		<div class="emptyState">
-			<p>Выберите заметку из списка</p>
-		</div>
-		{{/if}}
-	</main>
-</div>
+	</article>
+	<div class="noteActions"> 
+		<button class="addBlock">
+			<img src="/icons/block_add.svg" class="icon" />
+		</button>
+		<button class="dragBlock">
+			<img src="/icons/block_drag.svg" class="icon" />
+		</button>
+	</div>
+{{else}}
+	<div class="emptyState">
+	<p>Нет заметок</p>
+	</div>
+{{/if}}
