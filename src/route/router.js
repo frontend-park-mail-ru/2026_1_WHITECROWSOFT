@@ -1,4 +1,6 @@
 import { getRoute } from './routes.js';
+import { authService } from '../services/authService.js';
+import { Layout } from '../layout.js';
 const modules = import.meta.glob('../pages/**/*.js');
 
 /**
@@ -11,9 +13,7 @@ const modules = import.meta.glob('../pages/**/*.js');
  */
 export const router = {
 	_currentPath: null,
-	_sessionCache: null,
-	_sessionCacheTime: 0,
-	_SESSION_CACHE_MS: 5000,
+    _currentLayout: null, 
 
 	/**
 	 * Инициализирует роутер
@@ -96,6 +96,15 @@ export const router = {
 			}
 			return;
 		}
+
+		// const access = await this.checkAuth(route);
+        // if (!access.allowed) {
+        //     if (access.redirectTo && access.redirectTo !== path) {
+        //         this.replace(access.redirectTo);
+        //     }
+        //     return;
+        // }
+
 		try {
 			const path = `../pages/${route.component}.js`;
 			const moduleLoader = modules[path];
@@ -103,15 +112,29 @@ export const router = {
 				const module = await moduleLoader();
 				const initFn = module[route.init];
 				if (typeof initFn === 'function') {
-					await initFn();
+					if (route.layout === 'auth') {
+						 if (this._currentLayout) {
+							this._currentLayout.destroy();
+							this._currentLayout = null;
+							window.appLayout = null;
+						}
+						initFn();
+					} else {
+						if (!this._currentLayout) {
+							this._currentLayout = new Layout();
+							await this._currentLayout.init();
+							window.appLayout = this._currentLayout;
+						}
+						await window.appLayout.setPage(initFn, route.data);
+					}
 				}
 			} else {
 				throw new Error(`Module not found at ${path}`);
 			}
 		} catch (err) {
-			if (err?.status === 401) {
-				this.replace('/signin');
-			}
+			if (path !== '*' && path !== '/signin') {
+                this.replace('*');
+            }
 		}
 	},
 
@@ -121,63 +144,52 @@ export const router = {
 	 * @param {object} route - объект маршрута
 	 * @returns {Promise<object>} результат проверки доступа
 	 */
-	// async checkAuth(route) {
-	// 	const now = Date.now();
+	async checkAuth(route) {
+		const now = Date.now();
+		if (
+			this._sessionCache !== null &&
+			now - this._sessionCacheTime < this._SESSION_CACHE_MS
+		) {
+			return this._checkAuthLogic(route, this._sessionCache);
+		}
+		const session = await authService.getUserSession();
+		this._sessionCache = session;
+		this._sessionCacheTime = Date.now();
+		return this._checkAuthLogic(route, session);
+	},
 
-	// 	if (
-	// 		this._sessionCache !== null &&
-	// 		now - this._sessionCacheTime < this._SESSION_CACHE_MS
-	// 	) {
-	// 		return this._checkAuthLogic(route, this._sessionCache);
-	// 	}
-
-	// 	const session = await authService.getUserSession();
-	// 	this._sessionCache = session;
-	// 	this._sessionCacheTime = Date.now();
-
-	// 	return this._checkAuthLogic(route, session);
-	// },
-
-	// /**
-	//  * Оценивает доступ на основе сессии и типа маршрута
-	//  * @private
-	//  * @param {object} route - объект маршрута
-	//  * @param {object} session - объект сессии { isAuthenticated, user, error }
-	//  * @returns {object} результат проверки { allowed, redirectTo }
-	//  */
-	// _checkAuthLogic(route, session) {
-	// 	const isAuthenticated = session.isAuthenticated;
-	// 	const error = session.error;
-
-	// 	if (error?.onSamePage) {
-	// 		return {
-	// 			allowed: true,
-	// 			redirectTo: '',
-	// 		};
-	// 	}
-	// 	if (error?.type === 'AUTH') {
-	// 		return {
-	// 			allowed: false,
-	// 			redirect: error.redirectTo || '/signin',
-	// 		};
-	// 	}
-	// 	if (route.protected && !isAuthenticated) {
-	// 		return {
-	// 			allowed: false,
-	// 			redirectTo: session.error?.redirectTo || '/signin',
-	// 		};
-	// 	}
-	// 	if (route.guest && isAuthenticated) {
-	// 		return {
-	// 			allowed: false,
-	// 			redirectTo: '/',
-	// 		};
-	// 	}
-	// 	return {
-	// 		allowed: true,
-	// 		redirectTo: '',
-	// 	};
-	// },
+	/**
+	 * Оценивает доступ на основе сессии и типа маршрута
+	 * @private
+	 * @param {object} route - объект маршрута
+	 * @param {object} session - объект сессии { isAuthenticated, user, error }
+	 * @returns {object} результат проверки { allowed, redirectTo }
+	 */
+	_checkAuthLogic(route, session) {
+		const { isAuthenticated, requiresRedirect } = session;
+		if (requiresRedirect) {
+        	return { 
+				allowed: false, 
+				redirectTo: '/signin' 
+			};
+    	}
+		if (route.protected && !isAuthenticated) {
+			return {
+				allowed: false,
+				redirectTo: session.error?.redirectTo || '/signin',
+			};
+		}
+		if (route.guest && isAuthenticated) {
+			return {
+				allowed: false,
+				redirectTo: '/',
+			};
+		}
+		return {
+			allowed: true,
+			redirectTo: '',
+		};
+	},
 
 	/**
 	 * Очищает кэш сессии
