@@ -1,0 +1,37 @@
+
+    <div class="popupRow">
+        <input type="text" class="fontInput" value="{{font}}" placeholder="Inter" readonly>
+        <button class="dropdownBtn fontDropdownBtn" data-action="fontDropdown">
+            <img src="/icons/expand.svg" class="icon"/>
+        </button>
+        <button class="styleBtn {{#if isBold}}active{{/if}}" data-action="bold">
+            <img src="/icons/text_bold.svg" class="icon"/>
+        </button>
+        <button class="styleBtn {{#if isItalic}}active{{/if}}" data-action="italic">
+            <img src="/icons/text_italica.svg" class="icon"/>
+        </button>
+        <button class="styleBtn {{#if isUnderline}}active{{/if}}" data-action="underline">
+            <img src="/icons/text_underscore.svg" class="icon"/>
+        </button>
+        <button class="styleBtn {{#if isStrike}}active{{/if}}" data-action="strike">
+            <img src="/icons/text_cross.svg" class="icon"/>
+        </button>
+    </div>
+    <div class="popupRow">
+        <input type="number" class="fontSizeInput" min="8" max="96" value="{{fontSize}}" placeholder="14" readonly>
+        <button class="dropdownBtn sizeDropdownBtn" data-action="sizeDropdown">
+            <img src="/icons/expand.svg" class="icon"/>
+        </button>
+        <button class="colorBtn" data-action="color">
+            <img src="/icons/text_color.svg" class="icon"/>
+        </button>
+        <button class="linkBtn" data-action="link">
+            <img src="/icons/text_link.svg" class="icon"/>
+        </button>
+        <button class="codeBtn" data-action="code">
+            <img src="/icons/text_code.svg" class="icon"/>
+        </button>
+        <button class="formulaBtn" data-action="formula">
+            <img src="/icons/text_formula.svg" class="icon"/>
+        </button>
+    </div>
