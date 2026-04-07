@@ -61,6 +61,11 @@
 	padding: 0;
 }
 
+.appLayout {
+    display: flex;
+    flex-direction: row;
+}
+
 body {
 	background-color: var(--background);
 	color: var(--text);
