@@ -1,0 +1,105 @@
+
+<article class="settignsHeader">
+	<h1 class="settingsTitle">Профиль</h1>
+    <span class="settings">Вы можете загрузить фотографию изменить имя пользователя</span>
+</article>
+
+<div class="settingsBlocks">
+    <div class="profieBlocks">
+        <form id="usernameForm" class="settingsForm" novalidate>
+            <h2 class="accountTitle">Аккаунт</h2>
+                        
+            {{> components/partials/forms/input
+                name="username"
+                label="Имя пользователя"
+                type="text"
+                value=user.username
+                placeholder="Введите новое имя"
+                autocomplete="username"
+                witherror="true"
+            }}
+                        
+            {{> components/partials/forms/button 
+                type="submit" 
+                text="Изменить" 
+                variant="primary"
+                className="submitButton" 
+            }}
+        </form>
+
+        <div class="securityBlock">
+            <h2 class="securityTitle">Безопасность</h2>
+            <span class="settings">Добавьте почту, чтобы восстановить через нее пароль в случае, если Вы его потеряете или забудете.</span>
+					
+			<form id="emailForm" class="securityForm" novalidate>
+                {{> components/partials/forms/input
+                    name="email"
+                    label="Email"
+                    type="email"
+                    value=user.email
+                    placeholder="Ваша почта"
+                    autocomplete="email"
+                    witherror="true"
+                }}
+                        
+                {{> components/partials/forms/button 
+                    type="submit" 
+                    text="Сохранить" 
+                    variant="primary"
+                    className="submitButton" 
+                }}
+            </form>
+
+			<form id="passwordForm" class="securityForm" novalidate>
+                {{> components/partials/forms/input
+                    name="newPassword"
+                    label="Ваш пароль"
+                    type="password"
+                    placeholder="*************"
+                    autocomplete="new-password"
+                    witherror="true"
+                }}
+                        
+                {{> components/partials/forms/button 
+                    type="submit" 
+                    text="Изменить" 
+                    variant="primary"
+                    className="submitButton" 
+                }}
+            </form>
+        </div>
+    </div>
+    <div class="photoBlock">
+        <form id="avatarForm" class="settingsForm" enctype="multipart/form-data">
+            <h2 class="photoTitle">Фотография</h2>
+                        
+			{{> components/partials/forms/fileInput
+                name="avatar"
+                buttonText="Загрузить"
+                accept=".png,.jpg,.jpeg,.gif"
+                avatar=user.avatar
+                witherror="true"
+            }}
+                
+            <span class="settingsText">Размер фотографии не должен превышать 1мб.Допустимые расширени: .png, .jpg, .gif.</span>
+        </form>
+    </div>
+</div>
+		
+<div class="exitBlock">
+	{{> components/partials/forms/button 
+        type="button"
+        text="Выйти" 
+        variant="danger"
+        className="logoutButton"
+        data-action="logout"
+    }}
+            
+    {{> components/partials/forms/button 
+        type="button"
+        text="Удалить аккаунт" 
+        variant="danger"
+        className="deleteButton"
+        data-action="deleteAccount"
+    }}	
+</div>
