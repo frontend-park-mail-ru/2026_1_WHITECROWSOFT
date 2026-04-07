@@ -13,23 +13,34 @@ export const routes = [
 		component: 'signin/signinPage',
 		init: 'initSigninPage',
 		guest: true,
+		layout: 'auth',
 	},
 	{
 		path: '/signup',
 		component: 'signup/signupPage',
 		init: 'initSignupPage',
 		guest: true,
+		layout: 'auth',
+	},
+	{
+		path: '/profile',
+		component: 'profile/profilePage',
+		init: 'initProfilePage',
+		protected: true,
+		layout: 'main',
 	},
 	{
 		path: '/',
 		component: 'main/mainPage',
 		init: 'initMainPage',
 		protected: true,
+		layout: 'main',
 	},
 	{
 		path: '*',
 		component: 'not-found/notFoundPage',
 		init: 'initNotFoundPage',
+		layout: 'auth',
 	},
 ];
 
