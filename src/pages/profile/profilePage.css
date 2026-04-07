@@ -1,0 +1,214 @@
+.settignsHeader {
+	padding: 24px 40px;
+	border-bottom: 1px solid var(--faint-a);
+	background-color: var(--background);
+}
+
+.settingsTitle {
+	font-size: 1.75rem;
+	font-weight: 800;
+	color: var(--text);
+	margin-bottom: 8px;
+}
+
+.settings {
+	display: block;
+	font-size: var(--size-label);
+	color: var(--faint-b);
+	line-height: 1.5;
+}
+
+.settingsBlocks {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 40px;
+	padding: 40px;
+	background-color: var(--background);
+	max-width: 1200px;
+	margin: 0 auto;
+}
+
+.profieBlocks {
+	display: flex;
+	flex-direction: column;
+	gap: 32px;
+}
+
+.settingsForm,
+.securityForm {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 20px;
+	background-color: rgba(255, 255, 255, 0.5);
+	border: 1.25px solid var(--faint-a);
+	border-radius: 12px;
+}
+
+.accountTitle,
+.securityTitle,
+.photoTitle {
+	font-size: 1rem;
+	font-weight: 700;
+	color: var(--text);
+	margin-bottom: 8px;
+}
+
+.securityBlock {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.securityBlock > .settings {
+	font-size: var(--size-label);
+	color: var(--faint-b);
+}
+
+.photoBlock {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	padding: 20px;
+	background-color: rgba(255, 255, 255, 0.5);
+	border: 1.25px solid var(--faint-a);
+	border-radius: 12px;
+	height: fit-content;
+}
+
+.settingsText {
+	font-size: var(--size-small);
+	color: var(--faint-b);
+	line-height: 1.5;
+}
+
+.submitButton,
+.logoutButton,
+.deleteButton {
+	padding: 10px 20px;
+	border-radius: 10px;
+	border: none;
+	font-family: inherit;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	font-size: var(--size-base);
+	align-self: flex-start;
+}
+
+.submitButton {
+	background-color: var(--cornflower);
+	color: var(--background);
+}
+
+.submitButton:hover {
+	background-color: var(--oceanic);
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(65, 125, 222, 0.2);
+}
+
+.submitButton:active {
+	background-color: var(--pacific);
+	transform: translateY(0);
+}
+
+.exitBlock {
+	display: flex;
+	flex-direction: row;
+	gap: 16px;
+	padding: 40px;
+	border-top: 1px solid var(--faint-a);
+	background-color: var(--background);
+}
+
+.logoutButton,
+.deleteButton {
+	background-color: transparent;
+	color: var(--danger-red);
+	border: 1.25px solid var(--danger-red);
+}
+
+.logoutButton:hover,
+.deleteButton:hover {
+	background-color: var(--danger-red);
+	color: var(--background);
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(161, 36, 39, 0.2);
+}
+
+.logoutButton:active,
+.deleteButton:active {
+	transform: translateY(0);
+	box-shadow: 0 2px 6px rgba(161, 36, 39, 0.15);
+}
+
+/* Form Fields */
+.formInput {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	margin-bottom: 8px;
+}
+
+.formLabel {
+	font-size: var(--size-label);
+	font-weight: 600;
+	color: var(--text);
+	margin-bottom: 4px;
+}
+
+.input {
+	min-width: auto;
+	transition: all 0.2s ease;
+}
+
+.input:focus {
+	border-color: var(--cornflower);
+	box-shadow: 0 0 0 2px rgba(65, 125, 222, 0.1);
+}
+
+.fileInputWrapper {
+	margin-bottom: 12px;
+}
+
+.fileInput {
+	padding: 12px;
+	border: 1.25px dashed var(--faint-a);
+	border-radius: 10px;
+	background-color: rgba(255, 255, 255, 0.3);
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.fileInput:hover {
+	border-color: var(--cornflower);
+	background-color: rgba(65, 125, 222, 0.05);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+	.settingsBlocks {
+		grid-template-columns: 1fr;
+		gap: 24px;
+		padding: 24px;
+	}
+
+	.settignsHeader {
+		padding: 16px 24px;
+	}
+
+	.exitBlock {
+		padding: 24px;
+		flex-direction: column;
+	}
+}
+
+.emptyState {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 60px 20px;
+	text-align: center;
+	color: var(--faint-b);
+	font-size: 1.1rem;
+}
