@@ -31,6 +31,18 @@ export function el(tag, props = {}, children = []) {
 	return element;
 }
 
+export function createElement(tag, ...classNames) {
+    const el = document.createElement(tag);
+    if (classNames.length) {
+        el.className = classNames.join(' ');
+    }
+    return el;
+}
+
+export function getElementPosition(el) {
+    return el.getBoundingClientRect();
+}
+
 /**
  * Рендерит контент в указанный контейнер
  * @param {HTMLElement} container - контейнер для рендеринга
