@@ -1,5 +1,7 @@
 import { client } from '../client/client.js';
-// import { router } from '../route/router.js';
+import { db } from '../db.js';
+import { router } from '../route/router.js';
+import { store } from '../store.js';
 
 /**
  * Сервис для работы с авторизацией
@@ -7,57 +9,23 @@ import { client } from '../client/client.js';
  */
 export const authService = {
 	/**
-	 * Получает список всех заметок пользователя
-	 * @async
-	 * @returns {Promise<Array|null>} список заметок или null при ошибке
-	 */
-	async getNotes() {
-		try {
-			const result = client.get('/notes');
-			// router.clearSessionCache();
-			return result;
-		} catch (error) {
-			if (error?.status === 401 || error?.message?.includes('401')) {
-				// console.debug('[Auth] User not authenticated (expected)');
-				return null;
-			}
-			// console.warn('[Auth] Check failed:', error);
-			return null;
-		}
-	},
-
-	/**
-	 * Получает конкретную заметку по ID
-	 * @async
-	 * @param {string} noteID - идентификатор заметки
-	 * @returns {Promise<Object|null>} данные заметки или null при ошибке
-	 */
-	async getNote(noteID) {
-		try {
-			const result = client.get(`/notes/${noteID}`);
-			// if (result.status != 200) {
-			// 	throw new Error;
-			// }
-			return result;
-		} catch (error) {
-			if (error?.status === 401 || error?.message?.includes('401')) {
-				// console.debug('[Auth] User not authenticated (expected)');
-				return null;
-			}
-			// console.warn('[Auth] Check failed:', error);
-			return null;
-		}
-	},
-
-	/**
 	 * Регистрирует нового пользователя
 	 * @async
 	 * @param {Object} data - данные для регистрации
 	 * @returns {Promise<Object>} результат регистрации
 	 */
 	async signUp(data) {
-		const result = client.post('/signup', data);
-		// router.clearSessionCache();
+		const result = await client.post('/signup', data);
+        if (result?.id) {
+            const user = {
+                id: result.id,
+                username: result.username,
+                email: result.email || null,
+                avatar: result.avatar || null,
+            };
+            await db.settingsSet('user', user);
+            store.setUser(user);
+        }
 		return result;
 	},
 
@@ -68,8 +36,17 @@ export const authService = {
 	 * @returns {Promise<Object>} результат входа
 	 */
 	async signIn(data) {
-		const result = client.post('/signin', data);
-		// router.clearSessionCache();
+		const result = await client.post('/signin', data);
+        if (result?.id) {
+            const user = {
+                id: result.id,
+                username: result.username,
+                email: result.email || null,
+                avatar: result.avatar || null,
+            };
+            await db.settingsSet('user', user);
+            store.setUser(user);
+        }
 		return result;
 	},
 
@@ -79,53 +56,112 @@ export const authService = {
 	 * @returns {Promise<Object>} результат выхода
 	 */
 	async logOut() {
-		const result = client.post('/logout', {});
-		// router.clearSessionCache();
-		return result;
+        try {
+            await client.post('/logout', {});
+        } catch (error) {
+            console.debug('[Auth] Logout error:', error);
+        } finally {
+            await db.settingsSet('user', null);
+            store.setUser(null);
+            await db.notesClear();
+            store.setNotes([]);
+            router.clearSessionCache();
+        }
 	},
 
-	// /**
-	//  * Проверяет статус авторизации
-	//  * @async
-	//  * @returns {Promise<Object|null>} данные пользователя или null
-	//  */
-	// async getUserSession() {
-	// 	try {
-	// 		const user = await client.get('/protected');
-	// 		return user;
-	// 	} catch (error) {
-	// 		if (error?.status === 401 || error?.message?.includes('401')) {
-	// 			return {
-	// 				isAuthenticated: false,
-	// 				user: null,
-	// 				error: {
-	// 					type: 'AUTH',
-	// 					status: 401,
-	// 					redirectTo: '/signin',
-	// 					onSamePage: false,
-	// 				},
-	// 			};
-	// 		}
-	// 		if (error?.status >= 500) {
-	// 			return {
-	// 				isAuthenticated: false,
-	// 				user: null,
-	// 				error: {
-	// 					type: 'SERVER',
-	// 					status: error.status,
-	// 					onSamePage: true,
-	// 				},
-	// 			};
-	// 		}
-	// 		return {
-	// 			isAuthenticated: false,
-	// 			user: null,
-	// 			error: {
-	// 				type: 'NETWORK',
-	// 				status: error?.status || 0,
-	// 				onSamePage: true,
-	// 			},
-	// 		};
-	// 	}
-	// },
+	/**
+	 * Проверяет статус авторизации
+	 * @async
+	 * @returns {Promise<Object|null>} данные пользователя или null
+	 */
+    async getUserSession() {
+        const isOnline = store.getOnline();
+
+        if (!isOnline) {
+            const cachedUser = await db.settingsGet('user');
+            if (cachedUser) {
+                store.setUser(cachedUser);
+                return {
+                    isAuthenticated: true,
+                    user: cachedUser,
+                    isOffline: true,
+                    isStale: true,
+                }
+            }
+            return {
+                isAuthenticated: false,
+                user: null,
+            }
+        }
+
+        try {
+            const user = await client.get('/profile');
+            await db.settingsSet('user', user);
+            store.setUser(user);
+            return {
+                isAuthenticated: true,
+                user,
+                isOffline: false,
+            };
+        } catch (error) {
+            if (error?.status === 401) {
+                await db.settingsSet('user', null);
+                store.setUser(null);
+                return {
+                    isAuthenticated: false,
+                    user: null,
+                    requiresRedirect: true,
+                }
+            }
+            const cachedUser = await db.settingsGet('user');
+            if (cachedUser) {
+                store.setUser(cachedUser);
+                return {
+                    isAuthenticated: true,
+                    user: cachedUser,
+                    isStale: true,
+                }
+            }
+            return {
+                isAuthenticated: false,
+                user: null,
+                requiresRedirect: false,
+            }
+        }
+    },
+
+	
+    /**
+     * Обновляет профиль (после изменения настроек)
+     */
+    async updateProfile(data) {
+        const result = await client.put('/profile', data);
+        const currentUser = store.getUser();
+        if (currentUser) {
+            const updatedUser = { ...currentUser, ...result };
+            await db.settingsSet('user', updatedUser);
+            store.setUser(updatedUser);
+        }
+        
+        return result;
+    },
+
+    /**
+     * Обновляет аватар
+     */
+    async updateAvatar(formData) {
+        const result = await client.postForm('/profile/avatar', formData);
+        const currentUser = store.getUser();
+        if (currentUser && result?.avatar) {
+            const updatedUser = { ...currentUser, avatar: result.avatar };
+            await db.settingsSet('user', updatedUser);
+            store.setUser(updatedUser);
+        }
+        return result;
+    },
+
+	
+	async changePassword() {
+        //Пока не понятно какая логика будет для смены профиля
+    },
 };
