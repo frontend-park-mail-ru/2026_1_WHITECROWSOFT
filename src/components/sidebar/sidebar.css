@@ -31,6 +31,7 @@
 	/* overflow-y: scroll; */
 	max-width: 100%;
 	width: 100%;
+	flex: 1;
 }
 
 .sidebarButton,
@@ -49,6 +50,27 @@
 	font-family: 'Inter', sans-serif;
 	font-size: 16px;
 	color: var(--text);
+}
+
+.sidebarButton.bottom {
+	margin-top: auto;
+}
+
+.noteItemActions {
+    display: none;
+    gap: 3px;
+}
+
+.noteItem.active .noteItemActions {
+    display: flex;
+}
+
+.noteActionBtn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    width: 16px;
+	height: 16px;
 }
 
 .disabled {

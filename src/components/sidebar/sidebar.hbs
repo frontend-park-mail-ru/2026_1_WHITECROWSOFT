@@ -13,7 +13,11 @@
 				value="{{searchQuery}}"
 			/>
 		</div>
-		<button class="sidebarButton disabled">
+		<button id="profileBtn" class="profileButton sidebarButton" data-action="profile">
+			<img src="/icons/profile.svg" class="icon" />
+			<span id="profile-username">{{user.username}}</span>
+		</button>
+		<button id="homeButton" class="homeButton sidebarButton" data-action="home">
 			<img src="/icons/home.svg" class="icon" />
 			Главная
 		</button>
@@ -21,31 +25,42 @@
 			<img src="/icons/bookmark.svg" class="icon" />
 			Библиотека
 		</button>
-		<button class="sidebarButton disabled">
-			<img src="/icons/settings.svg" class="icon" />
-			Настройки
-		</button>
-		<button id="logoutBtn" class="logoutButton sidebarButton">
-			<img src="/icons/logout.svg" class="icon" />
-			Выйти
-		</button>
 	</div>
 
 	<hr class="barrier" />
 
 	<div class="notesList">
 		{{#each notes}}
-		<div
-			class="noteItem {{#if (eq this.ID ../activeNoteId)}}active{{/if}}"
-			data-note-id="{{this.ID}}"
-		>
-			<img src="/icons/{{this.icon}}.svg" class="icon" />
-			<div class="noteItemTitle">{{this.Title}}</div>
-		</div>
+			<div class="noteItem {{#if (eq this.ID ../activeNoteId)}}active{{/if}}" data-note-id="{{this.ID}}">
+				<img src="/icons/{{this.icon}}.svg" class="icon" />
+				<div class="noteItemTitle">{{this.title}}</div>
+				<div class="noteItemActions">
+					<button class="noteActionBtn addSubnoteBtn" data-action="addSubnote" data-note-id="{{this.ID}}">
+						<img src="/icons/add.svg" class="icon" />
+					</button>
+					<button class="noteActionBtn settingsBtn" data-action="settings" data-note-id="{{this.ID}}">
+						<img src="/icons/more.svg" class="icon" />
+					</button>
+				</div>
+			</div>
 		{{else}}
-		<div class="emptyNotes">
-			<p>У вас пока нет заметок</p>
-		</div>
+			<div class="emptyNotes">
+				<p>У вас пока нет заметок</p>
+			</div>
 		{{/each}}
 	</div>
+
+	<div class="newNoteContainer">
+        <button class="sidebarButton newNoteButton" data-action="newNote">
+            <img src="/icons/add.svg" class="icon" />
+            Новая Заметка
+        </button>
+    </div>
+
+	<hr class="barrier" />
+	
+	<button class="sidebarButton bottom disabled">
+		<img src="/icons/settings.svg" class="icon" />
+		Настройки
+	</button>
 </aside>
