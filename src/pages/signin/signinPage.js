@@ -45,13 +45,11 @@ export async function initSigninPage() {
 			showPassword: false,
 		},
 		validate: () => {
-			// no password validation required for login;
-			// either your password fits, or it doesn't.
 			return {};
 		},
 		onSubmit: async (formData) => {
 			await authService.signIn({
-				login: formData.username,
+				username: formData.username,
 				password: formData.password,
 			});
 		},

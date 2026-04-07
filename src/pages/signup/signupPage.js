@@ -66,7 +66,7 @@ export async function initSignupPage() {
 		},
 		onSubmit: async (formData) => {
 			await authService.signUp({
-				login: formData.username,
+				username: formData.username,
 				password: formData.password,
 			});
 			router.replace('/');
