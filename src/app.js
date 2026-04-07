@@ -1,9 +1,52 @@
+import { store } from './store.js';
+import { db } from './db.js';
 import { router } from './route/router.js';
+import { registerHelpers } from './utils/utils.js';
+import { noteService } from './services/noteService.js';
+import { queueService } from './services/requestQueueService.js';
 
 /**
  * Инициализирует приложение после загрузки DOM
  * @event DOMContentLoaded
  */
-document.addEventListener('DOMContentLoaded', () => {
-	router.init();
+document.addEventListener('DOMContentLoaded', async () => {
+	await bootstrap();
 });
+
+async function bootstrap() {
+	try {
+		registerHelpers();
+		await db.open();
+		await db.clear();
+		const notes = await noteService.getNotes();
+		store.setNotes(notes);
+		const activeNodeId = await db.settingsGet('activeNoteId');
+		if (activeNodeId) {
+			store.setActiveNoteId(activeNodeId);
+		}
+		const cachedUser = await db.settingsGet('user');
+		if (cachedUser) {
+			store.setUser(cachedUser);
+		}
+		window.addEventListener('online', async () => {
+			store.setOnline(true);
+			await queueService.flushQueue();
+		});
+		window.addEventListener('offline', () => {
+			store.setOnline(false);
+		});
+	} catch  (error) {
+		console.error('[App] Bootstrap error:', error);
+	} finally {
+		registerServiceWorker();
+		router.init();
+	}
+}
+
+function registerServiceWorker() {
+	if ('serviceWorker' in navigator) {
+		navigator.serviceWorker.register('/service-worker.js')
+			.then(() => console.log('[SW] Service worker registered'))
+			.catch((error) => console.warn('[SW] Service worker registration failed:', error));
+	}
+}
