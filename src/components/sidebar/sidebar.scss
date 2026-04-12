@@ -19,7 +19,7 @@
 	}
 
 	&__notesList {
-		overflow-y: scroll;
+		overflow-y: auto;
 		max-width: 100%;
 		width: 100%;
 		flex: 1;

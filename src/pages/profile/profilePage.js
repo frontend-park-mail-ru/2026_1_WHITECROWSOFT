@@ -6,6 +6,7 @@ import { registerHelpers, registerPartials } from '../../utils/utils.js';
 import templateText from './profilePage.hbs?raw';
 import { store } from '../../store.js';
 import './profilePage.css';
+import '../main/mainPage.scss';
 
 export async function initProfilePage(container, data = {}) {
     registerHelpers();
