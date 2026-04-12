@@ -266,7 +266,7 @@ export async function initMainPage(container) {
             }
         });
 
-        noteBody.addEventListener('dragend', async (e) => {
+        noteBody.addEventListener('dragend', async () => {
             if (draggedBlock) {
                 draggedBlock.classList.remove('dragging');
                 
@@ -352,6 +352,7 @@ async function _updateBlocksInDOM(blocks) {
                 
                 blockEl.appendChild(img);
             } catch (e) {
+                console.error('Error updating image block:', e)
                 blockEl = document.createElement('div');
                 blockEl.className = 'block';
                 blockEl.dataset.blockId = block.id;

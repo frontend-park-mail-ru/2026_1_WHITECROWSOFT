@@ -207,10 +207,6 @@ class Database {
         return Promise.all([this.notesClear(), this.formattingClear(), this.imagesClear(), this.clearQueueFiles()]);
     }
 
-    async clearQueuedRequests() {
-        return this._promise('requestQueue', 'readwrite', s => s.clear());
-    }
-
     _promise(storeName, mode, operation) {
         return new Promise((resolve, reject) => {
             const tx = this.db.transaction(storeName, mode);

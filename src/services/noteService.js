@@ -158,7 +158,7 @@ export const noteService = {
 				store.setActiveBlocks([]);
 				return result;
 			} catch(error) {
-				console.warn('[noteService] Network failed, queueing create request');
+				console.warn(`[noteService] Network failed (${error}), queueing create request`);
 				await queueService.enqueueRequest({ method: 'POST', endpoint: '/notes', body: data, localId: localNote.ID });
 			}
 		}
@@ -189,8 +189,8 @@ export const noteService = {
 		if (isOnline && !isLocal) {
 			try {
 				await client.delete(`/notes/${noteID}`);
-			} catch (error) {
-				console.warn('[noteService] Network failed, queueing delete request');
+      } catch (error) {
+        console.warn(`[noteService] Network failed (${error}), queueing delete request`);
 				await queueService.enqueueRequest({ method: 'DELETE', endpoint: `/notes/${noteID}`, body: null });
 			}
 		} else if (!isOnline && !isLocal) {
@@ -253,8 +253,8 @@ export const noteService = {
 				}
 
 				return result;
-			} catch (error) {
-				console.warn('[noteService] Network failed, queueing update request');
+      } catch (error) {
+        console.warn(`[noteService] Network failed (${error}), queueing update request`);
 				await queueService.enqueueRequest({ method: 'PUT', endpoint: `/notes/${noteID}`, body: data });
 			}
 		} else if (!isOnline && !isLocal) {
@@ -318,7 +318,8 @@ export const noteService = {
 				store.setActiveBlocks(blocks);
 				return blocks;
 			} catch(error) {
-				console.warn('[noteService] Network failed, using cache');
+        console.warn('[noteService] Network failed, using cache');
+        console.error('[noteService] Error fetching blocks:', error);
 			}
 		}
 
@@ -361,8 +362,8 @@ export const noteService = {
 				await this._updateCachedBlocks(noteID, block, 'add');
 				store.setActiveBlocks(store.getActiveBlocks().concat(block));
 				return block;
-			} catch(error) {
-				console.warn('[noteService] Network failed, queueing create block request');
+      } catch (error) {
+        console.warn(`[noteService] Network failed (${error}), queueing create block request`);
 				await queueService.enqueueRequest({ method: 'POST', endpoint: `/notes/${noteID}/blocks`, body: blockData, localId: localBlock.id });
 			}
 		}
@@ -399,7 +400,8 @@ export const noteService = {
 		if (isOnline && !isLocal) {
 			try {
 				await client.put(`/notes/${noteID}/blocks/${blockID}/content`, { content });
-			} catch (error) {
+      } catch (error) {
+        console.warn(`[noteService] Network failed (${error}), queueing block update request`);
 				await queueService.enqueueRequest({
 					method: 'PUT',
 					endpoint: `/notes/${noteID}/blocks/${blockID}/content`,
@@ -446,8 +448,8 @@ export const noteService = {
 				};
 				await this._updateCachedBlocks(noteID, block, 'update');
 				return block;
-			} catch(error) {
-				console.warn('[noteService] Network failed, queueing move block request');
+      } catch (error) {
+        console.warn(`[noteService] Network failed (${error}), queueing block move request`);
 				await queueService.enqueueRequest({ method: 'PUT', endpoint: `/notes/${noteID}/blocks/${blockID}/move`, body: { new_position: newPosition } });
 			}
 		} else if (!isOnline && !isLocal) {
@@ -472,8 +474,8 @@ export const noteService = {
 		if (isOnline && !isLocal) {
 			try {
 				await client.delete(`/notes/${noteID}/blocks/${blockID}`);
-			} catch(error) {
-				console.warn('[noteService] Network failed, queueing delete block request');
+      } catch (error) {
+        console.warn(`[noteService] Network failed (${error}), queueing block deletion request`);
 				await queueService.enqueueRequest({ method: 'DELETE', endpoint: `/notes/${noteID}/blocks/${blockID}`, body: null });
 			}
 		} else if (!isOnline && !isLocal) {
@@ -529,7 +531,7 @@ export const noteService = {
 				await db.formattingMarkSynced(blockId);
                 return result;
             } catch (error) {
-                console.warn('[noteService] Network failed, queuing formatting request');
+              console.warn(`[noteService] Network failed (${error}), queueing formatting request`);
                 await queueService.enqueueRequest({
                     method: 'PUT',
                     endpoint,
@@ -598,7 +600,7 @@ export const noteService = {
 					});
 				}
 				return ranges;
-			} catch (error) {
+      } catch (error) {
 				console.warn('[noteService] Failed to fetch formatting from server:', error);
 				return [];
 			}
@@ -622,8 +624,8 @@ export const noteService = {
 			try {
 				const result = await client.delete(endpoint);
 				return result;
-			} catch (error) {
-				console.warn('[noteService] Reset formatting failed, queued');
+      } catch (error) {
+        console.warn(`[noteService] Request failed (${error}), queueing formatting reset request`);
 				await queueService.enqueueRequest({ method: 'DELETE', endpoint });
 			}
 		} else {
@@ -664,7 +666,7 @@ export const noteService = {
 					}
 				});
 				return formattingMap;
-			} catch (error) {
+      } catch (error) {
 				console.warn('[noteService] Failed to fetch formatting from server, using cache:', error);
 			}
 		}
