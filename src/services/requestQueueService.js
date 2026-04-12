@@ -5,6 +5,7 @@ import { store } from '../store.js';
 const QUEUEABLE_METHODS = ['POST', 'PUT', 'DELETE', 'PATCH'];
 
 export const queueService = {
+     _lastCreatedNoteId: null,
 
     async enqueueRequest(request) {
         if (!QUEUEABLE_METHODS.includes(request.method)) {
@@ -37,6 +38,8 @@ export const queueService = {
             return [];
         }
 
+        this._lastCreatedNoteId = null;
+
         let queue = await this.getQueuedRequests();
         if (!queue.length) {
             return [];
@@ -53,6 +56,8 @@ export const queueService = {
                 if (requestItem.localId && requestItem.method === 'POST') {
                     if (requestItem.endpoint === '/notes') {
                         await this._commitLocalNoteId(requestItem.localId, response);
+                        const newNoteId = response.id;
+                        this._lastCreatedNoteId = newNoteId;
                         queue = await this._updateQueueArray(queue, requestItem.localId, response.id);
                     } else if (requestItem.endpoint.includes('/blocks') && !requestItem.type) {
                         await this._commitLocalBlockId(requestItem.localId, response);
@@ -243,7 +248,6 @@ export const queueService = {
         store.setNotes(notes);
 
         if (store.getActiveNoteId() === localId) {
-            store.setActiveNoteId(newNoteId);
             const activeNote = store.getActiveNote();
             if (activeNote) {
                 store.setActiveNote({
@@ -252,6 +256,7 @@ export const queueService = {
                     title: newNote.title,
                 });
             }
+            store.setActiveNoteId(newNoteId);
         }
     },
 
@@ -332,7 +337,7 @@ export const queueService = {
         }
         
         const newImageId = serverData.id;
-        const newImageUrl = `/minio/attachments/${newImageId}`;
+        const newImageUrl = serverData.attach_url;
         
         const updatedImage = {
             ...image,
@@ -341,7 +346,7 @@ export const queueService = {
             status: 'synced',
             syncedAt: Date.now(),
         };
-        delete updatedImage.blob;
+        // delete updatedImage.blob;
         
         await db.imagesDelete(localId);
         await db.imagesPut(updatedImage);

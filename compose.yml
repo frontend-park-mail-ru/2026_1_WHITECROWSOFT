@@ -1,17 +1,84 @@
 services:
-  backend:
-    image: ghcr.io/go-park-mail-ru/2026_1_whitecrowsoft:main
+  postgres:
+    image: postgres:15-alpine
     restart: unless-stopped
-    env_file: '.env'
+    env_file: ".env"
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./../../Back/2026_1_WHITECROWSOFT/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - noterian_network
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    env_file: ".env"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":${MINIO_CONSOLE_PORT:-9001}"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://localhost:${MINIO_API_PORT:-9000}/minio/health/live",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - noterian_network
+
+  backend:
+    build:
+      context: ./../../Back/2026_1_WHITECROWSOFT
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ".env"
     expose:
-      - '${PORT}'
+      - "${PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - noterian_network
 
   frontend:
-    build: .
-    # image: ghcr.io/frontend-park-mail-ru/2026_1_whitecrowsoft:latest
+    build:
+      context: ./
+      dockerfile: Dockerfile
     restart: unless-stopped
-    env_file: '.env'
     ports:
-      - '${PORT_FRONT}:80'
+      - "${PORT}:80"
     depends_on:
       - backend
+    networks:
+      - noterian_network
+
+volumes:
+  postgres_data:
+  minio_data:
+
+networks:
+  noterian_network:
+    driver: bridge

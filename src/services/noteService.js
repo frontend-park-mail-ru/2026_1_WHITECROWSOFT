@@ -374,17 +374,6 @@ export const noteService = {
 		return localBlock;
 	},
 
-	async createImageBlock(noteId, attachmentData) {
-		const blockData = {
-			note_id: noteId,
-			block_type_id: 2,
-			position: store.getActiveBlocks().length,
-			content: JSON.stringify(attachmentData)
-		};
-		
-		return await this.createBlock(noteId, blockData);
-	},
-
 	/**
 	 * Обновляет контент блока
 	 * @async

@@ -72,26 +72,22 @@ export function registerPartials() {
 
 		Handlebars.registerPartial(name, content);
 	});
-	console.log('[Handlebars] Partials registered');
 }
 
 /**
  * Регистрирует Handlebars helpers для использования в шаблонах
  */
 export function registerHelpers() {
-	Handlebars.registerHelper('eq', function (a, b) {
-		return a === b;
-	});
+	const helpers = {
+		eq: (a, b) => a === b,
+		neq: (a, b) => a !== b,
+		and: (a, b) => a && b,
+		or: (a, b) => a || b
+	};
 
-	Handlebars.registerHelper('neq', function (a, b) {
-		return a !== b;
-	});
-
-	Handlebars.registerHelper('and', function (a, b) {
-		return a && b;
-	});
-
-	Handlebars.registerHelper('or', function (a, b) {
-		return a || b;
+	Object.entries(helpers).forEach(([name, fn]) => {
+		if (!Handlebars.helpers[name]) {
+			Handlebars.registerHelper(name, fn);
+		}
 	});
 }

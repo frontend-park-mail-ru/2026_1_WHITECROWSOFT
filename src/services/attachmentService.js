@@ -33,9 +33,8 @@ export const attachmentService = {
             formData
         );
 
-        const imageUrl = `/minio/attachments/${attachmentResult.id}`;
         const imageContent = JSON.stringify({
-            url: imageUrl,
+            url: attachmentResult.attach_url,
             filename: attachmentResult.minio_key || file.name,
             size: file.size,
             mimeType: file.type,
@@ -52,7 +51,7 @@ export const attachmentService = {
             filename: file.name,
             mimeType: file.type,
             size: file.size,
-            url: imageUrl,
+            url: attachmentResult.attach_url,
             status: 'synced',
             syncedAt: Date.now()
         });
@@ -174,7 +173,9 @@ export const attachmentService = {
         }
         if (store.getOnline()) {
             try {
-                const imageUrl = `/minio/attachments/${attachmentId}`;
+                const attachData = await client.get(`/notes/${noteId}/blocks/${blockId}/attachments`);
+                let imageUrl = attachData.attach_url;
+                imageUrl = imageUrl.replace('http://minio:9000', '/minio');
                 const response = await fetch(imageUrl);
                 if (response.ok) {
                     const blob = await response.blob();

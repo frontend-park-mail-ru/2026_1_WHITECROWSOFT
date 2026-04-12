@@ -19,9 +19,16 @@ let formattingPopup = null;
 let isDraggingSelection = false;
 let selectionTimeout = null;
 
+let currentContainer = null;
+let unsubscribeFunctions = [];
+let domEventListeners = new Map();
+let attachPopupInstance = null;
+
 export async function initMainPage(container) {
-	registerHelpers();
-	const template = Handlebars.compile(templateText);
+    await cleanupMainPage();
+    currentContainer = container;
+    registerHelpers();
+    const template = Handlebars.compile(templateText);
 
     let notes = store.getNotes();
     let activeNote = store.getActiveNote();
@@ -57,7 +64,7 @@ export async function initMainPage(container) {
 
     const state = store.getState();
     const html = template(state);
-	container.innerHTML = html;
+    container.innerHTML = html;
 
     const emptyState = container.querySelector('.emptyState');
     const notePath = container.querySelector('.notePath');
@@ -67,23 +74,26 @@ export async function initMainPage(container) {
     const breadcrumbEl = container.querySelector('.currentItem');
 
     function setVisibility(hasNote) {
+        if (!emptyState || !notePath || !noteContent || !noteActions) return;
         emptyState.style.display = hasNote ? 'none' : 'flex';
         notePath.style.display = hasNote ? 'flex' : 'none';
         noteContent.style.display = hasNote ? 'block' : 'none';
         noteActions.style.display = hasNote ? 'flex' : 'none';
     }
 
-    store.subscribe('activeNote', (note) => {
+    const unsubActiveNote = store.subscribe('activeNote', (note) => {
         if (titleEl) titleEl.textContent = note?.title || '';
         if (breadcrumbEl) breadcrumbEl.textContent = note?.breadcrumb || '';
         setVisibility(!!note);
     });
+    unsubscribeFunctions.push(unsubActiveNote);
 
-    store.subscribe('activeBlocks', (blocks) => {
+    const unsubActiveBlocks = store.subscribe('activeBlocks', (blocks) => {
         _updateBlocksInDOM(blocks);
     });
+    unsubscribeFunctions.push(unsubActiveBlocks);
 
-    store.subscribe('activeNoteId', async (noteId) => {
+    const unsubActiveNoteId = store.subscribe('activeNoteId', async (noteId) => {
         if (noteId && noteId !== store.getActiveNote()?.ID) {
             try {
                 await noteService.getNote(noteId);
@@ -93,6 +103,7 @@ export async function initMainPage(container) {
             }
         }
     });
+    unsubscribeFunctions.push(unsubActiveNoteId);
 
     setVisibility(!!store.getActiveNote());
     _updateActiveNoteInDOM(store.getActiveNote());
@@ -100,8 +111,7 @@ export async function initMainPage(container) {
 
     const addBlockBtn = container.querySelector('.addBlock');
     if (addBlockBtn) {
-        let attachPopup = null;
-        addBlockBtn.addEventListener('click', (e) => {
+        const addBlockHandler = (e) => {
             e.stopPropagation();
             
             const activeNoteId = store.getActiveNoteId();
@@ -110,27 +120,32 @@ export async function initMainPage(container) {
                 return;
             }
             
-            if (attachPopup) {
-                attachPopup.close();
-                attachPopup = null;
+            if (attachPopupInstance) {
+                attachPopupInstance.close();
+                attachPopupInstance = null;
             } else {
-                attachPopup = new AttachPopup(addBlockBtn);
-                attachPopup.open();
+                attachPopupInstance = new AttachPopup(addBlockBtn);
+                attachPopupInstance.open();
+                
                 const closeOnNoteChange = () => {
-                    if (attachPopup) {
-                        attachPopup.close();
-                        attachPopup = null;
+                    if (attachPopupInstance) {
+                        attachPopupInstance.close();
+                        attachPopupInstance = null;
                     }
-                    store.unsubscribe('activeNoteId', closeOnNoteChange);
                 };
-                store.subscribe('activeNoteId', closeOnNoteChange);
+                
+                const unsub = store.subscribe('activeNoteId', closeOnNoteChange);
+                unsubscribeFunctions.push(unsub);
             }
-        });
+        };
+        
+        addBlockBtn.addEventListener('click', addBlockHandler);
+        _addEventListener(addBlockBtn, 'click', addBlockHandler);
     }
 
     const dragBlockBtn = container.querySelector('.dragBlock');
     if (dragBlockBtn) {
-        dragBlockBtn.addEventListener('click', () => {
+        const dragBlockHandler = () => {
             const activeNoteId = store.getActiveNoteId();
             if (!activeNoteId) {
                 console.warn('No active note to drag blocks');
@@ -151,16 +166,26 @@ export async function initMainPage(container) {
                     }
                 });
             }
-        });
+        };
+        
+        dragBlockBtn.addEventListener('click', dragBlockHandler);
+        _addEventListener(dragBlockBtn, 'click', dragBlockHandler);
     }
 
     const noteBody = container.querySelector('.noteBody');
     if (noteBody) {
-        noteBody.addEventListener('contextmenu', (e) => {
+        const createHandler = (event, handler) => {
+            const wrappedHandler = handler.bind(noteBody);
+            noteBody.addEventListener(event, wrappedHandler);
+            _addEventListener(noteBody, event, wrappedHandler);
+            return wrappedHandler;
+        };
+        
+        createHandler('contextmenu', (e) => {
             e.preventDefault();
         });
-
-        noteBody.addEventListener('mousedown', (e) => {
+        
+        createHandler('mousedown', (e) => {
             if (e.target.closest('.formattingPopup')) return;
             
             if (formattingPopup) {
@@ -170,7 +195,7 @@ export async function initMainPage(container) {
             isDraggingSelection = true;
         });
         
-        noteBody.addEventListener('mouseup', () => {
+        createHandler('mouseup', () => {
             if (!isDraggingSelection) return;
             isDraggingSelection = false;
             
@@ -189,8 +214,8 @@ export async function initMainPage(container) {
                 }
             }, 10);
         });
-
-        noteBody.addEventListener('click', (e) => {
+        
+        createHandler('click', (e) => {
             if (e.target.closest('.formattingPopup')) return;
             
             const selection = window.getSelection();
@@ -199,22 +224,15 @@ export async function initMainPage(container) {
                 formattingPopup = null;
             }
         });
-
-        noteBody.addEventListener('scroll', () => {
+        
+        createHandler('scroll', () => {
             if (formattingPopup) {
                 formattingPopup.close();
                 formattingPopup = null;
             }
         }, { passive: true });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && formattingPopup) {
-                formattingPopup.close();
-                formattingPopup = null;
-            }
-        });
-
-        noteBody.addEventListener('input', _debounce(async (e) => {
+        
+        const debouncedInput = _debounce(async (e) => {
             if (e.target.classList.contains('block')) {
                 if (formattingPopup) {
                     formattingPopup.close();
@@ -233,9 +251,12 @@ export async function initMainPage(container) {
                     }
                 }
             }
-        }, 500));
-
-        noteBody.addEventListener('dragstart', (e) => {
+        }, 500);
+        
+        noteBody.addEventListener('input', debouncedInput);
+        _addEventListener(noteBody, 'input', debouncedInput);
+        
+        createHandler('dragstart', (e) => {
             if (e.target.classList.contains('block') && dragMode) {
                 draggedBlock = e.target;
                 draggedFromIndex = Array.from(noteBody.querySelectorAll('.block')).indexOf(e.target);
@@ -244,8 +265,8 @@ export async function initMainPage(container) {
                 e.dataTransfer.setData('text/html', e.target.innerHTML);
             }
         });
-
-        noteBody.addEventListener('dragover', (e) => {
+        
+        createHandler('dragover', (e) => {
             if (dragMode && draggedBlock) {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
@@ -258,15 +279,15 @@ export async function initMainPage(container) {
                 }
             }
         });
-
-        noteBody.addEventListener('drop', async (e) => {
+        
+        createHandler('drop', async (e) => {
             if (dragMode && draggedBlock) {
                 e.preventDefault();
                 e.stopPropagation();
             }
         });
-
-        noteBody.addEventListener('dragend', async (e) => {
+        
+        createHandler('dragend', async (e) => {
             if (draggedBlock) {
                 draggedBlock.classList.remove('dragging');
                 
@@ -284,10 +305,6 @@ export async function initMainPage(container) {
                             } catch (error) {
                                 if (handleAuthError(error)) return;
                                 console.error('Error moving block:', error);
-                                const blocks = noteBody.querySelectorAll('.block');
-                                if (draggedFromIndex < blocks.length) {
-                                    noteBody.insertBefore(draggedBlock, blocks[draggedFromIndex]);
-                                }
                             }
                         }
                     }
@@ -297,6 +314,71 @@ export async function initMainPage(container) {
                 draggedFromIndex = null;
             }
         });
+    }
+    
+    const globalKeydownHandler = (e) => {
+        if (e.key === 'Escape' && formattingPopup) {
+            formattingPopup.close();
+            formattingPopup = null;
+        }
+    };
+    document.addEventListener('keydown', globalKeydownHandler);
+    _addEventListener(document, 'keydown', globalKeydownHandler);
+}
+
+function _addEventListener(element, event, handler) {
+    if (!domEventListeners.has(element)) {
+        domEventListeners.set(element, new Map());
+    }
+    const elementListeners = domEventListeners.get(element);
+    if (!elementListeners.has(event)) {
+        elementListeners.set(event, []);
+    }
+    elementListeners.get(event).push(handler);
+}
+
+export async function cleanupMainPage() {
+    unsubscribeFunctions.forEach(unsubscribe => {
+        if (typeof unsubscribe === 'function') {
+            unsubscribe();
+        }
+    });
+    unsubscribeFunctions = [];
+    
+    for (const [element, events] of domEventListeners.entries()) {
+        if (element && element.removeEventListener) {
+            for (const [event, handlers] of events.entries()) {
+                handlers.forEach(handler => {
+                    element.removeEventListener(event, handler);
+                });
+            }
+        }
+    }
+    domEventListeners.clear();
+    
+    if (formattingPopup) {
+        formattingPopup.close();
+        formattingPopup = null;
+    }
+    
+    if (attachPopupInstance) {
+        attachPopupInstance.close();
+        attachPopupInstance = null;
+    }
+    
+    if (selectionTimeout) {
+        clearTimeout(selectionTimeout);
+        selectionTimeout = null;
+    }
+    
+    dragMode = false;
+    draggedBlock = null;
+    draggedFromIndex = null;
+    isDraggingSelection = false;
+    
+    if (currentContainer) {
+        currentContainer.innerHTML = '';
+        currentContainer = null;
     }
 }
 
@@ -317,6 +399,9 @@ function _updateActiveNoteInDOM(note) {
 async function _updateBlocksInDOM(blocks) {
     const noteBody = document.querySelector('.noteBody');
     if (!noteBody) return;
+    
+    const currentDragMode = dragMode;
+    
     noteBody.querySelectorAll('.block').forEach(b => b.remove());
     
     for (const block of blocks) {
@@ -366,15 +451,17 @@ async function _updateBlocksInDOM(blocks) {
             blockEl.textContent = block.content;
         }
         
-        blockEl.draggable = dragMode;
-        if (dragMode) {
+        blockEl.draggable = currentDragMode;
+        if (currentDragMode) {
             blockEl.classList.add('draggable-mode');
         }
 
-        noteBody.insertBefore(
-            blockEl, 
-            noteBody.querySelector('.addBlock') || noteBody.lastChild
-        );
+        const addBlockBtn = noteBody.querySelector('.addBlock');
+        if (addBlockBtn) {
+            noteBody.insertBefore(blockEl, addBlockBtn);
+        } else {
+            noteBody.appendChild(blockEl);
+        }
         
         if (block.block_type_id !== 2) {
             const ranges = block.formatting?.ranges || [];

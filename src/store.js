@@ -9,6 +9,8 @@ class Store {
             online: navigator.onLine,
         };
         this.subscribers = {};
+        this.subscriberIds = {};
+        this.nextId = 0;
     }
 
     getState() {
@@ -88,15 +90,17 @@ class Store {
 
     subscribe(key, callback) {
         if (!this.subscribers[key]) {
-            this.subscribers[key] = [];
+            this.subscribers[key] = new Map();
         }
-        this.subscribers[key].push(callback);
-    }
+        
+        const id = this.nextId++;
+        this.subscribers[key].set(id, callback);
 
-    unsubscribe(key, callback) {
-        if (this.subscribers[key]) {
-            this.subscribers[key] = this.subscribers[key].filter(sub => sub.callback !== callback);
-        }
+        return () => {
+            if (this.subscribers[key]) {
+                this.subscribers[key].delete(id);
+            }
+        };
     }
 
     _notify(key, value) {
