@@ -151,3 +151,22 @@
 	background-color: var(--accent-active);
 	box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.3);
 }
+
+.image-block {
+    padding: 8px;
+    text-align: center;
+    background: var(--background-secondary);
+    border-radius: 8px;
+    margin: 8px 0;
+}
+
+.image-block img {
+    max-width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.image-block img:hover {
+    opacity: 0.9;
+}
