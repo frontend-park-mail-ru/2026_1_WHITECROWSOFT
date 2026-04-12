@@ -2,7 +2,7 @@ import { router } from "../../route/router";
 import { noteService } from "../../services/noteService";
 import { store } from "../../store";
 
-export function bindNavigationEvents(container, onNoteClick) {
+export function bindNavigationEvents(container) {
 	container.addEventListener('click', (e) => {
 		if (e.target.closest('[data-action="profile"]')) {
 			e.preventDefault();
@@ -24,7 +24,6 @@ export function bindNavigationEvents(container, onNoteClick) {
 				store.setActiveNoteId(noteId);
 				updateActiveNote(container, noteId);
 				router.push('/');
-				onNoteClick?.(noteId);
 			}
 			return;
 		}
@@ -46,7 +45,6 @@ export function bindNavigationEvents(container, onNoteClick) {
 		if (addSubnoteBtn) {
 			e.preventDefault();
 			e.stopPropagation();
-			onNoteClick?.(addSubnoteBtn.dataset.noteId, { action: 'addSubnote' });
 			return;
 		}
 

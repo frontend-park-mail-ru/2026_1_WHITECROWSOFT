@@ -45,9 +45,7 @@ export class Sidebar {
 	 * @listens click#[data-note-id] - Клик по элементу заметки
 	 */
 	_bindEvents() {
-		bindNavigationEvents(this.container, (noteId) => {
-			noteService.getNote(noteId)
-		});
+		bindNavigationEvents(this.container);
 
 		const addBlockBtn = this.container.querySelector('#addBlockBtn');
 		if (addBlockBtn) {
@@ -116,7 +114,7 @@ export class Sidebar {
 			const notesTemplateString = `
 				{{#each notes}}
 					<div class="noteItem {{#if (eq this.ID ../activeNoteId)}}active{{/if}}" data-note-id="{{this.ID}}">
-						<img src="/icons/{{this.icon}}.svg" class="icon" />
+						<img src="/icons/document.svg" class="icon" />
 						<div class="noteItemTitle">{{this.title}}</div>
 						<div class="noteItemActions">
 							<button class="noteActionBtn addSubnoteBtn" data-action="addSubnote" data-note-id="{{this.ID}}">
