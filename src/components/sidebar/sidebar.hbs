@@ -1,44 +1,44 @@
 <aside class="sidebar">
-	<div class="sidebarHeader">
-		<h1 class="appTitle">Noterian</h1>
+	<div class="sidebar__header">
+		<h1 class="logo__title">Noterian</h1>
 	</div>
 
-	<div class="actionMenu">
-		<div class="searchBox disabled">
-		    <img src="/icons/search.svg" class="icon searchIcon" />
+	<div class="sidebar__actionMenu">
+		<div class="search disabled">
+		    <img src="/icons/search.svg" class="icon search__icon" />
 			<input
 				type="text"
-				class="searchInput"
+				class="search__input input"
 				placeholder="Поиск"
 				value="{{searchQuery}}"
 			/>
 		</div>
-		<button id="profileBtn" class="profileButton sidebarButton" data-action="profile">
+		<button id="profileBtn" class="profileButton sidebar__btn" data-action="profile">
 			<img src="/icons/profile.svg" class="icon" />
 			<span id="profile-username">{{user.username}}</span>
 		</button>
-		<button id="homeButton" class="homeButton sidebarButton" data-action="home">
+		<button id="homeButton" class="homeButton sidebar__btn" data-action="home">
 			<img src="/icons/home.svg" class="icon" />
 			Главная
 		</button>
-		<button class="sidebarButton disabled">
+		<button class="sidebar__btn disabled">
 			<img src="/icons/bookmark.svg" class="icon" />
 			Библиотека
 		</button>
 	</div>
 
-	<hr class="barrier" />
+	<hr class="sidebar__barrier" />
 
-	<div class="notesList">
+	<div class="sidebar__notesList">
 		{{#each notes}}
-			<div class="noteItem {{#if (eq this.ID ../activeNoteId)}}active{{/if}}" data-note-id="{{this.ID}}">
+			<div class="sidebar__noteItem {{#if (eq this.ID ../activeNoteId)}}sidebar__noteItem--active{{/if}}" data-note-id="{{this.ID}}">
 				<img src="/icons/document.svg" class="icon" />
-				<div class="noteItemTitle">{{this.title}}</div>
-				<div class="noteItemActions">
-					<button class="noteActionBtn addSubnoteBtn" data-action="addSubnote" data-note-id="{{this.ID}}">
+				<div class="sidebar__noteItemTitle">{{this.title}}</div>
+				<div class="sidebar__noteItemActions">
+					<button class="sidebar__noteActionBtn addSubnoteBtn" data-action="addSubnote" data-note-id="{{this.ID}}">
 						<img src="/icons/add.svg" class="icon" />
 					</button>
-					<button class="noteActionBtn settingsBtn" data-action="settings" data-note-id="{{this.ID}}">
+					<button class="sidebar__noteActionBtn settingsBtn" data-action="settings" data-note-id="{{this.ID}}">
 						<img src="/icons/more.svg" class="icon" />
 					</button>
 				</div>
@@ -51,15 +51,15 @@
 	</div>
 
 	<div class="newNoteContainer">
-        <button class="sidebarButton newNoteButton" data-action="newNote">
+        <button class="sidebar__btn newNoteButton" data-action="newNote">
             <img src="/icons/add.svg" class="icon" />
             Новая Заметка
         </button>
     </div>
 
 	<hr class="barrier" />
-	
-	<button class="sidebarButton bottom disabled">
+
+	<button class="sidebar__btn bottom sidebar__btn--disabled">
 		<img src="/icons/settings.svg" class="icon" />
 		Настройки
 	</button>

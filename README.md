@@ -19,3 +19,7 @@
   2. Название Pull Request'а соответствует названию задачки в jira: `TADV-###: description`, где description - название из jira.
   3. При создании Pull Request'а нужно указать в описании ссылку на задачу в jira.
   4. Для того, чтобы залить изменения в ветку main нужен апрув от [Саши](https://t.me/alx3_14vo)
+
+  
+  querySelector
+  closest/nearest

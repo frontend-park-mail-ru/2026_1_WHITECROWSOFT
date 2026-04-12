@@ -2,25 +2,24 @@
     <p>Нет заметок</p>
 </div>
 
-<div class="notePath">
-    <span class="pathItem">Библиотека</span>
-    <span class="pathSeparator">/</span>
-    <span class="pathItem currentItem"></span>		
+<div class="note__breadcrumb">
+    <span class="note__breadcrumbItem">Библиотека</span>
+    <span class="note__breadcrumbItem note__breadcrumbItem--current"></span>		
 </div>
     
-<article class="noteContent">
-    <h1 class="noteTitle"></h1>
-    <div class="noteBody">
+<article class="note__content">
+    <h1 class="note__title"></h1>
+    <div class="note__body">
         {{#each activeBlocks}}
-        <div class="block" data-block-id="{{id}}" contenteditable="true">{{content}}</div>
+        <div class="note__block" data-block-id="{{id}}" contenteditable="true">{{content}}</div>
         {{/each}}
     </div>
 </article>
-<div class="noteActions"> 
-    <button class="addBlock">
+<div class="note__actions"> 
+    <button class="note__addBlockBtn">
         <img src="/icons/block_add.svg" class="icon" />
     </button>
-    <button class="dragBlock">
+    <button class="note__dragBlock">
         <img src="/icons/block_drag.svg" class="icon" />
     </button>
 </div>

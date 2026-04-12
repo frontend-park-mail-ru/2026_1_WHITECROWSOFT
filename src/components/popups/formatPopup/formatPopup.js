@@ -145,7 +145,7 @@ export class FormatPopup {
         if (!this.range) return null;
         const node = this.range.commonAncestorContainer;
         const el = node.nodeType === 1 ? node : node.parentElement;
-        return el?.closest('.block') || null;
+        return el?.closest('.note__block') || null;
     }
 
     _detectCurrentFormatting() {
