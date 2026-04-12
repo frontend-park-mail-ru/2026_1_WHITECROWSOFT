@@ -1,5 +1,5 @@
 import Handlebars from 'handlebars';
-import '../../assets/style/authForm.css';
+import '../../assets/style/authForm.scss';
 import { router } from '../../route/router.js';
 import { authService } from '../../services/authService.js';
 import { createFormRenderer } from '../../utils/formRender/formRenderer.js';

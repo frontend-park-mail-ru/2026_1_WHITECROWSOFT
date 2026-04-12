@@ -163,7 +163,7 @@ function showFormError(form, message) {
         errorEl.textContent = message;
         errorEl.style.visibility = 'visible';
     }
-    form.querySelector('input')?.classList.add('error');
+    form.querySelector('input')?.classList.add('input--error');
 }
 
 /**
@@ -175,6 +175,6 @@ function clearFormErrors(form) {
         el.style.visibility = 'hidden';
     });
     form.querySelectorAll('input').forEach(input => {
-        input.classList.remove('error');
+        input.classList.remove('input--error');
     });
 }

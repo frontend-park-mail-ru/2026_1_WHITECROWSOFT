@@ -42,7 +42,7 @@ export class Layout {
         try {
             this.mainContainer.innerHTML = '';
             const page = document.createElement('div');
-            page.className = 'page-container';
+            page.className = 'note';
             this.mainContainer.appendChild(page);
             if (pageModule){
                 await pageModule(page, pageData);

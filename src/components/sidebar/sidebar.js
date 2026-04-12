@@ -2,8 +2,9 @@ import Handlebars from 'handlebars';
 import { bindNavigationEvents, updateActiveNote, startInlineEdit } from './sidebarEvents.js';
 import { NotePopup } from '../popups/notePopup/notePopup.js';
 import { render } from '../../utils/utils.js';
-import './sidebar.css';
+import './sidebar.scss';
 import templateText from './sidebar.hbs?raw';
+import notesTemplateString from './noteItems.hbs?raw';
 import { store } from '../../store.js';
 import { noteService } from '../../services/noteService.js';
 
@@ -47,7 +48,7 @@ export class Sidebar {
 	_bindEvents() {
 		bindNavigationEvents(this.container);
 
-		const addBlockBtn = this.container.querySelector('#addBlockBtn');
+		const addBlockBtn = this.container.querySelector('#addSubnoteBtn');
 		if (addBlockBtn) {
 			addBlockBtn.addEventListener('click', async () => {
 				const activeNoteId = store.getActiveNoteId();
@@ -100,7 +101,7 @@ export class Sidebar {
 	_setActiveNote(noteId) {
 		this.state.activeNoteId = noteId;
 		updateActiveNote(this.container, noteId);
-		const addBlockBtn = this.container.querySelector('#addBlockBtn');
+		const addBlockBtn = this.container.querySelector('#addSubnoteBtn');
 		if (addBlockBtn) {
 			addBlockBtn.disabled = !noteId;
 		}
@@ -109,28 +110,8 @@ export class Sidebar {
 
 	_updateNotes(notes) {
 		this.state.notes = notes;
-		const notesList = this.container.querySelector('.notesList');
+		const notesList = this.container.querySelector('.sidebar__notesList');
 		if (notesList) {
-			const notesTemplateString = `
-				{{#each notes}}
-					<div class="noteItem {{#if (eq this.ID ../activeNoteId)}}active{{/if}}" data-note-id="{{this.ID}}">
-						<img src="/icons/document.svg" class="icon" />
-						<div class="noteItemTitle">{{this.title}}</div>
-						<div class="noteItemActions">
-							<button class="noteActionBtn addSubnoteBtn" data-action="addSubnote" data-note-id="{{this.ID}}">
-								<img src="/icons/add.svg" class="icon" />
-							</button>
-							<button class="noteActionBtn settingsBtn" data-action="settings" data-note-id="{{this.ID}}">
-								<img src="/icons/more.svg" class="icon" />
-							</button>
-						</div>
-					</div>
-				{{else}}
-					<div class="emptyNotes">
-						<p>У вас пока нет заметок</p>
-					</div>
-				{{/each}}
-			`;
 			const notesTemplate = Handlebars.compile(notesTemplateString);
 			notesList.innerHTML = notesTemplate(this.state);
 		}
@@ -145,9 +126,9 @@ export class Sidebar {
 	}
 
 	_startInlineEdit(noteId) {
-		const noteItem = this.container.querySelector(`.noteItem[data-note-id="${noteId}"]`);
+		const noteItem = this.container.querySelector(`.sidebar__noteItem[data-note-id="${noteId}"]`);
 		if (noteItem) {
-			const noteItemTitle = noteItem.querySelector('.noteItemTitle');
+			const noteItemTitle = noteItem.querySelector('.sidebar__noteItemTitle');
 			if (noteItemTitle) {
 				startInlineEdit(noteItemTitle, noteId);
 			}

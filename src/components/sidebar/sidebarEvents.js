@@ -16,8 +16,8 @@ export function bindNavigationEvents(container) {
 			return;
 		}
 
-		const noteItem = e.target.closest('.noteItem');
-		if (noteItem && !e.target.closest('.noteItemActions')) {
+		const noteItem = e.target.closest('.sidebar__noteItem');
+		if (noteItem && !e.target.closest('.sidebar__noteItemActions')) {
 			e.preventDefault();
 			const noteId = noteItem.dataset.noteId;
 			if (noteId) {
@@ -64,11 +64,11 @@ export function bindNavigationEvents(container) {
 	});
 
 	container.addEventListener('dblclick', (e) => {
-		const noteItemTitle = e.target.closest('.noteItemTitle');
+		const noteItemTitle = e.target.closest('.sidebar__noteItemTitle');
 		if (noteItemTitle) {
 			e.preventDefault();
 			e.stopPropagation();
-			const noteItem = noteItemTitle.closest('.noteItem');
+			const noteItem = noteItemTitle.closest('.sidebar__noteItem');
 			const noteId = noteItem?.dataset.noteId;
 			if (noteId) {
 				startInlineEdit(noteItemTitle, noteId);
@@ -82,7 +82,7 @@ export function startInlineEdit(noteItemTitle, noteId) {
 	const input = document.createElement('input');
 	input.type = 'text';
 	input.value = currentTitle;
-	input.className = 'noteTitleInput';
+	input.className = 'sidebar__titleInput';
 	input.style.width = '100%';
 	input.style.border = 'none';
 	input.style.outline = 'none';
@@ -121,7 +121,7 @@ export function startInlineEdit(noteItemTitle, noteId) {
 }
 
 export function updateActiveNote(container, noteId) {
-	container.querySelectorAll('.noteItem').forEach(element => {
-		element.classList.toggle('active', element.dataset.noteId === noteId);
+	container.querySelectorAll('.sidebar__noteItem').forEach(element => {
+		element.classList.toggle('sidebar__noteItem--active', element.dataset.noteId === noteId);
 	});
 }
