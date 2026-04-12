@@ -15,6 +15,7 @@
 	&__header {
 		width: 100%;
 		text-align: left;
+		padding-left: 10px;
 	}
 
 	&__notesList {
@@ -42,10 +43,17 @@
 		color: var(--text);
 		&:hover {
 			background: var(--highlight);
+			.sidebar__noteItemActions {
+			    display: flex;
+			}
 		}
 		&--active {
 			background: var(--highlight);
-			font-weight: 700;
+			/* font-weight: 700; */
+			display: flex;
+			.sidebar__noteItemActions {
+			    display: flex;
+			}
 		}
 		&--bottom {
 			margin-top: auto;
@@ -54,10 +62,6 @@
 	&__noteItemActions {
 		display: none;
 		gap: 3px;
-		display: flex;
-	}
-	*__noteItem--active {
-		display: flex;
 	}
 	&__noteActionBtn {
 		background: transparent;
@@ -90,6 +94,7 @@
 
 	&__barrier {
 		width: 170px;
+		align-self: center;
 		height: 0px;
 		border: 1px solid var(--faint-b);
 	}

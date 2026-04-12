@@ -1,10 +1,10 @@
 .note {
 	flex: 1;
 	display: flex;
-	/* align-items: center; */
 	flex-direction: column;
 	align-items: center;
 	padding: 32px 20px 0px;
+	height: 100vh;
 	overflow-y: auto;
 	background-color: var(--background);
 
@@ -56,7 +56,6 @@
 		/* line-height: 1.6; */
 		text-align: left;
 		/* white-space: pre-wrap; */
-		/* padding-bottom: 700px !important; */
 
 		/* ??? */
 		word-wrap: break-word;
@@ -122,9 +121,10 @@
 
 	&__actions {
 		display: flex;
-		gap: 12px;
 		margin-top: 24px;
-		justify-content: flex-end;
+		justify-content: flex-start;
+		max-width: 740px;
+		width: 100%;
 		button {
 			padding: 8px 16px;
 			background-color: var(--accent);
@@ -136,6 +136,7 @@
 			align-items: center;
 			gap: 8px;
 			transition: all 0.2s ease;
+			align-self: end;
 			:hover {
 				background-color: var(--accent-hover);
 				transform: translateY(-2px);

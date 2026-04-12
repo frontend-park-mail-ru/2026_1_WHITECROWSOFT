@@ -79,17 +79,13 @@ h5 {
 .app {
 	min-height: 100vh;
 	&__layout {
-		display: flex;
-		flex-direction: row;
+		display: grid;
+		grid-template-columns: 250px 1fr;
 	}
 	&__mainContainer {
-		display: flex;
+		grid-column: 2/2;
 		height: 100vh;
-		max-width: 740px;
 		overflow: hidden;
-		flex: 1;
-		align-items: center;
-		flex-direction: column;
 	}
 }
 
