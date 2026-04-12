@@ -13,19 +13,79 @@ export function setupForm(formId, onSubmit, onSuccess) {
 }
 
 /**
- * Настраивает обработчик для формы с файлом
+ * Настраивает обработчик для формы с файлом (аватар)
  */
 export function setupFileForm(formId, onSubmit, onSuccess) {
     const form = document.getElementById(formId);
     if (!form) return;
+    
     const fileInput = form.querySelector('input[type="file"]');
-    fileInput?.addEventListener('change', (e) => {
-        handleFileSelect(e.target, form);
+    if (!fileInput) return;
+    
+    fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        if (!validateFile(file, form)) {
+            fileInput.value = '';
+            return;
+        }
+        
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const preview = form.querySelector('[data-avatar-preview]');
+                if (preview) preview.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        await handleFileSubmit(form, fileInput, onSubmit, onSuccess);
     });
+    
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         await handleFileSubmit(form, fileInput, onSubmit, onSuccess);
     });
+}
+
+/**
+ * Логика отправки формы с файлом
+ */
+async function handleFileSubmit(form, fileInput, onSubmit, onSuccess) {
+    const submitBtn = form.querySelector('[type="submit"]');
+    const originalText = submitBtn?.textContent;
+    const file = fileInput?.files[0];
+    
+    if (!file) {
+        showFormError(form, 'Выберите файл');
+        return;
+    }
+    
+    if (!validateFile(file, form)) {
+        fileInput.value = '';
+        return;
+    }
+    
+    setLoading(submitBtn, true);
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const result = await onSubmit(formData);
+        if (onSuccess) onSuccess(result);
+        clearFormErrors(form);
+        
+        if (fileInput) {
+            fileInput.value = '';
+        }
+    } catch (error) {
+        if (handleAuthError(error)) return;
+        const errorMessage = error?.error || error?.message || 'Ошибка загрузки';
+        showFormError(form, errorMessage);
+        console.error('[ProfileForms] Upload error:', error);
+    } finally {
+        setLoading(submitBtn, false, originalText);
+    }
 }
 
 /**
@@ -50,66 +110,18 @@ async function handleSubmit(form, onSubmit, onSuccess) {
 }
 
 /**
- * Логика отправки формы с файлом
- */
-async function handleFileSubmit(form, fileInput, onSubmit, onSuccess) {
-    const submitBtn = form.querySelector('[type="submit"]');
-    const originalText = submitBtn?.textContent;
-    const file = fileInput?.files[0];
-    if (!file) {
-        showFormError(form, 'Выберите файл');
-        return;
-    }
-    if (!validateFile(file, form)) return;
-    setLoading(submitBtn, true);
-    try {
-        const formData = new FormData();
-        formData.append('Avatar', file);
-        const result = await onSubmit(formData);
-        if (result?.message) showSuccess(result.message);
-        if (onSuccess) onSuccess(result);
-        clearFormErrors(form);
-    } catch (error) {
-        if (handleAuthError(error)) return;
-        showFormError(form, error?.data?.error || error?.message || 'Ошибка загрузки');
-    } finally {
-        setLoading(submitBtn, false, originalText);
-    }
-}
-
-/**
- * Обработка выбора файла (превью)
- */
-function handleFileSelect(fileInput, form) {
-    const file = fileInput.files[0];
-    if (!file) return;
-    if (!validateFile(file, form)) {
-        fileInput.value = '';
-        return;
-    }
-    if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const preview = form.querySelector('[data-avatar-preview]');
-            if (preview) preview.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    }
-    clearFormErrors(form);
-}
-
-/**
  * Валидация файла
  */
 function validateFile(file, form) {
-    const maxSize = 1024 * 1024;
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/gif'];
+    const maxSize = 1024 * 1024; // 1 MB
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+    
     if (file.size > maxSize) {
         showFormError(form, 'Файл слишком большой (макс. 1 МБ)');
         return false;
     }
     if (!allowedTypes.includes(file.type)) {
-        showFormError(form, 'Недопустимый формат (PNG, JPG, GIF)');
+        showFormError(form, 'Недопустимый формат (PNG, JPG, GIF, WEBP)');
         return false;
     }
     return true;

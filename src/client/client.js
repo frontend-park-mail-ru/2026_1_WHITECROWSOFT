@@ -14,28 +14,89 @@ class Client {
 	 */
 	constructor() {
 		this.serverURL = SERVER_URL;
+		this.csrfToken = null;
+		this.csrfTokenPromise = null;
+	}
+
+	/**
+	 * Получает CSRF-токен с сервера
+	 * @async
+	 * @returns {Promise<string|null>} CSRF-токен или null
+	 */
+	async fetchCsrfToken() {
+		if (this.csrfToken) {
+			return this.csrfToken;
+		}
+		if (this.csrfTokenPromise) {
+			return this.csrfTokenPromise;
+		}
+		this.csrfTokenPromise = (async () => {
+			try {
+				const response = await fetch(`${this.serverURL}/csrf-token`, {
+					method: 'GET',
+					credentials: 'include',
+				});
+
+				if (!response.ok) {
+					throw new Error(`Failed to fetch CSRF token: ${response.status}`);
+				}
+				const data = await response.json();
+				this.csrfToken = data.csrf_token || data.token;
+				return this.csrfToken;
+			} catch (error) {
+				console.error('[Client] Failed to get CSRF token:', error);
+				return null;
+			} finally {
+				this.csrfTokenPromise = null;
+			}
+		})();
+
+		return this.csrfTokenPromise;
+	}
+
+	/**
+	 * Сбрасывает CSRF-токен (при ошибке 403)
+	 */
+	resetCsrfToken() {
+		this.csrfToken = null;
+		this.csrfTokenPromise = null;
 	}
 
 	/**
 	 * Отправляет HTTP запрос на сервер
 	 * @async
 	 * @param {string} endpoint - путь к контенту на сервере
-	 * @param {object} options - доплнительные параметры запроса
+	 * @param {object} options - дополнительные параметры запроса
 	 * @returns {Promise<Object|null>} данные ответа от сервера или null при статусе 204
 	 * @throws {AppError} ошибка запроса с полями status, data, cause
 	 */
 	async request(endpoint, options = {}) {
 		const url = `${this.serverURL}${endpoint}`;
-
+		const method = options.method || 'GET';
+		const isMutatingMethod = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method.toUpperCase());
+		let headers = { ...options.headers };
+		if (isMutatingMethod && !options.skipCsrf) {
+			const csrfToken = await this.fetchCsrfToken();
+			if (csrfToken) {
+				headers['X-CSRF-Token'] = csrfToken;
+			}
+		}
+		if (!(options.body instanceof FormData)) {
+			headers['Content-Type'] = 'application/json';
+		}
 		try {
 			const response = await fetch(url, {
 				credentials: 'include',
-				headers: {
-					'Content-Type': 'application/json',
-					...options.headers,
-				},
+				headers: headers,
 				...options,
+				body: options.body,
 			});
+			if (response.status === 403 && isMutatingMethod && !options._retried) {
+				console.warn('[Client] CSRF token invalid, refreshing and retrying...');
+				this.resetCsrfToken();
+				const retryOptions = { ...options, _retried: true };
+				return this.request(endpoint, retryOptions);
+			}
 
 			const responseData = await response.json().catch(() => null);
 
@@ -45,7 +106,7 @@ class Client {
 
 			if (response.status === 204) return null;
 
-			return await responseData;
+			return responseData;
 		} catch (err) {
 			if (err instanceof AppError) {
 				throw err;
@@ -110,10 +171,17 @@ class Client {
 		return this.request(endpoint, {
 			method: 'POST',
 			body: formData,
-			headers: {},
+			// Не устанавливаем Content-Type для FormData
 		});
 	}
 
+	/**
+	 * Отправляет DELETE запрос на сервер
+	 * @async
+	 * @param {string} endpoint - путь к контенту на сервере
+	 * @returns {Promise<Object|null>} данные ответа от сервера
+	 * @throws {AppError} ошибка запроса
+	 */
 	delete(endpoint) {
 		return this.request(endpoint, {
 			method: 'DELETE',

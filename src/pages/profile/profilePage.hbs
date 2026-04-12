@@ -1,4 +1,3 @@
-
 <article class="settignsHeader">
 	<h1 class="settingsTitle">Профиль</h1>
     <span class="settings">Вы можете загрузить фотографию изменить имя пользователя</span>
@@ -69,19 +68,49 @@
             </form>
         </div>
     </div>
+    
     <div class="photoBlock">
         <form id="avatarForm" class="settingsForm" enctype="multipart/form-data">
             <h2 class="photoTitle">Фотография</h2>
-                        
-			{{> components/partials/forms/fileInput
-                name="avatar"
-                buttonText="Загрузить"
-                accept=".png,.jpg,.jpeg,.gif"
-                avatar=user.avatar
-                witherror="true"
-            }}
+            <div class="avatar-preview-container">
+                {{#if user.avatar}}
+                    <img 
+                        src="{{user.avatar}}" 
+                        alt="Avatar" 
+                        class="avatar-preview" 
+                        data-avatar-image
+                    >
+                {{else}}
+                    <div class="avatar-default" data-avatar-image>
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                        </svg>
+                    </div>
+                {{/if}}
+                <div class="avatar-overlay" data-action="changeAvatar">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="file-input-wrapper">
+                <input 
+                    type="file" 
+                    name="avatar"
+                    id="avatar-file-input"
+                    accept=".png,.jpg,.jpeg,.gif"
+                    style="display: none;"
+                >
+                <button type="button" class="file-input-button" id="avatar-trigger">
+                    Загрузить новое фото
+                </button>
+                <span class="file-name" id="avatar-file-name">Файл не выбран</span>
+            </div>
                 
-            <span class="settingsText">Размер фотографии не должен превышать 1мб.Допустимые расширени: .png, .jpg, .gif.</span>
+            <span class="settingsText">Размер фотографии не должен превышать 1мб. Допустимые расширения: .png, .jpg, .gif.</span>
+            <div data-field-error class="error-message"></div>
         </form>
     </div>
 </div>

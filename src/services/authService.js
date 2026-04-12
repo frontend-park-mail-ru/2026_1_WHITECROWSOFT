@@ -130,7 +130,6 @@ export const authService = {
         }
     },
 
-	
     /**
      * Обновляет профиль (после изменения настроек)
      */
@@ -148,20 +147,25 @@ export const authService = {
 
     /**
      * Обновляет аватар
+     * @param {FormData} formData - FormData с файлом аватара
+     * @returns {Promise<Object>} результат загрузки с URL аватара
      */
     async updateAvatar(formData) {
         const result = await client.postForm('/profile/avatar', formData);
         const currentUser = store.getUser();
-        if (currentUser && result?.avatar) {
-            const updatedUser = { ...currentUser, avatar: result.avatar };
+        
+        if (currentUser && result?.AvatarURL) {
+            let avatarUrl = result.AvatarURL;
+            avatarUrl = avatarUrl.replace('http://minio:9000', '/minio');
+            avatarUrl = avatarUrl.replace('/minio/minio/', '/minio/');
+            const updatedUser = { ...currentUser, avatar: avatarUrl };
             await db.settingsSet('user', updatedUser);
             store.setUser(updatedUser);
         }
         return result;
     },
-
 	
 	async changePassword() {
-        //Пока не понятно какая логика будет для смены профиля
+        // TODO: реализовать смену пароля
     },
 };
