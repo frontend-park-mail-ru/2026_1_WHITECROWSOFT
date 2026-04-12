@@ -1,8 +1,8 @@
 class Database {
-    constructor () {
+    constructor() {
         this.db = null;
         this.DB_NAME = 'Noterian';
-        this.DB_VERSION = 3;
+        this.DB_VERSION = 9;
     }
 
     async open() {
@@ -29,6 +29,22 @@ class Database {
                     fmt.createIndex('noteId', 'noteId', { unique: false });
                     fmt.createIndex('synced', 'synced', { unique: false });
                     console.log('[DB] Created blockFormatting store');
+                }
+                if (!db.objectStoreNames.contains('images')) {
+                    const images = db.createObjectStore('images', { keyPath: 'id' });
+                    images.createIndex('blockId', 'blockId', { unique: false });
+                    images.createIndex('noteId', 'noteId', { unique: false });
+                    images.createIndex('url', 'url', { unique: false });
+                    images.createIndex('status', 'status', { unique: false });
+                    images.createIndex('timestamp', 'timestamp', { unique: false });
+                    console.log('[DB] Created images store');
+                }
+                if (!db.objectStoreNames.contains('queueFiles')) {
+                    const queueFiles = db.createObjectStore('queueFiles', { keyPath: 'id' });
+                    queueFiles.createIndex('queuedAt', 'queuedAt', { unique: false });
+                    queueFiles.createIndex('blockId', 'blockId', { unique: false });
+                    queueFiles.createIndex('noteId', 'noteId', { unique: false });
+                    console.log('[DB] Created queueFiles store');
                 }
             };
 
@@ -66,16 +82,20 @@ class Database {
     }
 
     async formattingGet(blockId) {
-        return this._promise('blockFormatting', 'readonly', s => s.get(blockId)).then(r => r?.formatting || null);
+        return this._promise('blockFormatting', 'readonly', s => s.get(blockId));
     }
 
     async formattingGetByNoteId(noteId) {
-        return this._promise('blockFormatting', 'readonly', (s) => s.index('noteId').getAll(noteId))
-            .then(records => {
-                const map = {};
-                (records || []).forEach(r => map[r.blockId] = r.formatting);
-                return map;
+        return this._promise('blockFormatting', 'readonly', (s) => {
+            const index = s.index('noteId');
+            return index.getAll(noteId);
+        }).then(records => {
+            const map = {};
+            (records || []).forEach(record => {
+                map[record.blockId] = record.formatting?.ranges || [];
             });
+            return map;
+        });
     }
 
     async formattingMarkSynced(blockId) {
@@ -83,7 +103,7 @@ class Database {
             const tx = this.db.transaction('blockFormatting', 'readwrite');
             const store = tx.objectStore('blockFormatting');
             const getReq = store.get(blockId);
-            
+             
             getReq.onsuccess = () => {
                 const record = getReq.result;
                 if (record) {
@@ -112,8 +132,83 @@ class Database {
         return this._promise('blockFormatting', 'readwrite', s => s.clear());
     }
 
+    async imagesPut(image) {
+        return this._promise('images', 'readwrite', s => s.put(image));
+    }
+
+    async imagesGet(id) {
+        return this._promise('images', 'readonly', s => s.get(id));
+    }
+
+    async imagesGetByNoteId(noteId) {
+        return this._promise('images', 'readonly', (s) => {
+            const index = s.index('noteId');
+            return index.getAll(noteId);
+        });
+    }
+
+    async imagesGetByBlockId(blockId) {
+        return this._promise('images', 'readonly', (s) => {
+            const index = s.index('blockId');
+            return index.getAll(blockId);
+        });
+    }
+
+    async imagesGetByUrl(url) {
+        return this._promise('images', 'readonly', (s) => {
+            const index = s.index('url');
+            return index.getAll(url);
+        });
+    }
+
+    async imagesGetAll() {
+        return this._promise('images', 'readonly', s => s.getAll());
+    }
+
+    async imagesDelete(id) {
+        return this._promise('images', 'readwrite', s => s.delete(id));
+    }
+
+    async imagesDeleteByNoteId(noteId) {
+        const images = await this.imagesGetByNoteId(noteId);
+        for (const image of images) {
+            await this.imagesDelete(image.id);
+        }
+    }
+
+    async imagesClear() {
+        return this._promise('images', 'readwrite', s => s.clear());
+    }
+
+    async queueFilePut(fileData) {
+        return this._promise('queueFiles', 'readwrite', s => s.put(fileData));
+    }
+
+    async queueFileGet(id) {
+        return this._promise('queueFiles', 'readonly', s => s.get(id));
+    }
+
+    async queueFileDelete(id) {
+        return this._promise('queueFiles', 'readwrite', s => s.delete(id));
+    }
+
+    async queueFileGetByBlockId(blockId) {
+        return this._promise('queueFiles', 'readonly', (s) => {
+            const index = s.index('blockId');
+            return index.getAll(blockId);
+        });
+    }
+
+    async clearQueueFiles() {
+        return this._promise('queueFiles', 'readwrite', s => s.clear());
+    }
+
     async clear() {
-        return Promise.all([this.notesClear(), this.formattingClear()]);
+        return Promise.all([this.notesClear(), this.formattingClear(), this.imagesClear(), this.clearQueueFiles()]);
+    }
+
+    async clearQueuedRequests() {
+        return this._promise('requestQueue', 'readwrite', s => s.clear());
     }
 
     _promise(storeName, mode, operation) {
