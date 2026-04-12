@@ -93,6 +93,12 @@ class Store {
         this.subscribers[key].push(callback);
     }
 
+    unsubscribe(key, callback) {
+        if (this.subscribers[key]) {
+            this.subscribers[key] = this.subscribers[key].filter(sub => sub.callback !== callback);
+        }
+    }
+
     _notify(key, value) {
         if (this.subscribers[key]) {
             this.subscribers[key].forEach(callback => callback(value));
