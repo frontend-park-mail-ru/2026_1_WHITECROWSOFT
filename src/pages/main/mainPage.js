@@ -286,8 +286,13 @@ export async function initMainPage(container) {
                 e.stopPropagation();
             }
         });
+<<<<<<< HEAD
         
         createHandler('dragend', async (e) => {
+=======
+
+        noteBody.addEventListener('dragend', async () => {
+>>>>>>> e20ac4adb0690c1e3e5cc953e07b6178b8dc1209
             if (draggedBlock) {
                 draggedBlock.classList.remove('dragging');
                 
@@ -437,6 +442,7 @@ async function _updateBlocksInDOM(blocks) {
                 
                 blockEl.appendChild(img);
             } catch (e) {
+                console.error('Error updating image block:', e)
                 blockEl = document.createElement('div');
                 blockEl.className = 'block';
                 blockEl.dataset.blockId = block.id;

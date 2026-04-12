@@ -303,12 +303,10 @@ export const queueService = {
         );
         store.setActiveBlocks(updatedActiveBlocks);
         
-        let foundNoteId = null;
         
         const activeNoteId = store.getActiveNoteId();
         const activeNote = await db.notesGet(activeNoteId);
         if (activeNote && activeNote.blocks && activeNote.blocks.some(b => b.id === localId)) {
-            foundNoteId = activeNoteId;
             const updatedBlocks = activeNote.blocks.map(block =>
                 block.id === localId ? { ...block, id: newBlockId } : block
             );
@@ -317,7 +315,6 @@ export const queueService = {
             const allNotes = await db.notesGetAll();
             for (const note of allNotes) {
                 if (note.blocks && note.blocks.some(b => b.id === localId)) {
-                    foundNoteId = note.ID;
                     const updatedBlocks = note.blocks.map(block =>
                         block.id === localId ? { ...block, id: newBlockId } : block
                     );

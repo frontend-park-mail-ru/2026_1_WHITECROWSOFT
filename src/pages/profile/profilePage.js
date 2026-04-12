@@ -1,8 +1,6 @@
 import Handlebars from 'handlebars';
-import { Sidebar } from '../../components/sidebar/sidebar.js';
 import { router } from '../../route/router.js';
 import { authService } from '../../services/authService.js';
-import { handleAuthError } from '../../utils/handleAuthError.js';
 import { setupForm, setupFileForm } from './profileForms.js';
 import { registerHelpers, registerPartials } from '../../utils/utils.js';
 import templateText from './profilePage.hbs?raw';
@@ -64,7 +62,7 @@ async function handleLogout() {
     try {
         await authService.logOut();
         router.replace('/signin');
-    } catch (error) {
+    } catch (err) {
         console.error('[ProfilePage] Logout error:', err);
         router.replace('/signin');        
     }

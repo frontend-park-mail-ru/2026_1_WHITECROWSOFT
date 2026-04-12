@@ -131,7 +131,8 @@ export const router = {
 			} else {
 				throw new Error(`Module not found at ${path}`);
 			}
-		} catch (err) {
+    } catch (err) {
+      console.warn('Error handling a route:', err)
 			if (path !== '*' && path !== '/signin') {
                 this.replace('*');
             }
