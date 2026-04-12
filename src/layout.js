@@ -19,11 +19,8 @@ export class Layout {
     _render() {
         const app = document.querySelector('#app');
         if (!app) return;
-        
-        // Используем Handlebars шаблон вместо innerHTML
         const template = Handlebars.compile(layoutTemplate);
         app.innerHTML = template({});
-        
         this.mainContainer = document.getElementById('mainContainer');
     }
 

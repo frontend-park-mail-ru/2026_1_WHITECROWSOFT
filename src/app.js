@@ -17,7 +17,7 @@ async function bootstrap() {
 	try {
 		registerHelpers();
 		await db.open();
-		await db.clear();
+		await queueService.clearQueue();
 		const notes = await noteService.getNotes();
 		store.setNotes(notes);
 		const activeNodeId = await db.settingsGet('activeNoteId');
