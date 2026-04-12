@@ -286,13 +286,8 @@ export async function initMainPage(container) {
                 e.stopPropagation();
             }
         });
-<<<<<<< HEAD
-        
-        createHandler('dragend', async (e) => {
-=======
 
         noteBody.addEventListener('dragend', async () => {
->>>>>>> e20ac4adb0690c1e3e5cc953e07b6178b8dc1209
             if (draggedBlock) {
                 draggedBlock.classList.remove('dragging');
                 

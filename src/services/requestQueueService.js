@@ -5,7 +5,6 @@ import { store } from '../store.js';
 const QUEUEABLE_METHODS = ['POST', 'PUT', 'DELETE', 'PATCH'];
 
 export const queueService = {
-     _lastCreatedNoteId: null,
 
     async enqueueRequest(request) {
         if (!QUEUEABLE_METHODS.includes(request.method)) {
@@ -38,8 +37,6 @@ export const queueService = {
             return [];
         }
 
-        this._lastCreatedNoteId = null;
-
         let queue = await this.getQueuedRequests();
         if (!queue.length) {
             return [];
@@ -56,8 +53,6 @@ export const queueService = {
                 if (requestItem.localId && requestItem.method === 'POST') {
                     if (requestItem.endpoint === '/notes') {
                         await this._commitLocalNoteId(requestItem.localId, response);
-                        const newNoteId = response.id;
-                        this._lastCreatedNoteId = newNoteId;
                         queue = await this._updateQueueArray(queue, requestItem.localId, response.id);
                     } else if (requestItem.endpoint.includes('/blocks') && !requestItem.type) {
                         await this._commitLocalBlockId(requestItem.localId, response);
@@ -303,10 +298,12 @@ export const queueService = {
         );
         store.setActiveBlocks(updatedActiveBlocks);
         
+        let foundNoteId = null;
         
         const activeNoteId = store.getActiveNoteId();
         const activeNote = await db.notesGet(activeNoteId);
         if (activeNote && activeNote.blocks && activeNote.blocks.some(b => b.id === localId)) {
+            foundNoteId = activeNoteId;
             const updatedBlocks = activeNote.blocks.map(block =>
                 block.id === localId ? { ...block, id: newBlockId } : block
             );
@@ -315,6 +312,7 @@ export const queueService = {
             const allNotes = await db.notesGetAll();
             for (const note of allNotes) {
                 if (note.blocks && note.blocks.some(b => b.id === localId)) {
+                    foundNoteId = note.ID;
                     const updatedBlocks = note.blocks.map(block =>
                         block.id === localId ? { ...block, id: newBlockId } : block
                     );
