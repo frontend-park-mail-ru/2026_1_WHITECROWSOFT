@@ -1,4 +1,11 @@
-import type { Note, BlockFormatting, ImageAttachment, QueueFile, QueuedRequest, FormattingRange } from './types';
+import type {
+	BlockFormatting,
+	FormattingRange,
+	ImageAttachment,
+	Note,
+	QueueFile,
+	QueuedRequest,
+} from './types';
 
 interface FormattingRecord {
 	blockId: string | number;
@@ -16,10 +23,10 @@ class Database {
 	async open(): Promise<IDBDatabase> {
 		return new Promise((resolve, reject) => {
 			const request = indexedDB.open(this.DB_NAME, this.DB_VERSION);
-			
+
 			request.onupgradeneeded = (e: IDBVersionChangeEvent) => {
 				const db = (e.target as IDBOpenDBRequest).result;
-				
+
 				if (!db.objectStoreNames.contains('notes')) {
 					const notes = db.createObjectStore('notes', { keyPath: 'ID' });
 					notes.createIndex('updatedAt', 'updatedAt', { unique: false });
@@ -28,11 +35,16 @@ class Database {
 					db.createObjectStore('settings', { keyPath: 'key' });
 				}
 				if (!db.objectStoreNames.contains('requestQueue')) {
-					const queue = db.createObjectStore('requestQueue', { keyPath: 'id', autoIncrement: true });
+					const queue = db.createObjectStore('requestQueue', {
+						keyPath: 'id',
+						autoIncrement: true,
+					});
 					queue.createIndex('queuedAt', 'queuedAt', { unique: false });
 				}
 				if (!db.objectStoreNames.contains('blockFormatting')) {
-					const fmt = db.createObjectStore('blockFormatting', { keyPath: 'blockId' });
+					const fmt = db.createObjectStore('blockFormatting', {
+						keyPath: 'blockId',
+					});
 					fmt.createIndex('noteId', 'noteId', { unique: false });
 					fmt.createIndex('synced', 'synced', { unique: false });
 				}
@@ -44,7 +56,9 @@ class Database {
 					images.createIndex('status', 'status', { unique: false });
 				}
 				if (!db.objectStoreNames.contains('queueFiles')) {
-					const queueFiles = db.createObjectStore('queueFiles', { keyPath: 'id' });
+					const queueFiles = db.createObjectStore('queueFiles', {
+						keyPath: 'id',
+					});
 					queueFiles.createIndex('queuedAt', 'queuedAt', { unique: false });
 					queueFiles.createIndex('blockId', 'blockId', { unique: false });
 					queueFiles.createIndex('noteId', 'noteId', { unique: false });
@@ -119,16 +133,22 @@ class Database {
 		return this._put('blockFormatting', data);
 	}
 
-	async formattingGet(blockId: string | number): Promise<FormattingRecord | undefined> {
+	async formattingGet(
+		blockId: string | number,
+	): Promise<FormattingRecord | undefined> {
 		return this._get<FormattingRecord>('blockFormatting', blockId);
 	}
 
-	async formattingGetByNoteId(noteId: string | number): Promise<Record<string, FormattingRange[]>> {
+	async formattingGetByNoteId(
+		noteId: string | number,
+	): Promise<Record<string, FormattingRange[]>> {
 		const records = await this._getAll<FormattingRecord>('blockFormatting');
 		const map: Record<string, FormattingRange[]> = {};
-		records.filter(r => r.noteId === noteId).forEach(record => {
-			map[String(record.blockId)] = record.formatting?.ranges || [];
-		});
+		records
+			.filter((r) => r.noteId === noteId)
+			.forEach((record) => {
+				map[String(record.blockId)] = record.formatting?.ranges || [];
+			});
 		return map;
 	}
 
@@ -141,7 +161,7 @@ class Database {
 
 	async formattingGetUnsynced(): Promise<FormattingRecord[]> {
 		const records = await this._getAll<FormattingRecord>('blockFormatting');
-		return records.filter(r => !r.synced);
+		return records.filter((r) => !r.synced);
 	}
 
 	async formattingDelete(blockId: string | number): Promise<void> {
@@ -172,17 +192,19 @@ class Database {
 
 	async imagesGetByNoteId(noteId: string | number): Promise<ImageAttachment[]> {
 		const all = await this._getAll<ImageAttachment>('images');
-		return all.filter(img => img.noteId === noteId);
+		return all.filter((img) => img.noteId === noteId);
 	}
 
-	async imagesGetByBlockId(blockId: string | number): Promise<ImageAttachment[]> {
+	async imagesGetByBlockId(
+		blockId: string | number,
+	): Promise<ImageAttachment[]> {
 		const all = await this._getAll<ImageAttachment>('images');
-		return all.filter(img => img.blockId === blockId);
+		return all.filter((img) => img.blockId === blockId);
 	}
 
 	async imagesGetByUrl(url: string): Promise<ImageAttachment[]> {
 		const all = await this._getAll<ImageAttachment>('images');
-		return all.filter(img => img.url === url);
+		return all.filter((img) => img.url === url);
 	}
 
 	async imagesGetAll(): Promise<ImageAttachment[]> {
@@ -219,12 +241,12 @@ class Database {
 
 	async queueFileGetByBlockId(blockId: string | number): Promise<QueueFile[]> {
 		const all = await this._getAll<QueueFile>('queueFiles');
-		return all.filter(file => file.blockId === blockId);
+		return all.filter((file) => file.blockId === blockId);
 	}
 
 	async queueFileGetByNoteId(noteId: string | number): Promise<QueueFile[]> {
 		const all = await this._getAll<QueueFile>('queueFiles');
-		return all.filter(file => file.noteId === noteId);
+		return all.filter((file) => file.noteId === noteId);
 	}
 
 	async clearQueueFiles(): Promise<void> {
@@ -237,7 +259,7 @@ class Database {
 			this.notesClear(),
 			this.formattingClear(),
 			this.imagesClear(),
-			this.clearQueueFiles()
+			this.clearQueueFiles(),
 		]);
 	}
 
@@ -264,12 +286,17 @@ class Database {
 		});
 	}
 
-	private _put(storeName: string, value: unknown, key?: IDBValidKey): Promise<void> {
+	private _put(
+		storeName: string,
+		value: unknown,
+		key?: IDBValidKey,
+	): Promise<void> {
 		return new Promise((resolve, reject) => {
 			if (!this.db) return reject(new Error('Database not initialized'));
 			const transaction = this.db.transaction(storeName, 'readwrite');
 			const store = transaction.objectStore(storeName);
-			const request = key !== undefined ? store.put(value, key) : store.put(value);
+			const request =
+				key !== undefined ? store.put(value, key) : store.put(value);
 			request.onsuccess = () => resolve();
 			request.onerror = () => reject(request.error);
 		});

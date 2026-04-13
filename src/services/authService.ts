@@ -135,7 +135,7 @@ export const authService = {
 	async updateProfile(data: Partial<User>): Promise<ProfileUpdateResponse> {
 		const result = await client.put<ProfileUpdateResponse>('/profile', data);
 		const currentUser = store.getUser();
-		
+
 		if (currentUser && result) {
 			const updatedUser: User = {
 				...currentUser,
@@ -149,7 +149,10 @@ export const authService = {
 	},
 
 	async updateAvatar(formData: FormData): Promise<AvatarUploadResponse> {
-		const result = await client.postForm<AvatarUploadResponse>('/profile/avatar', formData);
+		const result = await client.postForm<AvatarUploadResponse>(
+			'/profile/avatar',
+			formData,
+		);
 		const currentUser = store.getUser();
 		if (currentUser && result?.AvatarURL) {
 			let avatarUrl = result.AvatarURL;
@@ -165,9 +168,17 @@ export const authService = {
 		return result;
 	},
 
-	async changePassword(data?: { oldPassword: string; newPassword: string }): Promise<void> {
+	async changePassword(data?: {
+		oldPassword: string;
+		newPassword: string;
+	}): Promise<void> {
 		console.warn('[AuthService] changePassword not implemented yet', data);
 	},
 };
 
-export type { AuthCredentials, AuthResponse, ProfileUpdateResponse, AvatarUploadResponse };
+export type {
+	AuthCredentials,
+	AuthResponse,
+	AvatarUploadResponse,
+	ProfileUpdateResponse,
+};

@@ -58,5 +58,7 @@ export const routes: Route[] = [
  * @returns найденный маршрут или маршрут по умолчанию (*)
  */
 export function getRoute(path: string): Route | undefined {
-	return routes.find((r) => r.path === path) || routes.find((r) => r.path === '*');
+	return (
+		routes.find((r) => r.path === path) || routes.find((r) => r.path === '*')
+	);
 }

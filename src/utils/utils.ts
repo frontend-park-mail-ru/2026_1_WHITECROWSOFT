@@ -3,9 +3,9 @@ import Handlebars from 'handlebars';
 type EventHandler = (event: Event) => void;
 
 interface ElementProps {
-    class?: string;
-    id?: string;
-    [key: string]: string | number | boolean | EventHandler | undefined;
+	class?: string;
+	id?: string;
+	[key: string]: string | number | boolean | EventHandler | undefined;
 }
 
 type ChildType = string | Node | null | undefined;
@@ -17,45 +17,56 @@ type ChildType = string | Node | null | undefined;
  * @param children - дочерние элементы
  * @returns созданный элемент
  */
-export function el(tag: string, props: ElementProps = {}, children: ChildType[] = []): HTMLElement {
-    const element = document.createElement(tag);
+export function el(
+	tag: string,
+	props: ElementProps = {},
+	children: ChildType[] = [],
+): HTMLElement {
+	const element = document.createElement(tag);
 
-    Object.entries(props).forEach(([key, value]) => {
-        if (value === undefined || value === null) return;
-        
-        if (key === 'class') {
-            element.className = String(value);
-        } else if (key.startsWith('on') && typeof value === 'function') {
-            const eventName = key.slice(2).toLowerCase();
-            element.addEventListener(eventName, value as EventHandler);
-        } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-            element.setAttribute(key, String(value));
-        }
-    });
+	Object.entries(props).forEach(([key, value]) => {
+		if (value === undefined || value === null) return;
 
-    children.forEach((child) => {
-        if (child === null || child === undefined) return;
-        
-        if (typeof child === 'string') {
-            element.appendChild(document.createTextNode(child));
-        } else if (child instanceof Node) {
-            element.appendChild(child);
-        }
-    });
+		if (key === 'class') {
+			element.className = String(value);
+		} else if (key.startsWith('on') && typeof value === 'function') {
+			const eventName = key.slice(2).toLowerCase();
+			element.addEventListener(eventName, value as EventHandler);
+		} else if (
+			typeof value === 'string' ||
+			typeof value === 'number' ||
+			typeof value === 'boolean'
+		) {
+			element.setAttribute(key, String(value));
+		}
+	});
 
-    return element;
+	children.forEach((child) => {
+		if (child === null || child === undefined) return;
+
+		if (typeof child === 'string') {
+			element.appendChild(document.createTextNode(child));
+		} else if (child instanceof Node) {
+			element.appendChild(child);
+		}
+	});
+
+	return element;
 }
 
-export function createElement(tag: string, ...classNames: string[]): HTMLElement {
-    const element = document.createElement(tag);
-    if (classNames.length) {
-        element.className = classNames.join(' ');
-    }
-    return element;
+export function createElement(
+	tag: string,
+	...classNames: string[]
+): HTMLElement {
+	const element = document.createElement(tag);
+	if (classNames.length) {
+		element.className = classNames.join(' ');
+	}
+	return element;
 }
 
 export function getElementPosition(el: HTMLElement): DOMRect {
-    return el.getBoundingClientRect();
+	return el.getBoundingClientRect();
 }
 
 /**
@@ -63,57 +74,60 @@ export function getElementPosition(el: HTMLElement): DOMRect {
  * @param container - контейнер для рендеринга
  * @param content - строка HTML или DOM элемент
  */
-export function render(container: HTMLElement | null, content: string | Node): void {
-    if (!container) return;
-    
-    container.innerHTML = '';
-    if (typeof content === 'string') {
-        container.innerHTML = content;
-    } else {
-        container.appendChild(content);
-    }
+export function render(
+	container: HTMLElement | null,
+	content: string | Node,
+): void {
+	if (!container) return;
+
+	container.innerHTML = '';
+	if (typeof content === 'string') {
+		container.innerHTML = content;
+	} else {
+		container.appendChild(content);
+	}
 }
 
 interface PartialModules {
-    [path: string]: string;
+	[path: string]: string;
 }
 
 const partials = import.meta.glob('../components/partials/**/*.hbs', {
-    query: '?raw',
-    import: 'default',
-    eager: true,
+	query: '?raw',
+	import: 'default',
+	eager: true,
 }) as PartialModules;
 
 /**
  * Регистрирует Handlebars partials из файлов .hbs
  */
 export function registerPartials(): void {
-    Object.entries(partials).forEach(([path, content]) => {
-        const name = path.replace('../', '').replace('.hbs', '');
-        Handlebars.registerPartial(name, content);
-    });
+	Object.entries(partials).forEach(([path, content]) => {
+		const name = path.replace('../', '').replace('.hbs', '');
+		Handlebars.registerPartial(name, content);
+	});
 }
 
 type HandlebarsHelper = (...args: unknown[]) => unknown;
 
 interface HelpersMap {
-    [key: string]: HandlebarsHelper;
+	[key: string]: HandlebarsHelper;
 }
 
 /**
  * Регистрирует Handlebars helpers для использования в шаблонах
  */
 export function registerHelpers(): void {
-    const helpers: HelpersMap = {
-        eq: (a: unknown, b: unknown) => a === b,
-        neq: (a: unknown, b: unknown) => a !== b,
-        and: (a: unknown, b: unknown) => !!(a && b),
-        or: (a: unknown, b: unknown) => !!(a || b)
-    };
+	const helpers: HelpersMap = {
+		eq: (a: unknown, b: unknown) => a === b,
+		neq: (a: unknown, b: unknown) => a !== b,
+		and: (a: unknown, b: unknown) => !!(a && b),
+		or: (a: unknown, b: unknown) => !!(a || b),
+	};
 
-    Object.entries(helpers).forEach(([name, fn]) => {
-        if (!Handlebars.helpers[name]) {
-            Handlebars.registerHelper(name, fn);
-        }
-    });
+	Object.entries(helpers).forEach(([name, fn]) => {
+		if (!Handlebars.helpers[name]) {
+			Handlebars.registerHelper(name, fn);
+		}
+	});
 }

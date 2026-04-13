@@ -7,15 +7,15 @@ import templateText from './notFoundPage.hbs?raw';
  * Инициализирует страницу 404
  */
 export function initNotFoundPage(): void {
-    registerHelpers();
-    registerPartials();
-    const template = Handlebars.compile(templateText);
-    const app = document.querySelector('#app') as HTMLElement | null;
-    if (!app) {
-        return;
-    }
-    app.innerHTML = template({});
-    attachEvents(app);
+	registerHelpers();
+	registerPartials();
+	const template = Handlebars.compile(templateText);
+	const app = document.querySelector('#app') as HTMLElement | null;
+	if (!app) {
+		return;
+	}
+	app.innerHTML = template({});
+	attachEvents(app);
 }
 
 /**
@@ -23,15 +23,15 @@ export function initNotFoundPage(): void {
  * @param app - контейнер страницы
  */
 function attachEvents(app: HTMLElement): void {
-    app.addEventListener('click', (e: MouseEvent) => {
-        const target = e.target as HTMLElement;
-        const link = target.closest('[data-link]') as HTMLElement | null;
-        if (link) {
-            e.preventDefault();
-            const targetLink = link.dataset.link;
-            if (targetLink === 'home') {
-                router.push('/');
-            }
-        }
-    });
+	app.addEventListener('click', (e: MouseEvent) => {
+		const target = e.target as HTMLElement;
+		const link = target.closest('[data-link]') as HTMLElement | null;
+		if (link) {
+			e.preventDefault();
+			const targetLink = link.dataset.link;
+			if (targetLink === 'home') {
+				router.push('/');
+			}
+		}
+	});
 }

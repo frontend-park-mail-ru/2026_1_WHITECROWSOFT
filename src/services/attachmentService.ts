@@ -1,9 +1,9 @@
 import { client } from '../client/client.js';
 import { db } from '../db.js';
 import { store } from '../store.js';
-import { queueService } from './requestQueueService.js';
+import type { AttachmentApiResponse, Block } from '../types.js';
 import { noteService } from './noteService.js';
-import type { Block, AttachmentApiResponse } from '../types.js';
+import { queueService } from './requestQueueService.js';
 
 interface CreateBlockResponse {
 	id: string | number;
@@ -45,16 +45,19 @@ export const attachmentService = {
 			note_id: noteId,
 			block_type_id: 2,
 			position: store.getActiveBlocks().length,
-			content: ''
+			content: '',
 		};
-		const createdBlock = await client.post<CreateBlockResponse>(`/notes/${noteId}/blocks`, blockData);
+		const createdBlock = await client.post<CreateBlockResponse>(
+			`/notes/${noteId}/blocks`,
+			blockData,
+		);
 		const blockId = createdBlock.id;
 
 		const formData = new FormData();
 		formData.append('file', file);
 		const attachmentResult = await client.postForm<AttachmentApiResponse>(
 			`/notes/${noteId}/blocks/${blockId}/attachments`,
-			formData
+			formData,
 		);
 
 		const imageContent = JSON.stringify({
@@ -62,9 +65,11 @@ export const attachmentService = {
 			filename: attachmentResult.minio_key || file.name,
 			size: file.size,
 			mimeType: file.type,
-			attachmentId: attachmentResult.id
+			attachmentId: attachmentResult.id,
 		});
-		await client.put(`/notes/${noteId}/blocks/${blockId}/content`, { content: imageContent });
+		await client.put(`/notes/${noteId}/blocks/${blockId}/content`, {
+			content: imageContent,
+		});
 
 		const blob = await this._fileToBlob(file);
 		await db.imagesPut({
@@ -77,7 +82,7 @@ export const attachmentService = {
 			size: file.size,
 			url: attachmentResult.attach_url,
 			status: 'synced',
-			syncedAt: Date.now()
+			syncedAt: Date.now(),
 		});
 
 		const finalBlock: Block = {
@@ -88,7 +93,7 @@ export const attachmentService = {
 			content: imageContent,
 			created_at: createdBlock.created_at,
 			updated_at: new Date().toISOString(),
-			formatting: { ranges: [] }
+			formatting: { ranges: [] },
 		};
 
 		const cachedNote = await db.notesGet(noteId);
@@ -107,7 +112,7 @@ export const attachmentService = {
 		const localAttachmentId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 		const localBlockId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 		const blob = await this._fileToBlob(file);
-		
+
 		await db.imagesPut({
 			id: localAttachmentId,
 			blockId: localBlockId,
@@ -118,9 +123,9 @@ export const attachmentService = {
 			size: file.size,
 			status: 'pending',
 			isLocal: true,
-			createdAt: Date.now()
+			createdAt: Date.now(),
 		});
-		
+
 		await db.queueFilePut({
 			id: localAttachmentId,
 			blockId: localBlockId,
@@ -129,9 +134,9 @@ export const attachmentService = {
 			filename: file.name,
 			mimeType: file.type,
 			size: file.size,
-			queuedAt: Date.now()
+			queuedAt: Date.now(),
 		});
-		
+
 		const imageContent = JSON.stringify({
 			url: `local://${localAttachmentId}`,
 			filename: file.name,
@@ -139,17 +144,22 @@ export const attachmentService = {
 			mimeType: file.type,
 			attachmentId: localAttachmentId,
 			isLocal: true,
-			pendingSync: true
+			pendingSync: true,
 		});
-		
+
 		const newBlock = await noteService.createBlock(noteId, {
 			note_id: noteId,
 			block_type_id: 2,
 			position: store.getActiveBlocks().length,
-			content: imageContent
+			content: imageContent,
 		});
-		
-		console.log('[attachmentService] Updating image blockId from', localBlockId, 'to', newBlock.id);
+
+		console.log(
+			'[attachmentService] Updating image blockId from',
+			localBlockId,
+			'to',
+			newBlock.id,
+		);
 		await db.imagesDelete(localAttachmentId);
 		await db.imagesPut({
 			id: localAttachmentId,
@@ -161,9 +171,9 @@ export const attachmentService = {
 			size: file.size,
 			status: 'pending',
 			isLocal: true,
-			createdAt: Date.now()
+			createdAt: Date.now(),
 		});
-		
+
 		await db.queueFileDelete(localAttachmentId);
 		await db.queueFilePut({
 			id: localAttachmentId,
@@ -173,28 +183,34 @@ export const attachmentService = {
 			filename: file.name,
 			mimeType: file.type,
 			size: file.size,
-			queuedAt: Date.now()
+			queuedAt: Date.now(),
 		});
-		
+
 		await queueService.enqueueRequest({
 			method: 'POST',
 			endpoint: `/notes/${noteId}/blocks/${newBlock.id}/attachments`,
 			type: 'IMAGE_UPLOAD',
 			localId: localAttachmentId,
-			body: { fileId: localAttachmentId, noteId, blockId: newBlock.id }
+			body: { fileId: localAttachmentId, noteId, blockId: newBlock.id },
 		});
-		
+
 		return newBlock;
 	},
 
-	async getImageUrl(attachmentId: string | number, noteId: string | number, blockId: string | number): Promise<string | null> {
+	async getImageUrl(
+		attachmentId: string | number,
+		noteId: string | number,
+		blockId: string | number,
+	): Promise<string | null> {
 		const localImage = await db.imagesGet(attachmentId);
 		if (localImage?.blob) {
 			return URL.createObjectURL(localImage.blob);
 		}
 		if (store.getOnline()) {
 			try {
-				const attachData = await client.get<AttachmentApiResponse>(`/notes/${noteId}/blocks/${blockId}/attachments`);
+				const attachData = await client.get<AttachmentApiResponse>(
+					`/notes/${noteId}/blocks/${blockId}/attachments`,
+				);
 				let imageUrl = attachData.attach_url;
 				imageUrl = imageUrl.replace('http://minio:9000', '/minio');
 				const response = await fetch(imageUrl);
@@ -210,7 +226,7 @@ export const attachmentService = {
 						size: blob.size,
 						url: imageUrl,
 						status: 'synced',
-						syncedAt: Date.now()
+						syncedAt: Date.now(),
 					});
 					return URL.createObjectURL(blob);
 				}
@@ -221,14 +237,23 @@ export const attachmentService = {
 		return null;
 	},
 
-	async syncPendingAttachment(localAttachmentId: string, noteId: string | number, blockId: string | number): Promise<AttachmentApiResponse> {
+	async syncPendingAttachment(
+		localAttachmentId: string,
+		noteId: string | number,
+		blockId: string | number,
+	): Promise<AttachmentApiResponse> {
 		const localImage = await db.imagesGet(localAttachmentId);
 		if (!localImage?.blob) throw new Error('Local image not found');
 
-		const file = new File([localImage.blob], localImage.filename, { type: localImage.mimeType });
+		const file = new File([localImage.blob], localImage.filename, {
+			type: localImage.mimeType,
+		});
 		const formData = new FormData();
 		formData.append('file', file);
-		const result = await client.postForm<AttachmentApiResponse>(`/notes/${noteId}/blocks/${blockId}/attachments`, formData);
+		const result = await client.postForm<AttachmentApiResponse>(
+			`/notes/${noteId}/blocks/${blockId}/attachments`,
+			formData,
+		);
 
 		const imageUrl = `/minio/attachments/${result.id}`;
 		const imageContent = JSON.stringify({
@@ -236,7 +261,7 @@ export const attachmentService = {
 			filename: result.minio_key || file.name,
 			size: file.size,
 			mimeType: file.type,
-			attachmentId: result.id
+			attachmentId: result.id,
 		});
 		await noteService.updateBlockContent(noteId, blockId, imageContent);
 
@@ -251,15 +276,23 @@ export const attachmentService = {
 			size: file.size,
 			url: imageUrl,
 			status: 'synced',
-			syncedAt: Date.now()
+			syncedAt: Date.now(),
 		});
 
 		const blocks = store.getActiveBlocks();
-		store.setActiveBlocks(blocks.map(b => b.id === blockId ? { ...b, content: imageContent } : b));
+		store.setActiveBlocks(
+			blocks.map((b) =>
+				b.id === blockId ? { ...b, content: imageContent } : b,
+			),
+		);
 		return result;
 	},
 
-	async _saveLocalAndQueueForExistingBlock(noteId: string | number, blockId: string | number, file: File): Promise<LocalAttachmentResult> {
+	async _saveLocalAndQueueForExistingBlock(
+		noteId: string | number,
+		blockId: string | number,
+		file: File,
+	): Promise<LocalAttachmentResult> {
 		const localAttachmentId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 		const blob = await this._fileToBlob(file);
 		await db.imagesPut({
@@ -272,7 +305,7 @@ export const attachmentService = {
 			size: file.size,
 			status: 'pending',
 			isLocal: true,
-			createdAt: Date.now()
+			createdAt: Date.now(),
 		});
 		const imageContent = JSON.stringify({
 			url: `local://${localAttachmentId}`,
@@ -281,7 +314,7 @@ export const attachmentService = {
 			mimeType: file.type,
 			attachmentId: localAttachmentId,
 			isLocal: true,
-			pendingSync: true
+			pendingSync: true,
 		});
 		await noteService.updateBlockContent(noteId, blockId, imageContent);
 		await queueService.enqueueRequest({
@@ -289,7 +322,7 @@ export const attachmentService = {
 			endpoint: `/notes/${noteId}/blocks/${blockId}/attachments`,
 			type: 'IMAGE_UPLOAD',
 			localId: localAttachmentId,
-			body: { fileId: localAttachmentId, noteId, blockId }
+			body: { fileId: localAttachmentId, noteId, blockId },
 		});
 		return {
 			id: localAttachmentId,
@@ -297,27 +330,33 @@ export const attachmentService = {
 			minio_key: file.name,
 			size: file.size,
 			mime_type: file.type,
-			local: true
+			local: true,
 		};
 	},
 
 	_fileToBlob(file: File): Promise<Blob> {
 		return new Promise((resolve, reject) => {
 			const reader = new FileReader();
-			reader.onload = () => resolve(new Blob([reader.result as ArrayBuffer], { type: file.type }));
+			reader.onload = () =>
+				resolve(new Blob([reader.result as ArrayBuffer], { type: file.type }));
 			reader.onerror = reject;
 			reader.readAsArrayBuffer(file);
 		});
 	},
-	
-	async deleteAttachment(noteId: string | number, blockId: string | number): Promise<void> {
+
+	async deleteAttachment(
+		noteId: string | number,
+		blockId: string | number,
+	): Promise<void> {
 		const isOnline = store.getOnline();
 		const blocks = store.getActiveBlocks();
-		const block = blocks.find(b => b.id === blockId);
-		
+		const block = blocks.find((b) => b.id === blockId);
+
 		if (block && block.content) {
 			try {
-				const imageData = JSON.parse(block.content) as { attachmentId?: string | number };
+				const imageData = JSON.parse(block.content) as {
+					attachmentId?: string | number;
+				};
 				const attachmentId = imageData.attachmentId;
 				if (attachmentId) {
 					await db.imagesDelete(attachmentId);
@@ -326,7 +365,7 @@ export const attachmentService = {
 				console.warn('[attachmentService] Failed to parse block content:', e);
 			}
 		}
-		
+
 		if (isOnline) {
 			try {
 				await client.delete(`/notes/${noteId}/blocks/${blockId}/attachments`);
@@ -335,15 +374,15 @@ export const attachmentService = {
 				await queueService.enqueueRequest({
 					method: 'DELETE',
 					endpoint: `/notes/${noteId}/blocks/${blockId}/attachments`,
-					type: 'IMAGE_DELETE'
+					type: 'IMAGE_DELETE',
 				});
 			}
 		} else {
 			await queueService.enqueueRequest({
 				method: 'DELETE',
 				endpoint: `/notes/${noteId}/blocks/${blockId}/attachments`,
-				type: 'IMAGE_DELETE'
+				type: 'IMAGE_DELETE',
 			});
 		}
-	}
+	},
 };

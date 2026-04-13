@@ -43,7 +43,7 @@ const ASSETS_TO_CACHE = [
 	'/fonts/inter/inter_italic.woff2',
 	'/fonts/librecaslon/LibreCaslonText-Bold.woff2',
 	'/fonts/librecaslon/LibreCaslonText-Italic.woff2',
-	'/fonts/librecaslon/LibreCaslonText-Regular.woff2'
+	'/fonts/librecaslon/LibreCaslonText-Regular.woff2',
 ];
 
 self.addEventListener('install', (event) => {
@@ -51,26 +51,28 @@ self.addEventListener('install', (event) => {
 	event.waitUntil(
 		caches.open(CACHE_NAME).then((cache) => {
 			return Promise.allSettled(
-				ASSETS_TO_CACHE.map(url => 
-					cache.add(url).catch(err => 
-						console.warn(`[SW] Failed to cache ${url}:`, err)
-					)
-				)
+				ASSETS_TO_CACHE.map((url) =>
+					cache
+						.add(url)
+						.catch((err) => console.warn(`[SW] Failed to cache ${url}:`, err)),
+				),
 			);
-		})
+		}),
 	);
 });
 
 self.addEventListener('activate', (event) => {
 	self.clients.claim();
 	event.waitUntil(
-		caches.keys().then((cacheNames) =>
-			Promise.all(
-				cacheNames
-					.filter((name) => name !== CACHE_NAME)
-					.map((name) => caches.delete(name))
-			)
-		)
+		caches
+			.keys()
+			.then((cacheNames) =>
+				Promise.all(
+					cacheNames
+						.filter((name) => name !== CACHE_NAME)
+						.map((name) => caches.delete(name)),
+				),
+			),
 	);
 });
 
@@ -79,19 +81,26 @@ function cacheFirst(request) {
 		if (cachedResponse) {
 			return cachedResponse;
 		}
-		return fetch(request).then((networkResponse) => {
-			if (networkResponse && networkResponse.ok) {
-				const clonedResponse = networkResponse.clone();
-				caches.open(CACHE_NAME).then((cache) => cache.put(request, clonedResponse));
-			}
-			return networkResponse;
-		}).catch((error) => {
-			console.warn('[SW] Fetch failed:', request.url, error);
-			if (request.mode === 'navigate') {
-				return caches.match('/index.html');
-			}
-			return new Response('Network error', { status: 408, statusText: 'Network Error' });
-		});
+		return fetch(request)
+			.then((networkResponse) => {
+				if (networkResponse && networkResponse.ok) {
+					const clonedResponse = networkResponse.clone();
+					caches
+						.open(CACHE_NAME)
+						.then((cache) => cache.put(request, clonedResponse));
+				}
+				return networkResponse;
+			})
+			.catch((error) => {
+				console.warn('[SW] Fetch failed:', request.url, error);
+				if (request.mode === 'navigate') {
+					return caches.match('/index.html');
+				}
+				return new Response('Network error', {
+					status: 408,
+					statusText: 'Network Error',
+				});
+			});
 	});
 }
 
@@ -100,7 +109,9 @@ function networkFirst(request) {
 		.then((response) => {
 			if (response && response.ok) {
 				const clonedResponse = response.clone();
-				caches.open(CACHE_NAME).then((cache) => cache.put(request, clonedResponse));
+				caches
+					.open(CACHE_NAME)
+					.then((cache) => cache.put(request, clonedResponse));
 			}
 			return response;
 		})
@@ -113,7 +124,10 @@ function networkFirst(request) {
 				if (request.mode === 'navigate') {
 					return caches.match('/index.html');
 				}
-				return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
+				return new Response('Offline', {
+					status: 503,
+					statusText: 'Service Unavailable',
+				});
 			});
 		});
 }
@@ -122,16 +136,18 @@ self.addEventListener('fetch', (event) => {
 	const request = event.request;
 	const url = new URL(request.url);
 
-	if (url.pathname.startsWith('/api/') || 
-	    url.pathname.startsWith('/minio/') ||
-	    url.pathname.startsWith('/null')) {
+	if (
+		url.pathname.startsWith('/api/') ||
+		url.pathname.startsWith('/minio/') ||
+		url.pathname.startsWith('/null')
+	) {
 		return;
 	}
 
 	if (request.method !== 'GET') {
 		return;
 	}
-	
+
 	if (request.mode === 'navigate') {
 		event.respondWith(networkFirst(request));
 		return;

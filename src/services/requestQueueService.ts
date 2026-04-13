@@ -1,7 +1,7 @@
 import { client } from '../client/client.js';
 import { db } from '../db.js';
 import { store } from '../store.js';
-import type { QueuedRequest, Note } from '../types.js';
+import type { Note, QueuedRequest } from '../types.js';
 
 const QUEUEABLE_METHODS = ['POST', 'PUT', 'DELETE', 'PATCH'];
 
@@ -44,7 +44,11 @@ export const queueService = {
 		};
 
 		const id = await db.queueRequest(queuedRequest);
-		console.log('[Queue] Enqueued:', request.type || request.method, request.endpoint);
+		console.log(
+			'[Queue] Enqueued:',
+			request.type || request.method,
+			request.endpoint,
+		);
 		return id;
 	},
 
@@ -52,7 +56,15 @@ export const queueService = {
 		return await db.getQueuedRequests();
 	},
 
-	async flushQueue(): Promise<Array<{ id: number; status: string; response?: unknown; retryCount?: number; error?: string }>> {
+	async flushQueue(): Promise<
+		Array<{
+			id: number;
+			status: string;
+			response?: unknown;
+			retryCount?: number;
+			error?: string;
+		}>
+	> {
 		if (!store.getOnline()) {
 			return [];
 		}
@@ -62,9 +74,15 @@ export const queueService = {
 			return [];
 		}
 
-		const results: Array<{ id: number; status: string; response?: unknown; retryCount?: number; error?: string }> = [];
+		const results: Array<{
+			id: number;
+			status: string;
+			response?: unknown;
+			retryCount?: number;
+			error?: string;
+		}> = [];
 		let i = 0;
-		
+
 		while (i < queue.length) {
 			const requestItem = queue[i];
 			try {
@@ -72,18 +90,41 @@ export const queueService = {
 
 				if (requestItem.localId && requestItem.method === 'POST') {
 					if (requestItem.endpoint === '/notes') {
-						const resp = response as { id: string | number; ID?: string | number; title?: string; updated_at?: string; updatedAt?: string };
+						const resp = response as {
+							id: string | number;
+							ID?: string | number;
+							title?: string;
+							updated_at?: string;
+							updatedAt?: string;
+						};
 						await this._commitLocalNoteId(requestItem.localId, resp);
-						queue = await this._updateQueueArray(queue, requestItem.localId, String(resp.id || resp.ID));
-					} else if (requestItem.endpoint.includes('/blocks') && !requestItem.type) {
-						const resp = response as { id: string | number; block_id?: string | number };
+						queue = await this._updateQueueArray(
+							queue,
+							requestItem.localId,
+							String(resp.id || resp.ID),
+						);
+					} else if (
+						requestItem.endpoint.includes('/blocks') &&
+						!requestItem.type
+					) {
+						const resp = response as {
+							id: string | number;
+							block_id?: string | number;
+						};
 						await this._commitLocalBlockId(requestItem.localId, resp);
 						const newId = resp.id || resp.block_id;
 						if (newId) {
-							queue = await this._updateQueueArrayForBlock(queue, requestItem.localId, String(newId));
+							queue = await this._updateQueueArrayForBlock(
+								queue,
+								requestItem.localId,
+								String(newId),
+							);
 						}
 					} else if (requestItem.type === 'IMAGE_UPLOAD') {
-						await this._commitLocalImageId(requestItem.localId, response as AttachmentApiResponse);
+						await this._commitLocalImageId(
+							requestItem.localId,
+							response as AttachmentApiResponse,
+						);
 					}
 				}
 
@@ -91,22 +132,29 @@ export const queueService = {
 					await db.deleteQueuedRequest(requestItem.id);
 				}
 				results.push({ id: requestItem.id!, status: 'synced', response });
-
 			} catch (error) {
 				const err = error as Error & { status?: number };
 				const retryCount = requestItem.retryCount;
-				
+
 				if (retryCount < 3) {
 					// Обновляем retryCount в базе
 					const updatedRequest = { ...requestItem, retryCount: retryCount + 1 };
 					await db.queueRequest(updatedRequest);
 					await db.deleteQueuedRequest(requestItem.id!);
-					results.push({ id: requestItem.id!, status: 'retry', retryCount: retryCount + 1 });
+					results.push({
+						id: requestItem.id!,
+						status: 'retry',
+						retryCount: retryCount + 1,
+					});
 				} else {
 					if (requestItem.id) {
 						await db.deleteQueuedRequest(requestItem.id);
 					}
-					results.push({ id: requestItem.id!, status: 'failed', error: err.message });
+					results.push({
+						id: requestItem.id!,
+						status: 'failed',
+						error: err.message,
+					});
 				}
 
 				const isOnline = navigator.onLine;
@@ -120,14 +168,21 @@ export const queueService = {
 		return results;
 	},
 
-	async _updateQueueArray(queue: QueuedRequest[], oldNoteId: string, newNoteId: string): Promise<QueuedRequest[]> {
+	async _updateQueueArray(
+		queue: QueuedRequest[],
+		oldNoteId: string,
+		newNoteId: string,
+	): Promise<QueuedRequest[]> {
 		const updatedQueue: QueuedRequest[] = [];
 		for (const req of queue) {
 			let newEndpoint = req.endpoint;
 			let newBody = req.body;
 			let needUpdate = false;
 			if (req.endpoint && req.endpoint.includes(oldNoteId)) {
-				newEndpoint = req.endpoint.replace(new RegExp(oldNoteId, 'g'), newNoteId);
+				newEndpoint = req.endpoint.replace(
+					new RegExp(oldNoteId, 'g'),
+					newNoteId,
+				);
 				needUpdate = true;
 			}
 			if (req.body) {
@@ -150,14 +205,21 @@ export const queueService = {
 		return updatedQueue;
 	},
 
-	async _updateQueueArrayForBlock(queue: QueuedRequest[], oldBlockId: string, newBlockId: string): Promise<QueuedRequest[]> {
+	async _updateQueueArrayForBlock(
+		queue: QueuedRequest[],
+		oldBlockId: string,
+		newBlockId: string,
+	): Promise<QueuedRequest[]> {
 		const updatedQueue: QueuedRequest[] = [];
 		for (const req of queue) {
 			let newEndpoint = req.endpoint;
 			let newBody = req.body;
 			let needUpdate = false;
 			if (req.endpoint && req.endpoint.includes(oldBlockId)) {
-				newEndpoint = req.endpoint.replace(new RegExp(oldBlockId, 'g'), newBlockId);
+				newEndpoint = req.endpoint.replace(
+					new RegExp(oldBlockId, 'g'),
+					newBlockId,
+				);
 				needUpdate = true;
 			}
 			if (req.body) {
@@ -188,23 +250,28 @@ export const queueService = {
 			if (!fileId) {
 				throw new Error('No fileId for IMAGE_UPLOAD');
 			}
-			
+
 			const fileData = await db.queueFileGet(fileId);
 			if (!fileData || !fileData.blob) {
 				throw new Error('File not found in queueFiles: ' + fileId);
 			}
-			
+
 			const formDataObj = new FormData();
-			const file = new File([fileData.blob], fileData.filename, { type: fileData.mimeType });
+			const file = new File([fileData.blob], fileData.filename, {
+				type: fileData.mimeType,
+			});
 			formDataObj.append('file', file);
-			
+
 			return await client.postForm(endpoint, formDataObj);
 		}
 
 		switch (method) {
 			case 'PUT':
 				if (endpoint.includes('/formatting')) {
-					const response = await client.put(endpoint, body as Record<string, unknown>);
+					const response = await client.put(
+						endpoint,
+						body as Record<string, unknown>,
+					);
 					const blockId = endpoint.split('/').slice(-2)[0];
 					await db.formattingMarkSynced(blockId);
 					return response;
@@ -212,7 +279,10 @@ export const queueService = {
 				return await client.put(endpoint, body as Record<string, unknown>);
 
 			case 'PATCH':
-				return await (client as any).patch(endpoint, body as Record<string, unknown>);
+				return await (client as any).patch(
+					endpoint,
+					body as Record<string, unknown>,
+				);
 
 			case 'DELETE':
 				return await client.delete(endpoint);
@@ -228,7 +298,16 @@ export const queueService = {
 		}
 	},
 
-	async _commitLocalNoteId(localId: string, serverData: { id: string | number; ID?: string | number; title?: string; updated_at?: string; updatedAt?: string }): Promise<void> {
+	async _commitLocalNoteId(
+		localId: string,
+		serverData: {
+			id: string | number;
+			ID?: string | number;
+			title?: string;
+			updated_at?: string;
+			updatedAt?: string;
+		},
+	): Promise<void> {
 		const localNote = await db.notesGet(localId);
 		if (!localNote) {
 			console.warn('[Queue] Local note not found:', localId);
@@ -243,7 +322,7 @@ export const queueService = {
 
 		try {
 			const imagesToUpdate = await db.imagesGetByNoteId(localId);
-			
+
 			for (const image of imagesToUpdate) {
 				await db.imagesDelete(image.id);
 				await db.imagesPut({
@@ -260,16 +339,17 @@ export const queueService = {
 			...localNote,
 			ID: newNoteId,
 			title: serverData.title ?? localNote.title,
-			updatedAt: serverData.updated_at ?? serverData.updatedAt ?? localNote.updatedAt,
+			updatedAt:
+				serverData.updated_at ?? serverData.updatedAt ?? localNote.updatedAt,
 			icon: localNote.icon || null,
 		};
 
 		await db.notesDelete(localId);
 		await db.notesPut(newNote);
 
-		const notes = store.getNotes().map(note => 
-			note.ID === localId ? newNote : note
-		);
+		const notes = store
+			.getNotes()
+			.map((note) => (note.ID === localId ? newNote : note));
 		store.setNotes(notes);
 
 		if (store.getActiveNoteId() === localId) {
@@ -285,16 +365,19 @@ export const queueService = {
 		}
 	},
 
-	async _commitLocalBlockId(localId: string, serverData: ServerResponseWithId): Promise<void> {
+	async _commitLocalBlockId(
+		localId: string,
+		serverData: ServerResponseWithId,
+	): Promise<void> {
 		const newBlockId = serverData.id || serverData.block_id;
 		if (!newBlockId) {
 			console.warn('[Queue] No new block id provided');
 			return;
 		}
-		
+
 		try {
 			const imagesToUpdate = await db.imagesGetByBlockId(localId);
-			
+
 			for (const image of imagesToUpdate) {
 				await db.imagesDelete(image.id);
 				await db.imagesPut({
@@ -306,10 +389,10 @@ export const queueService = {
 		} catch (error) {
 			console.warn('[Queue] Failed to update images for block:', error);
 		}
-		
+
 		try {
 			const queueFilesToUpdate = await db.queueFileGetByBlockId(localId);
-			
+
 			for (const queueFile of queueFilesToUpdate) {
 				await db.queueFileDelete(queueFile.id);
 				await db.queueFilePut({
@@ -321,34 +404,38 @@ export const queueService = {
 		} catch (error) {
 			console.warn('[Queue] Failed to update queueFiles for block:', error);
 		}
-		
+
 		const activeBlocks = store.getActiveBlocks();
-		const updatedActiveBlocks = activeBlocks.map(block =>
-			block.id === localId ? { ...block, id: newBlockId } : block
+		const updatedActiveBlocks = activeBlocks.map((block) =>
+			block.id === localId ? { ...block, id: newBlockId } : block,
 		);
 		store.setActiveBlocks(updatedActiveBlocks);
-		
+
 		let foundNoteId: string | number | null = null;
-		
+
 		const activeNoteId = store.getActiveNoteId();
 		if (activeNoteId) {
 			const activeNote = await db.notesGet(activeNoteId);
-			if (activeNote && activeNote.blocks && activeNote.blocks.some(b => b.id === localId)) {
+			if (
+				activeNote &&
+				activeNote.blocks &&
+				activeNote.blocks.some((b) => b.id === localId)
+			) {
 				foundNoteId = activeNoteId;
-				const updatedBlocks = activeNote.blocks.map(block =>
-					block.id === localId ? { ...block, id: newBlockId } : block
+				const updatedBlocks = activeNote.blocks.map((block) =>
+					block.id === localId ? { ...block, id: newBlockId } : block,
 				);
 				await db.notesPut({ ...activeNote, blocks: updatedBlocks });
 			}
 		}
-		
+
 		if (!foundNoteId) {
 			const allNotes = await db.notesGetAll();
 			for (const note of allNotes) {
-				if (note.blocks && note.blocks.some(b => b.id === localId)) {
+				if (note.blocks && note.blocks.some((b) => b.id === localId)) {
 					foundNoteId = note.ID;
-					const updatedBlocks = note.blocks.map(block =>
-						block.id === localId ? { ...block, id: newBlockId } : block
+					const updatedBlocks = note.blocks.map((block) =>
+						block.id === localId ? { ...block, id: newBlockId } : block,
 					);
 					await db.notesPut({ ...note, blocks: updatedBlocks });
 					break;
@@ -356,23 +443,26 @@ export const queueService = {
 			}
 		}
 	},
-   
-	async _commitLocalImageId(localId: string, serverData: AttachmentApiResponse): Promise<void> {
+
+	async _commitLocalImageId(
+		localId: string,
+		serverData: AttachmentApiResponse,
+	): Promise<void> {
 		let image = await db.imagesGet(localId);
-		
+
 		if (!image) {
 			const imagesByUrl = await db.imagesGetByUrl(`local://${localId}`);
 			image = imagesByUrl[0];
 		}
-		
+
 		if (!image) {
 			console.warn('[Queue] Image not found for localId:', localId);
 			return;
 		}
-		
+
 		const newImageId = serverData.id;
 		const newImageUrl = serverData.attach_url;
-		
+
 		const updatedImage = {
 			...image,
 			id: newImageId,
@@ -380,7 +470,7 @@ export const queueService = {
 			status: 'synced' as const,
 			syncedAt: Date.now(),
 		};
-		
+
 		await db.imagesDelete(localId);
 		await db.imagesPut(updatedImage);
 		await db.queueFileDelete(localId);
@@ -389,27 +479,32 @@ export const queueService = {
 			filename: serverData.minio_key || image.filename,
 			size: image.size,
 			mimeType: image.mimeType,
-			attachmentId: newImageId
+			attachmentId: newImageId,
 		});
 		try {
-			const response = await client.put(`/notes/${image.noteId}/blocks/${image.blockId}/content`, {
-				content: newImageContent
-			});
-			console.log('[Queue] Block content updated on server, response:', response);
+			const response = await client.put(
+				`/notes/${image.noteId}/blocks/${image.blockId}/content`,
+				{
+					content: newImageContent,
+				},
+			);
+			console.log(
+				'[Queue] Block content updated on server, response:',
+				response,
+			);
 
 			const cachedNote = await db.notesGet(image.noteId);
 			if (cachedNote && cachedNote.blocks) {
-				const updatedBlocks = cachedNote.blocks.map(b =>
-					b.id === image.blockId ? { ...b, content: newImageContent } : b
+				const updatedBlocks = cachedNote.blocks.map((b) =>
+					b.id === image.blockId ? { ...b, content: newImageContent } : b,
 				);
 				await db.notesPut({ ...cachedNote, blocks: updatedBlocks });
 			}
 			const blocks = store.getActiveBlocks();
-			const updatedBlocks = blocks.map(b =>
-				b.id === image.blockId ? { ...b, content: newImageContent } : b
+			const updatedBlocks = blocks.map((b) =>
+				b.id === image.blockId ? { ...b, content: newImageContent } : b,
 			);
 			store.setActiveBlocks(updatedBlocks);
-			
 		} catch (error) {
 			console.error('[Queue] Failed to update block content:', error);
 			throw error;
@@ -420,7 +515,11 @@ export const queueService = {
 		await db.clearQueuedRequests();
 	},
 
-	async getQueueStats(): Promise<{ total: number; byType: Record<string, number>; oldest: number | null }> {
+	async getQueueStats(): Promise<{
+		total: number;
+		byType: Record<string, number>;
+		oldest: number | null;
+	}> {
 		const requests = await this.getQueuedRequests();
 		return {
 			total: requests.length,
@@ -429,7 +528,10 @@ export const queueService = {
 				acc[type] = (acc[type] || 0) + 1;
 				return acc;
 			}, {}),
-			oldest: requests.length > 0 ? Math.min(...requests.map(r => r.queuedAt)) : null,
+			oldest:
+				requests.length > 0
+					? Math.min(...requests.map((r) => r.queuedAt))
+					: null,
 		};
-	}
+	},
 };

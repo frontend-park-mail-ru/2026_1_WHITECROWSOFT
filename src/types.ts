@@ -6,44 +6,44 @@ export interface User {
 }
 
 export interface Note {
-    ID: string | number;
-    title: string;
-    icon: string | null;
-    updatedAt: string | number;
-    blocks?: Block[];
-    isLocal?: boolean;
-    breadcrumb?: string;
+	ID: string | number;
+	title: string;
+	icon: string | null;
+	updatedAt: string | number;
+	blocks?: Block[];
+	isLocal?: boolean;
+	breadcrumb?: string;
 }
 
 export interface ActiveNote {
-    ID: string | number;
-    title: string;
-    breadcrumb: string;
-    text: string;
+	ID: string | number;
+	title: string;
+	breadcrumb: string;
+	text: string;
 }
 
 export interface Block {
-    id: string | number;
-    note_id?: string | number;
-    block_type_id: number;
-    content: string;
-    position: number;
-    formatting?: BlockFormatting | null;
-    created_at?: string;
-    updated_at?: string;
-    isLocal?: boolean;
+	id: string | number;
+	note_id?: string | number;
+	block_type_id: number;
+	content: string;
+	position: number;
+	formatting?: BlockFormatting | null;
+	created_at?: string;
+	updated_at?: string;
+	isLocal?: boolean;
 }
 
 export interface BlockFormatting {
-    ranges: FormattingRange[];
+	ranges: FormattingRange[];
 }
 
 export interface FormattingRange {
-    start_pos: number;
-    end_pos: number;
-    bold?: boolean | null;
-    italic?: boolean | null;
-    underline?: boolean | null;
+	start_pos: number;
+	end_pos: number;
+	bold?: boolean | null;
+	italic?: boolean | null;
+	underline?: boolean | null;
 }
 
 export interface ActiveNote {
@@ -54,44 +54,43 @@ export interface ActiveNote {
 }
 
 export interface ImageAttachment {
-    id: string | number;
-    blockId: string | number;
-    noteId: string | number;
-    blob?: Blob;
-    filename: string;
-    mimeType: string;
-    size: number;
-    url?: string;
-    status: 'pending' | 'synced' | 'failed';
-    isLocal?: boolean;
-    createdAt?: number;
-    syncedAt?: number;
-    timestamp?: number;
+	id: string | number;
+	blockId: string | number;
+	noteId: string | number;
+	blob?: Blob;
+	filename: string;
+	mimeType: string;
+	size: number;
+	url?: string;
+	status: 'pending' | 'synced' | 'failed';
+	isLocal?: boolean;
+	createdAt?: number;
+	syncedAt?: number;
+	timestamp?: number;
 }
 
 export interface QueueFile {
-    id: string;
-    blockId: string | number;
-    noteId: string | number;
-    blob: Blob;
-    filename: string;
-    mimeType: string;
-    size: number;
-    queuedAt: number;
+	id: string;
+	blockId: string | number;
+	noteId: string | number;
+	blob: Blob;
+	filename: string;
+	mimeType: string;
+	size: number;
+	queuedAt: number;
 }
 
 export interface QueuedRequest {
-    id?: number;
-    method: 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-    endpoint: string;
-    body?: unknown | null;
-    formData?: FormData | null;
-    localId?: string | null;
-    type?: string | null;
-    queuedAt: number;
-    retryCount: number;
+	id?: number;
+	method: 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+	endpoint: string;
+	body?: unknown | null;
+	formData?: FormData | null;
+	localId?: string | null;
+	type?: string | null;
+	queuedAt: number;
+	retryCount: number;
 }
-
 
 export interface StoreState {
 	user: User | null;
@@ -153,7 +152,7 @@ export interface FormState {
 	showPasswordConfirm?: boolean;
 }
 
-export type FormAction = 
+export type FormAction =
 	| { type: 'INPUT_CHANGE'; payload: { fieldName: string; value: unknown } }
 	| { type: 'SUBMIT_START' }
 	| { type: 'SUBMIT_END' }

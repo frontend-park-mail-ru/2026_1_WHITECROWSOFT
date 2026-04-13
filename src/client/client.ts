@@ -57,7 +57,7 @@ class Client {
 					throw new Error(`Failed to fetch CSRF token: ${response.status}`);
 				}
 
-				const data = await response.json() as CsrfTokenResponse;
+				const data = (await response.json()) as CsrfTokenResponse;
 				this.csrfToken = data.csrf_token ?? data.token ?? null;
 				return this.csrfToken;
 			} catch (error) {
@@ -76,10 +76,15 @@ class Client {
 		this.csrfTokenPromise = null;
 	}
 
-	async request<T = unknown>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+	async request<T = unknown>(
+		endpoint: string,
+		options: RequestOptions = {},
+	): Promise<T> {
 		const url = `${this.serverURL}${endpoint}`;
 		const method = options.method || 'GET';
-		const isMutatingMethod = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method.toUpperCase());
+		const isMutatingMethod = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(
+			method.toUpperCase(),
+		);
 
 		const headers: Record<string, string> = { ...options.headers };
 
@@ -110,9 +115,8 @@ class Client {
 
 			let responseData: T | null = null;
 			try {
-				responseData = await response.json() as T;
-			} catch {
-			}
+				responseData = (await response.json()) as T;
+			} catch {}
 
 			if (!response.ok) {
 				throw createError.fromResponse(response, responseData);
@@ -132,7 +136,9 @@ class Client {
 				throw createError.timeout(err);
 			}
 
-			throw createError.client(err instanceof Error ? err : new Error(String(err)));
+			throw createError.client(
+				err instanceof Error ? err : new Error(String(err)),
+			);
 		}
 	}
 

@@ -1,9 +1,11 @@
-import { getRoute, Route } from './routes.js';
 import { authService } from '../services/authService.js';
-import { Layout } from './../layout.js';
 import type { UserSession } from '../types.js';
+import { Layout } from './../layout.js';
+import { getRoute, Route } from './routes.js';
 
-const modules = import.meta.glob<{ default?: unknown; [key: string]: unknown }>('../pages/**/*.ts');
+const modules = import.meta.glob<{ default?: unknown; [key: string]: unknown }>(
+	'../pages/**/*.{ts,js}',
+);
 
 /**
  * Роутер для навигации между страницами
@@ -13,18 +15,17 @@ export const router = {
 	_currentLayout: null as Layout | null,
 	_sessionCache: null as UserSession | null,
 	_sessionCacheTime: 0 as number,
-	_SESSION_CACHE_MS: 5000 as number,
+	_SESSION_CACHE_MS: (24 * 60 * 60 * 1000) as number,
 
-	/**
-	 * Инициализирует роутер
-	 */
 	init(): void {
 		window.addEventListener('popstate', (e: PopStateEvent) => {
 			this.handleRoute(e.state?.path || window.location.pathname);
 		});
 
 		document.addEventListener('click', (e: MouseEvent) => {
-			const link = (e.target as HTMLElement).closest('a[href]') as HTMLAnchorElement | null;
+			const link = (e.target as HTMLElement).closest(
+				'a[href]',
+			) as HTMLAnchorElement | null;
 			if (!link) return;
 
 			const href = link.getAttribute('href');
@@ -54,30 +55,18 @@ export const router = {
 		this.handleRoute(window.location.pathname);
 	},
 
-	/**
-	 * Переводит на новый путь
-	 * @param path - целевой путь
-	 */
 	push(path: string): void {
 		if (path === this._currentPath) return;
 		history.pushState({ path }, '', path);
 		this.handleRoute(path);
 	},
 
-	/**
-	 * Заменяет текущий путь
-	 * @param path - целевой путь
-	 */
 	replace(path: string): void {
 		if (path === this._currentPath) return;
 		history.replaceState({ path }, '', path);
 		this.handleRoute(path);
 	},
 
-	/**
-	 * Обрабатывает маршрут и загружает соответствующую страницу
-	 * @param path - путь для обработки
-	 */
 	async handleRoute(path: string): Promise<void> {
 		if (path === this._currentPath) {
 			return;
@@ -96,41 +85,52 @@ export const router = {
 
 		const access = await this.checkAuth(route);
 		if (!access.allowed) {
-		    if (access.redirectTo && access.redirectTo !== path) {
-		        this.replace(access.redirectTo);
-		    }
-		    return;
+			if (access.redirectTo && access.redirectTo !== path) {
+				this.replace(access.redirectTo);
+			}
+			return;
 		}
 
 		try {
-			const modulePath = `../pages/${route.component}.ts`;
-			const moduleLoader = modules[modulePath];
+			let modulePath = `../pages/${route.component}.ts`;
+			let moduleLoader = modules[modulePath];
+
+			if (!moduleLoader) {
+				modulePath = `../pages/${route.component}.js`;
+				moduleLoader = modules[modulePath];
+			}
 
 			if (moduleLoader) {
 				const module = await moduleLoader();
-				const initFn = module[route.init] as ((data?: unknown) => void | Promise<void>) | undefined;
+				const initFn = module[route.init] as
+					| ((data?: unknown) => void | Promise<void>)
+					| undefined;
 
 				if (typeof initFn === 'function') {
 					if (route.layout === 'auth') {
 						if (this._currentLayout) {
-							if (typeof this._currentLayout.destroy === 'function') {
-								this._currentLayout.destroy();
-							}
+							this._currentLayout.destroy();
 							this._currentLayout = null;
 							(window as any).appLayout = null;
 						}
-						initFn();
+						const app = document.querySelector('#app');
+						if (app) {
+							app.innerHTML = '';
+						}
+
+						await initFn();
 					} else {
 						if (!this._currentLayout) {
 							this._currentLayout = new Layout();
-							await this._currentLayout.init();
+							await this._currentLayout.init(false);
 							(window as any).appLayout = this._currentLayout;
 						}
-						await (window as any).appLayout.setPage(initFn, route.data);
+
+						await this._currentLayout.setPage(initFn, route.data);
 					}
 				}
 			} else {
-				throw new Error(`Module not found at ${modulePath}`);
+				throw new Error(`Module not found for ${route.component}`);
 			}
 		} catch (err) {
 			console.warn('Error handling a route:', err);
@@ -140,12 +140,9 @@ export const router = {
 		}
 	},
 
-	/**
-	 * Проверяет доступ к маршруту на основе сессии
-	 * @param route - объект маршрута
-	 * @returns результат проверки доступа
-	 */
-	async checkAuth(route: Route): Promise<{ allowed: boolean; redirectTo: string }> {
+	async checkAuth(
+		route: Route,
+	): Promise<{ allowed: boolean; redirectTo: string }> {
 		const now = Date.now();
 
 		if (
@@ -155,26 +152,30 @@ export const router = {
 			return this._checkAuthLogic(route, this._sessionCache);
 		}
 
-		const session = await authService.getUserSession();
+		let session: UserSession = {
+			isAuthenticated: false,
+			user: null,
+		};
+		try {
+			session = await authService.getUserSession();
+		} catch (error) {
+			console.error('Failed to get user session:', error);
+		}
 		this._sessionCache = session;
 		this._sessionCacheTime = Date.now();
 		return this._checkAuthLogic(route, session);
 	},
 
-	/**
-	 * Оценивает доступ на основе сессии и типа маршрута
-	 * @private
-	 * @param route - объект маршрута
-	 * @param session - объект сессии
-	 * @returns результат проверки
-	 */
-	_checkAuthLogic(route: Route, session: UserSession): { allowed: boolean; redirectTo: string } {
+	_checkAuthLogic(
+		route: Route,
+		session: UserSession,
+	): { allowed: boolean; redirectTo: string } {
 		const { isAuthenticated, requiresRedirect } = session;
 
 		if (requiresRedirect) {
 			return {
 				allowed: false,
-				redirectTo: '/signin'
+				redirectTo: '/signin',
 			};
 		}
 
@@ -198,9 +199,6 @@ export const router = {
 		};
 	},
 
-	/**
-	 * Очищает кэш сессии
-	 */
 	clearSessionCache(): void {
 		this._sessionCache = null;
 		this._sessionCacheTime = 0;
