@@ -82,11 +82,6 @@ function clearFormErrors(form: HTMLFormElement): void {
     });
 }
 
-function showSuccess(message: string): void {
-    // Можно реализовать показ успешного сообщения
-    console.log('Success:', message);
-}
-
 /**
  * Универсальная логика отправки формы
  */
@@ -97,7 +92,6 @@ async function handleSubmit(form: HTMLFormElement, onSubmit: FormSubmitHandler, 
     try {
         const formData = collectFormData(form);
         const result = await onSubmit(formData) as SubmitResult | undefined;
-        if (result?.message) showSuccess(result.message);
         if (onSuccess) onSuccess(result);
         clearFormErrors(form);
     } catch (error) {

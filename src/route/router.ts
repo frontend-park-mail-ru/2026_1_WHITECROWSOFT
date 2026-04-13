@@ -94,13 +94,13 @@ export const router = {
 			return;
 		}
 
-		// const access = await this.checkAuth(route);
-		// if (!access.allowed) {
-		//     if (access.redirectTo && access.redirectTo !== path) {
-		//         this.replace(access.redirectTo);
-		//     }
-		//     return;
-		// }
+		const access = await this.checkAuth(route);
+		if (!access.allowed) {
+		    if (access.redirectTo && access.redirectTo !== path) {
+		        this.replace(access.redirectTo);
+		    }
+		    return;
+		}
 
 		try {
 			const modulePath = `../pages/${route.component}.ts`;
