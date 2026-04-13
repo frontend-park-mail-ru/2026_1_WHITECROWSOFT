@@ -1,134 +1,127 @@
-<article class="settignsHeader">
-	<h1 class="settingsTitle">Профиль</h1>
-    <span class="settings">Вы можете загрузить фотографию изменить имя пользователя</span>
-</article>
-
-<div class="settingsBlocks">
-    <div class="profieBlocks">
-        <form id="usernameForm" class="settingsForm" novalidate>
-            <h2 class="accountTitle">Аккаунт</h2>
-                        
-            {{> components/partials/forms/input
-                name="username"
-                label="Имя пользователя"
-                type="text"
-                value=user.username
-                placeholder="Введите новое имя"
-                autocomplete="username"
-                witherror="true"
-            }}
-                        
-            {{> components/partials/forms/button 
-                type="submit" 
-                text="Изменить" 
-                variant="primary"
-                className="submitButton" 
-            }}
-        </form>
-
-        <div class="securityBlock">
-            <h2 class="securityTitle">Безопасность</h2>
-            <span class="settings">Добавьте почту, чтобы восстановить через нее пароль в случае, если Вы его потеряете или забудете.</span>
-					
-			<form id="emailForm" class="securityForm" novalidate>
-                {{> components/partials/forms/input
-                    name="email"
-                    label="Email"
-                    type="email"
-                    value=user.email
-                    placeholder="Ваша почта"
-                    autocomplete="email"
-                    witherror="true"
-                }}
-                        
-                {{> components/partials/forms/button 
-                    type="submit" 
-                    text="Сохранить" 
-                    variant="primary"
-                    className="submitButton" 
-                }}
-            </form>
-
-			<form id="passwordForm" class="securityForm" novalidate>
-                {{> components/partials/forms/input
-                    name="newPassword"
-                    label="Ваш пароль"
-                    type="password"
-                    placeholder="*************"
-                    autocomplete="new-password"
-                    witherror="true"
-                }}
-                        
-                {{> components/partials/forms/button 
-                    type="submit" 
-                    text="Изменить" 
-                    variant="primary"
-                    className="submitButton" 
-                }}
-            </form>
-        </div>
+<div class="settings__overwrapper">
+<div class="settings">
+    <div class="settings__block">
+        <h1 class="settings__title">Профиль</h1>
+        <span class="settings__description">Вы можете загрузить фотографию изменить имя пользователя</span>
     </div>
-    
-    <div class="photoBlock">
-        <form id="avatarForm" class="settingsForm" enctype="multipart/form-data">
-            <h2 class="photoTitle">Фотография</h2>
-            <div class="avatar-preview-container">
-                {{#if user.avatar}}
-                    <img 
-                        src="{{user.avatar}}" 
-                        alt="Avatar" 
-                        class="avatar-preview" 
-                        data-avatar-image
-                    >
-                {{else}}
-                    <div class="avatar-default" data-avatar-image>
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                            <circle cx="12" cy="7" r="4" />
-                        </svg>
-                    </div>
-                {{/if}}
-                <div class="avatar-overlay" data-action="changeAvatar">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                        <circle cx="12" cy="13" r="4"/>
+
+    <div class="settings__wrapper settings__wrapper--wide">
+        <div class="settings">
+            <div class="settings__block">
+                <h2 class="settings__subtitle">Аккаунт</h2>
+                <form id="usernameForm" class="settings__form" novalidate>
+                    {{> components/partials/forms/input
+                        name="username"
+                        label="Имя пользователя"
+                        type="text"
+                        value=user.username
+                        placeholder="Введите новое имя"
+                        autocomplete="username"
+                        witherror="true"
+                    }}
+
+                    {{> components/partials/forms/button
+                        type="submit"
+                        text="Изменить"
+                        variant="primary"
+                        className="settings__button"
+                    }}
+                </form>
+            </div>
+
+            <div class="settings__block">
+                <h2 class="settings__subtitle">Безопасность</h2>
+                <span class="settings__description settings__description--medium">Добавьте почту, чтобы восстановить через нее пароль в случае, если Вы его потеряете или забудете.</span>
+
+     			<form id="emailForm" class="settings__form" novalidate>
+                    {{> components/partials/forms/input
+                        name="email"
+                        label="Email"
+                        type="email"
+                        value=user.email
+                        placeholder="Ваша почта"
+                        autocomplete="email"
+                        witherror="true"
+                    }}
+
+                    {{> components/partials/forms/button
+                        type="submit"
+                        text="Сохранить"
+                        variant="primary"
+                        className="settings__button"
+                    }}
+                </form>
+
+     			<form id="passwordForm" class="settings__form" novalidate>
+                    {{> components/partials/forms/input
+                        name="newPassword"
+                        label="Ваш пароль"
+                        type="password"
+                        placeholder="*************"
+                        autocomplete="new-password"
+                        witherror="true"
+                    }}
+
+                    {{> components/partials/forms/button
+                        type="submit"
+                        text="Изменить"
+                        variant="primary"
+                        className="settings__button"
+                    }}
+                </form>
+            </div>
+        </div>
+        <div class="settings__block">
+            <h2 class="settings__subtitle">Фотография</h2>
+            {{#if user.avatar}}
+                <img
+                    src="{{user.avatar}}"
+                    alt="Avatar"
+                    class="settings__avatar"
+                    data-avatar-image
+                >
+            {{else}}
+                <div class="settings__avatar" data-avatar-image>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
                     </svg>
                 </div>
-            </div>
-            <div class="file-input-wrapper">
-                <input 
-                    type="file" 
-                    name="avatar"
-                    id="avatar-file-input"
-                    accept=".png,.jpg,.jpeg,.gif"
-                    style="display: none;"
-                >
-                <button type="button" class="file-input-button" id="avatar-trigger">
-                    Загрузить новое фото
-                </button>
-                <span class="file-name" id="avatar-file-name">Файл не выбран</span>
-            </div>
-                
-            <span class="settingsText">Размер фотографии не должен превышать 1мб. Допустимые расширения: .png, .jpg, .gif.</span>
-            <div data-field-error class="error-message"></div>
-        </form>
+            {{/if}}
+            <form id="avatarForm" class="settingsForm" enctype="multipart/form-data">
+                <div class="file-input-wrapper">
+                    <input
+                        type="file"
+                        name="avatar"
+                        id="avatar-file-input"
+                        accept=".png,.jpg,.jpeg,.gif"
+                        style="display: none;"
+                    >
+                    <button type="button" class="settings__button" id="avatar-trigger">
+                        Загрузить
+                    </button>
+                </div>
+                <div data-field-error class="error-message"></div>
+            </form>
+            <span class="settings__description settings__description--small">Размер фотографии не должен превышать 1мб. Допустимые расширения: .png, .jpg, .gif.</span>
+        </div>
+    </div>
+    <div class="settings__wrapper">
+	{{> components/partials/forms/button
+            type="button"
+            text="Выйти"
+            variant="danger"
+            className="settings__button settings__button--danger logoutButton"
+            data-action="logout"
+        }}
+    
+        {{> components/partials/forms/button
+            type="button"
+            text="Удалить аккаунт"
+            variant="danger"
+            className="settings__button settings__button--dangerAlt"
+            data-action="deleteAccount"
+        }}
     </div>
 </div>
-		
-<div class="exitBlock">
-	{{> components/partials/forms/button 
-        type="button"
-        text="Выйти" 
-        variant="danger"
-        className="logoutButton"
-        data-action="logout"
-    }}
-            
-    {{> components/partials/forms/button 
-        type="button"
-        text="Удалить аккаунт" 
-        variant="danger"
-        className="deleteButton"
-        data-action="deleteAccount"
-    }}	
 </div>

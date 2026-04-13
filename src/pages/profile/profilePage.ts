@@ -7,7 +7,7 @@ import type { User } from '../../types.js';
 import { registerHelpers, registerPartials } from '../../utils/utils.js';
 import '../main/mainPage.scss';
 import { setupForm } from './profileForms.js';
-import './profilePage.css';
+import './profilePage.scss';
 import templateText from './profilePage.hbs?raw';
 
 export async function initProfilePage(
@@ -54,7 +54,6 @@ function setupProfileForms(app: HTMLElement): void {
 	const avatarInput = document.getElementById(
 		'avatar-file-input',
 	) as HTMLInputElement | null;
-	const fileNameSpan = document.getElementById('avatar-file-name');
 
 	if (avatarTrigger && avatarInput) {
 		avatarTrigger.addEventListener('click', () => {
@@ -64,16 +63,11 @@ function setupProfileForms(app: HTMLElement): void {
 		avatarInput.addEventListener('change', async (e: Event) => {
 			const target = e.target as HTMLInputElement;
 			const file = target.files?.[0];
-			if (!file) return;
-
-			if (fileNameSpan) {
-				fileNameSpan.textContent = file.name;
-			}
+      if (!file) return;
 
 			if (file.size > 1024 * 1024) {
 				alert('Файл слишком большой (макс. 1 МБ)');
 				avatarInput.value = '';
-				if (fileNameSpan) fileNameSpan.textContent = 'Файл не выбран';
 				return;
 			}
 
@@ -87,7 +81,6 @@ function setupProfileForms(app: HTMLElement): void {
 			if (!allowedTypes.includes(file.type)) {
 				alert('Недопустимый формат (PNG, JPG, GIF, WEBP)');
 				avatarInput.value = '';
-				if (fileNameSpan) fileNameSpan.textContent = 'Файл не выбран';
 				return;
 			}
 
@@ -122,14 +115,12 @@ function setupProfileForms(app: HTMLElement): void {
 					store.setUser(updatedUser);
 
 					avatarInput.value = '';
-					if (fileNameSpan) fileNameSpan.textContent = 'Файл не выбран';
 				}
 			} catch (error) {
 				console.error('Upload error:', error);
 				const err = error as { error?: string; message?: string };
 				alert(err?.error || err?.message || 'Ошибка загрузки');
 				avatarInput.value = '';
-				if (fileNameSpan) fileNameSpan.textContent = 'Файл не выбран';
 			}
 		});
 	}

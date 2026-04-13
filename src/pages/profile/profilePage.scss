@@ -1,0 +1,125 @@
+.settings {
+	display: flex;
+	gap: 40px;
+	flex-direction: column;
+
+	&__block {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+	&__wrapper {
+		display: flex;
+		flex-direction: row;
+		gap: 20px;
+		&--wide {
+			gap: 120px;
+		}
+	}
+	&__form {
+		display: flex;
+		flex-direction: row;
+		gap: 20px;
+		align-items: end;
+		.form__input {
+			max-width: 250px;
+			.input__error {
+				display: none;
+			}
+		}
+	}
+
+	&__button {
+		height: 35px;
+		width: 100%;
+		max-width: 140px;
+		border-radius: 10px;
+		border: 2px solid var(--oceanic);
+		background: none;
+		color: var(--oceanic);
+		font-size: 16px;
+		font-weight: 800;
+		cursor: pointer;
+
+		display: inline-flex;
+		align-items: center;
+		justify-content: space-around;
+		&:hover {
+			border: 2px solid var(--cornflower);
+			color: var(--cornflower);
+			background-color: var(--highlight);
+		}
+
+		&--dangerAlt {
+			max-width: 180px; /* bad bad bad */
+			border: 2px solid var(--danger-red);
+			color: var(--danger-red);
+			&:hover {
+				color: var(--danger-red);
+				border: 2px solid var(--danger-red);
+				background-color: rgba(215, 45, 45, 0.25);
+			}
+			&:active {
+				color: var(--danger-red);
+				border: 2px solid var(--danger-red);
+				background-color: rgba(215, 45, 45, 0.6);
+			}
+		}
+		&--danger {
+			background: var(--danger-red);
+			border: none;
+			color: var(--background);
+			&:hover {
+				border: none;
+				color: var(--background);
+				background-color: var(--coral-red);
+			}
+			&:active {
+				border: none;
+				color: var(--background);
+				background-color: var(--clown-red);
+			}
+		}
+	}
+
+	&__title {
+		font-size: 2rem;
+		font-weight: 800;
+		width: 100%;
+		text-align: left;
+	}
+	&__subtitle {
+		font-weight: 800;
+		text-align: left;
+		font-size: 20px;
+	}
+
+	&__description {
+		color: var(--faint-b);
+		font-size: 14px;
+		&--medium {
+			max-width: 400px;
+		}
+		&--small {
+			font-size: 12px;
+			max-width: 285px;
+		}
+	}
+
+	&__avatar {
+		border-radius: 50%;
+		width: 115px;
+		height: 115px;
+		border: 2px solid var(--faint-a);
+		overflow: hidden;
+	}
+
+	/*
+	This is not a place of honour.
+	Nothing sacred is here.
+	Nothing of value is here.
+	*/
+	&__overwrapper {
+		padding-left: 60px;
+	}
+}
