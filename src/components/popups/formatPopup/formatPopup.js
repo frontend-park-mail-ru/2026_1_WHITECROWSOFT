@@ -1,7 +1,7 @@
 import Handlebars from "handlebars";
 import { createElement } from "../../../utils/utils.js";
 import templateText from './formatPopup.hbs?raw';
-import './formatPopup.css';
+import './formatPopup.scss';
 import { noteService } from '../../../services/noteService.js';
 import { store } from '../../../store.js';
 import { getSelectionPositionsInElement, applyFormattingToRange } from '../../../utils/formattingUtils.js';
@@ -30,7 +30,7 @@ export class FormatPopup {
         this._bindGlobalCloseHandlers();
         this._bindPopupEvents();
         this._detectCurrentFormatting();
-        this.element.classList.add('visible');
+        this.element.classList.add('formattingPopup--visible');
         
         this.element.addEventListener('mousedown', (e) => e.stopPropagation());
         this.element.addEventListener('click', (e) => e.stopPropagation());
@@ -226,9 +226,9 @@ export class FormatPopup {
         const boldBtn = this.element.querySelector('[data-action="bold"]');
         const italicBtn = this.element.querySelector('[data-action="italic"]');
         const underlineBtn = this.element.querySelector('[data-action="underline"]');
-        if (boldBtn) boldBtn.classList.toggle('active', Boolean(formatting?.bold));
-        if (italicBtn) italicBtn.classList.toggle('active', Boolean(formatting?.italic));
-        if (underlineBtn) underlineBtn.classList.toggle('active', Boolean(formatting?.underline));
+        if (boldBtn) boldBtn.classList.toggle('formattingPopup__button--active', Boolean(formatting?.bold));
+        if (italicBtn) italicBtn.classList.toggle('formattingPopup__button--active', Boolean(formatting?.italic));
+        if (underlineBtn) underlineBtn.classList.toggle('formattingPopup__button--active', Boolean(formatting?.underline));
     }
 
     _isSelectionValid() {

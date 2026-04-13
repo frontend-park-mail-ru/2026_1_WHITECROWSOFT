@@ -1,0 +1,49 @@
+.popup {
+	&__wrapper {
+		position: fixed;
+		z-index: 1000;
+		background: var(--background);
+		border: 1px solid var(--faint-a);
+		border-radius: 8px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		min-width: 150px;
+		max-width: 200px;
+	}
+	&__container {
+		padding: 8px;
+		h3 {
+			margin: 0 0 8px 0;
+			font-size: 14px;
+			font-weight: 600;
+			color: var(--text);
+		}
+	}
+	&__operations {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	&__button {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 6px 8px;
+		border-radius: 6px;
+		cursor: pointer;
+		border: none;
+		background: transparent;
+		width: 100%;
+		text-align: left;
+		font-family: 'Inter', sans-serif;
+		font-size: 14px;
+		color: var(--text);
+		transition: background-color 0.2s;
+		:hover {
+			background: var(--highlight);
+		}
+	}
+	&__icon {
+		width: 14px;
+		height: 14px;
+	}
+}

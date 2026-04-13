@@ -1,0 +1,66 @@
+.formattingPopup {
+	display: none;
+	position: fixed;
+	z-index: 1000;
+	background: var(--background);
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+	padding: 8px 12px;
+	gap: 6px;
+	pointer-events: auto;
+	visibility: hidden;
+	transform: translateX(-50%);
+	&--visible {
+		display: flex;
+		flex-direction: column;
+		visibility: visible;
+	}
+	&__row {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+	&__button {
+		padding: 6px;
+		border: none;
+		background: transparent;
+		border-radius: 6px;
+		cursor: pointer;
+		transition: background 0.15s;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		:hover {
+			background: var(--highlight);
+		}
+		&--active {
+			background: var(--highlight);
+			icon {
+				filter: brightness(0) invert(1);
+			}
+		}
+		&--disabled {	
+            cursor: default;
+			pointer-events: none;
+			color: var(--faint-b);
+		}
+	}
+	&__input {
+		width: 60px;
+		padding: 4px 6px;
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		font-size: 14px;
+		text-align: center;
+		background: var(--background);
+		color: var(--text);
+		pointer-events: none;
+		opacity: 0.6;
+	}
+	&__icon {
+		width: 16px;
+		height: 16px;
+		pointer-events: none;
+	}
+}

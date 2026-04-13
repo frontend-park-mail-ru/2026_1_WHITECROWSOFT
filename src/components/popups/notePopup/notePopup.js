@@ -2,7 +2,7 @@ import Handlebars from "handlebars";
 import { createElement, getElementPosition } from "../../../utils/utils.js";
 import templateText from './notePopup.hbs?raw';
 import { noteService } from '../../../services/noteService.js';
-import './notePopup.css';
+import '../../../assets/style/genericPopup.scss';
 
 export class NotePopup {
     constructor(noteId, anchorElement) {
@@ -17,7 +17,7 @@ export class NotePopup {
         this.close();
 
         const html = Handlebars.compile(templateText)({ noteId: this.noteId });
-        this.element = createElement('div', 'notesPopupWrapper');
+        this.element = createElement('div', 'popup__wrapper');
         this.element.innerHTML = html;
 
         this._position();

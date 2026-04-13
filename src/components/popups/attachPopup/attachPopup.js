@@ -4,7 +4,7 @@ import templateText from './attachPopup.hbs?raw';
 import { attachmentService } from '../../../services/attachmentService.js';
 import { noteService } from '../../../services/noteService.js';
 import { store } from '../../../store.js';
-import './attachPopup.css';
+import '../../../assets/style/genericPopup.scss';
 
 export class AttachPopup {
     constructor(anchorElement) {
@@ -19,7 +19,7 @@ export class AttachPopup {
         this.close();
 
         const html = Handlebars.compile(templateText)({});
-        this.element = createElement('div', 'attachPopupWrapper');
+        this.element = createElement('div', 'popup__wrapper');
         this.element.innerHTML = html;
 
         this.fileInput = document.createElement('input');
