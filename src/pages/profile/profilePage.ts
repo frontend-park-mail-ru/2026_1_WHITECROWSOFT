@@ -1,14 +1,14 @@
 import Handlebars from 'handlebars';
+import { db } from '../../db.js';
 import { router } from '../../route/router.js';
 import { authService } from '../../services/authService.js';
 import { store } from '../../store.js';
-import { db } from '../../db.js';
 import type { User } from '../../types.js';
 import { registerHelpers, registerPartials } from '../../utils/utils.js';
 import '../main/mainPage.scss';
 import { setupForm } from './profileForms.js';
-import './profilePage.scss';
 import templateText from './profilePage.hbs?raw';
+import './profilePage.scss';
 
 export async function initProfilePage(
 	container: HTMLElement,
@@ -63,7 +63,7 @@ function setupProfileForms(app: HTMLElement): void {
 		avatarInput.addEventListener('change', async (e: Event) => {
 			const target = e.target as HTMLInputElement;
 			const file = target.files?.[0];
-      if (!file) return;
+			if (!file) return;
 
 			if (file.size > 1024 * 1024) {
 				alert('Файл слишком большой (макс. 1 МБ)');
@@ -125,7 +125,9 @@ function setupProfileForms(app: HTMLElement): void {
 		});
 	}
 
-	const logoutBtn = document.querySelector('.logoutButton') as HTMLButtonElement | null;
+	const logoutBtn = document.querySelector(
+		'.logoutButton',
+	) as HTMLButtonElement | null;
 	if (logoutBtn) {
 		logoutBtn.addEventListener('click', handleLogout);
 	}
@@ -137,14 +139,16 @@ function setupProfileForms(app: HTMLElement): void {
 }
 
 async function handleLogout(): Promise<void> {
-	const logoutBtn = document.querySelector('.logoutButton') as HTMLButtonElement | null;
+	const logoutBtn = document.querySelector(
+		'.logoutButton',
+	) as HTMLButtonElement | null;
 	const originalText = logoutBtn?.textContent;
-	
+
 	if (logoutBtn) {
 		logoutBtn.disabled = true;
 		logoutBtn.textContent = 'Выход...';
 	}
-	
+
 	try {
 		await authService.logOut();
 		router.replace('/signin');

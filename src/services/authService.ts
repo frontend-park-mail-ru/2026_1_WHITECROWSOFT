@@ -64,7 +64,7 @@ export const authService = {
 	},
 
 	async logOut(): Promise<void> {
-		console.log('logout')
+		console.log('logout');
 		try {
 			await client.post('/logout', {});
 		} catch (error) {
@@ -76,14 +76,14 @@ export const authService = {
 			store.setActiveNoteId(null);
 			store.setActiveBlocks([]);
 			store.setOnline(navigator.onLine);
-			
+
 			await db.notesClear();
 			await db.formattingClear();
 			await db.imagesClear();
 			await db.clearQueueFiles();
 			await db.clearQueuedRequests();
 			await db.settingsClear();
-			
+
 			router.clearSessionCache();
 		}
 	},
@@ -110,7 +110,8 @@ export const authService = {
 			const user = await client.get<User>('/profile');
 			let avatarUrl: string | null = null;
 			try {
-				const avatar = await client.get<AvatarUploadResponse>('/profile/avatar');
+				const avatar =
+					await client.get<AvatarUploadResponse>('/profile/avatar');
 				console.log('[AuthService] Avatar response:', avatar);
 				if (avatar?.AvatarURL) {
 					avatarUrl = avatar.AvatarURL;

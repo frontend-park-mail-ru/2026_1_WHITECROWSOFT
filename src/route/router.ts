@@ -1,11 +1,13 @@
-import { getRoute, Route } from './routes.js';
-import { authService } from '../services/authService.js';
-import { Layout } from './../layout.js';
-import { store } from '../store.js';
 import { db } from '../db.js';
-import type { UserSession, User } from '../types.js';
+import { authService } from '../services/authService.js';
+import { store } from '../store.js';
+import type { User, UserSession } from '../types.js';
+import { Layout } from './../layout.js';
+import { getRoute, Route } from './routes.js';
 
-const modules = import.meta.glob<{ default?: unknown; [key: string]: unknown }>('../pages/**/*.{ts,js}');
+const modules = import.meta.glob<{ default?: unknown; [key: string]: unknown }>(
+	'../pages/**/*.{ts,js}',
+);
 
 /**
  * Роутер для навигации между страницами
@@ -15,7 +17,7 @@ export const router = {
 	_currentLayout: null as Layout | null,
 	_sessionCache: null as UserSession | null,
 	_sessionCacheTime: 0 as number,
-	_SESSION_CACHE_MS: 60 * 60 * 1000 as number,
+	_SESSION_CACHE_MS: (60 * 60 * 1000) as number,
 
 	init(): void {
 		window.addEventListener('popstate', (e: PopStateEvent) => {
@@ -23,7 +25,9 @@ export const router = {
 		});
 
 		document.addEventListener('click', (e: MouseEvent) => {
-			const link = (e.target as HTMLElement).closest('a[href]') as HTMLAnchorElement | null;
+			const link = (e.target as HTMLElement).closest(
+				'a[href]',
+			) as HTMLAnchorElement | null;
 			if (!link) return;
 
 			const href = link.getAttribute('href');
@@ -69,7 +73,7 @@ export const router = {
 	 * Быстрая проверка авторизации без запроса к серверу
 	 */
 	async isAuthenticatedFast(): Promise<boolean> {
-		const cachedUser = store.getUser() || await db.settingsGet<User>('user');
+		const cachedUser = store.getUser() || (await db.settingsGet<User>('user'));
 		return !!cachedUser;
 	},
 
@@ -95,22 +99,22 @@ export const router = {
 				this.replace('/');
 				return;
 			}
-			
+
 			if (this._currentLayout) {
 				this._currentLayout.destroy();
 				this._currentLayout = null;
 				(window as any).appLayout = null;
 			}
-			
+
 			const app = document.querySelector('#app');
 			if (app) {
 				app.innerHTML = '';
 			}
-			
+
 			try {
 				let modulePath = `../pages/${route.component}.ts`;
 				let moduleLoader = modules[modulePath];
-				
+
 				if (!moduleLoader) {
 					modulePath = `../pages/${route.component}.js`;
 					moduleLoader = modules[modulePath];
@@ -118,7 +122,9 @@ export const router = {
 
 				if (moduleLoader) {
 					const module = await moduleLoader();
-					const initFn = module[route.init] as ((data?: unknown) => void | Promise<void>) | undefined;
+					const initFn = module[route.init] as
+						| ((data?: unknown) => void | Promise<void>)
+						| undefined;
 					if (typeof initFn === 'function') {
 						await initFn();
 					}
@@ -143,7 +149,7 @@ export const router = {
 		try {
 			let modulePath = `../pages/${route.component}.ts`;
 			let moduleLoader = modules[modulePath];
-			
+
 			if (!moduleLoader) {
 				modulePath = `../pages/${route.component}.js`;
 				moduleLoader = modules[modulePath];
@@ -151,7 +157,9 @@ export const router = {
 
 			if (moduleLoader) {
 				const module = await moduleLoader();
-				const initFn = module[route.init] as ((data?: unknown) => void | Promise<void>) | undefined;
+				const initFn = module[route.init] as
+					| ((data?: unknown) => void | Promise<void>)
+					| undefined;
 
 				if (typeof initFn === 'function') {
 					if (!this._currentLayout) {
@@ -159,7 +167,7 @@ export const router = {
 						await this._currentLayout.init(false);
 						(window as any).appLayout = this._currentLayout;
 					}
-					
+
 					await this._currentLayout.setPage(initFn, route.data);
 				}
 			} else {
@@ -173,7 +181,9 @@ export const router = {
 		}
 	},
 
-	async checkAuth(route: Route): Promise<{ allowed: boolean; redirectTo: string }> {
+	async checkAuth(
+		route: Route,
+	): Promise<{ allowed: boolean; redirectTo: string }> {
 		if (route.guest) {
 			const isAuth = await this.isAuthenticatedFast();
 			if (isAuth) {
@@ -212,13 +222,16 @@ export const router = {
 		return this._checkAuthLogic(route, session);
 	},
 
-	_checkAuthLogic(route: Route, session: UserSession): { allowed: boolean; redirectTo: string } {
+	_checkAuthLogic(
+		route: Route,
+		session: UserSession,
+	): { allowed: boolean; redirectTo: string } {
 		const { isAuthenticated, requiresRedirect } = session;
 
 		if (requiresRedirect) {
 			return {
 				allowed: false,
-				redirectTo: '/signin'
+				redirectTo: '/signin',
 			};
 		}
 

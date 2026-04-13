@@ -17,27 +17,27 @@ async function bootstrap() {
 		registerHelpers();
 		await db.open();
 		await queueService.clearQueue();
-		
+
 		const cachedNotes = await db.notesGetAll();
 		if (cachedNotes && cachedNotes.length > 0) {
 			store.setNotes(cachedNotes);
 		}
-		
+
 		const activeNodeId = await db.settingsGet('activeNoteId');
 		if (activeNodeId) {
 			store.setActiveNoteId(activeNodeId);
 		}
-		
+
 		const cachedUser = await db.settingsGet('user');
 		if (cachedUser) {
 			store.setUser(cachedUser);
 		}
-		
+
 		window.addEventListener('online', async () => {
 			store.setOnline(true);
 			await queueService.flushQueue();
 		});
-		
+
 		window.addEventListener('offline', () => {
 			store.setOnline(false);
 		});

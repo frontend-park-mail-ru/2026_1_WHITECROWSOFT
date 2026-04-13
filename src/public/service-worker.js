@@ -153,10 +153,10 @@ self.addEventListener('fetch', (event) => {
 		return;
 	}
 
-    if (url.pathname === '/signin' || url.pathname === '/signup') {
-        event.respondWith(fetch(request));
-        return;
-    }
+	if (url.pathname === '/signin' || url.pathname === '/signup') {
+		event.respondWith(fetch(request));
+		return;
+	}
 
 	if (
 		request.destination === 'style' ||
