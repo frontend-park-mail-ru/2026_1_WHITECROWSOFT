@@ -3,9 +3,8 @@ const CACHE_NAME = `noterian-static-${CACHE_VERSION}`;
 const ASSETS_TO_CACHE = [
 	'/',
 	'/index.html',
-	'/assets/style/main.css',
-	'/assets/style/authForm.css',
-	'/assets/style/profilePage.css',
+	'/assets/style/main.scss',
+	'/assets/style/authForm.scss',
 	'/icons/add.svg',
 	'/icons/attach_picture.svg',
 	'/icons/attach_table.svg',

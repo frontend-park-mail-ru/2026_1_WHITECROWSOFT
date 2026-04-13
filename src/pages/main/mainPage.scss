@@ -73,11 +73,6 @@
 		border: 1px solid transparent;
 		border-radius: 4px;
 		outline: none;
-		margin-bottom: 8px;
-		&:focus {
-			border-color: var(--accent);
-			background-color: var(--background-hover);
-		}
 		&--dragging {
 			opacity: 0.5;
 			background-color: rgba(var(--accent-rgb), 0.2);
