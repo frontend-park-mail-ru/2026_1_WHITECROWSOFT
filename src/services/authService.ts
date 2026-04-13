@@ -64,6 +64,7 @@ export const authService = {
 	},
 
 	async logOut(): Promise<void> {
+		console.log('logout')
 		try {
 			await client.post('/logout', {});
 		} catch (error) {
@@ -97,8 +98,26 @@ export const authService = {
 		}
 		try {
 			const user = await client.get<User>('/profile');
-			await db.settingsSet('user', user);
-			store.setUser(user);
+			let avatarUrl: string | null = null;
+			try {
+				const avatar = await client.get<AvatarUploadResponse>('/profile/avatar');
+				console.log('[AuthService] Avatar response:', avatar);
+				if (avatar?.AvatarURL) {
+					avatarUrl = avatar.AvatarURL;
+					avatarUrl = avatarUrl.replace('http://minio:9000', '/minio');
+					avatarUrl = avatarUrl.replace('/minio/minio/', '/minio/');
+				}
+			} catch (avatarError) {
+				console.warn('[AuthService] Failed to fetch avatar:', avatarError);
+			}
+			const currentUser: User = {
+				id: user.id,
+				username: user.username,
+				email: user.email || null,
+				avatar: avatarUrl || null,
+			};
+			await db.settingsSet('user', currentUser);
+			store.setUser(currentUser);
 			return {
 				isAuthenticated: true,
 				user,
@@ -164,6 +183,7 @@ export const authService = {
 			};
 			await db.settingsSet('user', updatedUser);
 			store.setUser(updatedUser);
+			console.log(store.getUser());
 		}
 		return result;
 	},

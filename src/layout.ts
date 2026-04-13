@@ -119,7 +119,6 @@ export class Layout {
 		try {
 			if (!this.mainContainer) return;
 			if (this._isAuthMode) {
-				console.log('AUTH');
 				const sidebarContainer = document.getElementById('sidebarContainer');
 				if (sidebarContainer) {
 					sidebarContainer.style.display = 'none';
@@ -129,7 +128,6 @@ export class Layout {
 					this.mainContainer.style.maxWidth = '100%';
 				}
 			} else {
-				console.log('MAIN');
 				const sidebarContainer = document.getElementById('sidebarContainer');
 				if (sidebarContainer) {
 					sidebarContainer.style.display = 'block';

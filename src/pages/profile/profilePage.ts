@@ -2,6 +2,7 @@ import Handlebars from 'handlebars';
 import { router } from '../../route/router.js';
 import { authService } from '../../services/authService.js';
 import { store } from '../../store.js';
+import { db } from '../../db.js';
 import type { User } from '../../types.js';
 import { registerHelpers, registerPartials } from '../../utils/utils.js';
 import '../main/mainPage.scss';
@@ -133,7 +134,7 @@ function setupProfileForms(app: HTMLElement): void {
 		});
 	}
 
-	const logoutBtn = app.querySelector('[data-action="logout"]');
+	const logoutBtn = document.querySelector('.logoutButton') as HTMLButtonElement | null;
 	if (logoutBtn) {
 		logoutBtn.addEventListener('click', handleLogout);
 	}
@@ -145,12 +146,33 @@ function setupProfileForms(app: HTMLElement): void {
 }
 
 async function handleLogout(): Promise<void> {
+	const logoutBtn = document.querySelector('.logoutButton') as HTMLButtonElement | null;
+	const originalText = logoutBtn?.textContent;
+	
+	if (logoutBtn) {
+		logoutBtn.disabled = true;
+		logoutBtn.textContent = 'Выход...';
+	}
+	
 	try {
 		await authService.logOut();
 		router.replace('/signin');
-	} catch (err) {
-		console.error('[ProfilePage] Logout error:', err);
-		router.replace('/signin');
+	} catch (error) {
+		console.error('[ProfilePage] Logout error:', error);
+		alert('Ошибка при выходе из аккаунта. Попробуйте еще раз.');
+		try {
+			await db.settingsSet('user', null);
+			store.setUser(null);
+			router.replace('/signin');
+		} catch (cleanupError) {
+			console.error('[ProfilePage] Cleanup error:', cleanupError);
+			window.location.href = '/signin';
+		}
+	} finally {
+		if (logoutBtn && window.location.pathname !== '/signin') {
+			logoutBtn.disabled = false;
+			logoutBtn.textContent = originalText || 'Выйти';
+		}
 	}
 }
 

@@ -76,7 +76,6 @@ class Database {
 		});
 	}
 
-	// 📝 Notes
 	async notesGetAll(): Promise<Note[]> {
 		return this._getAll<Note>('notes');
 	}
@@ -97,7 +96,6 @@ class Database {
 		return this._clear('notes');
 	}
 
-	// ⚙️ Settings
 	async settingsGet<T = unknown>(key: string): Promise<T | undefined> {
 		const result = await this._get<{ key: string; value: T }>('settings', key);
 		return result?.value;
@@ -111,7 +109,6 @@ class Database {
 		return this._clear('settings');
 	}
 
-	// 📥 Queue
 	async queueRequest(request: Omit<QueuedRequest, 'id'>): Promise<number> {
 		return this._add('requestQueue', request);
 	}
@@ -128,7 +125,6 @@ class Database {
 		return this._clear('requestQueue');
 	}
 
-	// 🎨 Formatting
 	async formattingPut(data: FormattingRecord): Promise<void> {
 		return this._put('blockFormatting', data);
 	}
@@ -181,7 +177,6 @@ class Database {
 		return this._clear('blockFormatting');
 	}
 
-	// 🖼️ Images
 	async imagesPut(image: ImageAttachment): Promise<void> {
 		return this._put('images', image);
 	}
@@ -226,7 +221,6 @@ class Database {
 		return this._clear('images');
 	}
 
-	// 📦 Queue Files
 	async queueFilePut(file: QueueFile): Promise<void> {
 		return this._put('queueFiles', file);
 	}
@@ -253,7 +247,6 @@ class Database {
 		return this._clear('queueFiles');
 	}
 
-	// 🧹 Batch Clear
 	async clear(): Promise<void[]> {
 		return Promise.all([
 			this.notesClear(),
@@ -263,7 +256,6 @@ class Database {
 		]);
 	}
 
-	// 🔧 Private methods
 	private _getAll<T>(storeName: string): Promise<T[]> {
 		return new Promise((resolve, reject) => {
 			if (!this.db) return reject(new Error('Database not initialized'));
