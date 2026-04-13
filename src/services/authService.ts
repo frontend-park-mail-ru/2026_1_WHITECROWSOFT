@@ -70,10 +70,20 @@ export const authService = {
 		} catch (error) {
 			console.debug('[Auth] Logout error:', error);
 		} finally {
-			await db.settingsSet('user', null);
 			store.setUser(null);
-			await db.notesClear();
 			store.setNotes([]);
+			store.setActiveNote(null);
+			store.setActiveNoteId(null);
+			store.setActiveBlocks([]);
+			store.setOnline(navigator.onLine);
+			
+			await db.notesClear();
+			await db.formattingClear();
+			await db.imagesClear();
+			await db.clearQueueFiles();
+			await db.clearQueuedRequests();
+			await db.settingsClear();
+			
 			router.clearSessionCache();
 		}
 	},
