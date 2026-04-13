@@ -17,15 +17,6 @@ async function bootstrap() {
 		registerHelpers();
 		await db.open();
 		await queueService.clearQueue();
-		store.setNotes(notes);
-		const activeNodeId = await db.settingsGet('activeNoteId');
-		if (activeNodeId) {
-			store.setActiveNoteId(activeNodeId);
-		}
-		const cachedUser = await db.settingsGet('user');
-		if (cachedUser) {
-			store.setUser(cachedUser);
-		}
 		window.addEventListener('online', async () => {
 			store.setOnline(true);
 			await queueService.flushQueue();
