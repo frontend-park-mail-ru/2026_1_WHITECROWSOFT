@@ -509,7 +509,7 @@ async function _updateBlocksInDOM(blocks: Block[]): Promise<void> {
 					);
 
 					blockEl = document.createElement('div');
-					blockEl.className = 'note__block note__Imageblock';
+					blockEl.className = 'note__block note__imageblock';
 					blockEl.dataset.blockId = String(block.id);
 
 					const img = document.createElement('img');
