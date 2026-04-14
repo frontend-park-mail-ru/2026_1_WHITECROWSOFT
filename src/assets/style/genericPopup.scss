@@ -38,8 +38,11 @@
 		font-size: 14px;
 		color: var(--text);
 		transition: background-color 0.2s;
-		:hover {
+		&:hover {
 			background: var(--highlight);
+		}
+		&--disabled {
+			cursor: not-allowed;
 		}
 	}
 	&__icon {
