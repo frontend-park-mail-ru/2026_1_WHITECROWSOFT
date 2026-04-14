@@ -13,7 +13,7 @@
         <button class="formattingPopup__button {{#if isUnderline}}formattingPopup__button--active{{/if}}" data-action="underline">
             <img src="/icons/text_underscore.svg" class="formattingPopup__icon"/>
         </button>
-        <button class="formattingPopup__button {{#if isStrike}}formattingPopup__button--active{{/if}}" data-action="strike">
+        <button class="formattingPopup__button {{#if isStrike}}formattingPopup__button--active{{/if}}" data-action="strike" disabled style="cursor: not-allowed; opacity: 0.6;">
             <img src="/icons/text_cross.svg" class="formattingPopup__icon"/>
         </button>
     </div>
@@ -22,16 +22,16 @@
         <button class="formattingPopup__button" data-action="sizeDropdown">
             <img src="/icons/expand.svg" class="formattingPopup__icon"/>
         </button>
-        <button class="formattingPopup__button" data-action="color">
+        <button class="formattingPopup__button" data-action="color" disabled style="cursor: not-allowed; opacity: 0.6;">
             <img src="/icons/text_color.svg" class="formattingPopup__icon"/>
         </button>
-        <button class="formattingPopup__button" data-action="link">
+        <button class="formattingPopup__button" data-action="link" disabled style="cursor: not-allowed; opacity: 0.6;">
             <img src="/icons/text_link.svg" class="formattingPopup__icon"/>
         </button>
-        <button class="formattingPopup__button" data-action="code">
+        <button class="formattingPopup__button" data-action="code" disabled style="cursor: not-allowed; opacity: 0.6;">
             <img src="/icons/text_code.svg" class="formattingPopup__icon"/>
         </button>
-        <button class="formattingPopup__button" data-action="formula">
+        <button class="formattingPopup__button" data-action="formula" disabled style="cursor: not-allowed; opacity: 0.6;">
             <img src="/icons/text_formula.svg" class="formattingPopup__icon"/>
         </button>
     </div>
