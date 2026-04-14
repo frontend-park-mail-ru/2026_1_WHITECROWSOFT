@@ -6,7 +6,10 @@ import { attachmentService } from '../../services/attachmentService.js';
 import { noteService } from '../../services/noteService.js';
 import { store } from '../../store.js';
 import type { ActiveNote, Block } from '../../types.js';
-import { applyFormattingToRange, clearFormattingFromBlock } from '../../utils/formattingUtils.js';
+import {
+	applyFormattingToRange,
+	clearFormattingFromBlock,
+} from '../../utils/formattingUtils.js';
 import { handleAuthError } from '../../utils/handleAuthError.js';
 import { registerHelpers } from '../../utils/utils.js';
 import templateText from './mainPage.hbs?raw';
@@ -22,23 +25,28 @@ let selectionTimeout: number | null = null;
 
 let currentContainer: HTMLElement | null = null;
 let unsubscribeFunctions: Array<() => void> = [];
-let domEventListeners: Map<EventTarget, Map<string, EventListener[]>> = new Map();
+let domEventListeners: Map<
+	EventTarget,
+	Map<string, EventListener[]>
+> = new Map();
 let attachPopupInstance: AttachPopup | null = null;
 
 async function saveBlockContent(blockEl: HTMLElement): Promise<void> {
 	const blockId = blockEl.dataset.blockId;
 	const activeNoteId = store.getActiveNoteId();
 	if (!activeNoteId || !blockId) return;
-	
+
 	const newContent = blockEl.innerHTML;
-	const oldBlock = store.getActiveBlocks().find(b => String(b.id) === blockId);
-	
+	const oldBlock = store
+		.getActiveBlocks()
+		.find((b) => String(b.id) === blockId);
+
 	if (oldBlock && oldBlock.content !== newContent) {
 		try {
 			await noteService.updateBlockContent(activeNoteId, blockId, newContent);
 			const blocks = store.getActiveBlocks();
-			const updatedBlocks = blocks.map(b => 
-				String(b.id) === blockId ? { ...b, content: newContent } : b
+			const updatedBlocks = blocks.map((b) =>
+				String(b.id) === blockId ? { ...b, content: newContent } : b,
 			);
 			store.setActiveBlocks(updatedBlocks);
 		} catch (error) {
@@ -56,7 +64,7 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 
 	let notes = store.getNotes();
 	let activeNote = store.getActiveNote();
-	
+
 	if (notes.length === 0) {
 		try {
 			await noteService.getNotes();
@@ -92,12 +100,22 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 	const html = template(state);
 	container.innerHTML = html;
 
-	const emptyState = container.querySelector('.emptyState') as HTMLElement | null;
-	const notePath = container.querySelector('.note__breadcrumb') as HTMLElement | null;
-	const noteContent = container.querySelector('.note__content') as HTMLElement | null;
-	const noteActions = container.querySelector('.note__actions') as HTMLElement | null;
+	const emptyState = container.querySelector(
+		'.emptyState',
+	) as HTMLElement | null;
+	const notePath = container.querySelector(
+		'.note__breadcrumb',
+	) as HTMLElement | null;
+	const noteContent = container.querySelector(
+		'.note__content',
+	) as HTMLElement | null;
+	const noteActions = container.querySelector(
+		'.note__actions',
+	) as HTMLElement | null;
 	const titleEl = container.querySelector('.note__title') as HTMLElement | null;
-	const breadcrumbEl = container.querySelector('.note__breadcrumbItem--current') as HTMLElement | null;
+	const breadcrumbEl = container.querySelector(
+		'.note__breadcrumbItem--current',
+	) as HTMLElement | null;
 
 	function setVisibility(hasNote: boolean): void {
 		if (!emptyState || !notePath || !noteContent || !noteActions) return;
@@ -107,57 +125,73 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 		noteActions.style.display = hasNote ? 'flex' : 'none';
 	}
 
-	const unsubActiveNote = store.subscribe('activeNote', (activeNoteData: ActiveNote | null) => {
-		if (titleEl) titleEl.textContent = activeNoteData?.title || '';
-		if (breadcrumbEl) breadcrumbEl.textContent = activeNoteData?.breadcrumb || '';
-		setVisibility(!!activeNoteData);
-	});
+	const unsubActiveNote = store.subscribe(
+		'activeNote',
+		(activeNoteData: ActiveNote | null) => {
+			if (titleEl) titleEl.textContent = activeNoteData?.title || '';
+			if (breadcrumbEl)
+				breadcrumbEl.textContent = activeNoteData?.breadcrumb || '';
+			setVisibility(!!activeNoteData);
+		},
+	);
 	unsubscribeFunctions.push(unsubActiveNote);
 
-	const unsubActiveBlocks = store.subscribe('activeBlocks', (blocks: Block[]) => {
-		const noteBody = document.querySelector('.note__body');
-		if (!noteBody) return;
-		const currentBlocks = noteBody.querySelectorAll('.note__block');
-		if (currentBlocks.length !== blocks.length) {
-			_updateBlocksInDOM(blocks);
-		} else {
-			blocks.forEach((block, index) => {
-				const blockEl = noteBody.querySelector(`.note__block[data-block-id="${block.id}"]`) as HTMLElement;
-				if (blockEl && blockEl.parentNode) {
-					const currentIndex = Array.from(blockEl.parentNode.children).indexOf(blockEl);
-					if (currentIndex !== index) {
-						const addBlockBtn = noteBody.querySelector('.note__addBlockBtn');
-						if (addBlockBtn) {
-							if (index >= currentIndex) {
-								noteBody.insertBefore(blockEl, addBlockBtn);
-							} else {
-								noteBody.insertBefore(blockEl, addBlockBtn);
+	const unsubActiveBlocks = store.subscribe(
+		'activeBlocks',
+		(blocks: Block[]) => {
+			const noteBody = document.querySelector('.note__body');
+			if (!noteBody) return;
+			const currentBlocks = noteBody.querySelectorAll('.note__block');
+			if (currentBlocks.length !== blocks.length) {
+				_updateBlocksInDOM(blocks);
+			} else {
+				blocks.forEach((block, index) => {
+					const blockEl = noteBody.querySelector(
+						`.note__block[data-block-id="${block.id}"]`,
+					) as HTMLElement;
+					if (blockEl && blockEl.parentNode) {
+						const currentIndex = Array.from(
+							blockEl.parentNode.children,
+						).indexOf(blockEl);
+						if (currentIndex !== index) {
+							const addBlockBtn = noteBody.querySelector('.note__addBlockBtn');
+							if (addBlockBtn) {
+								if (index >= currentIndex) {
+									noteBody.insertBefore(blockEl, addBlockBtn);
+								} else {
+									noteBody.insertBefore(blockEl, addBlockBtn);
+								}
 							}
 						}
 					}
-				}
-			});
-		}
-	});
+				});
+			}
+		},
+	);
 	unsubscribeFunctions.push(unsubActiveBlocks);
 
-	const unsubActiveNoteId = store.subscribe('activeNoteId', async (noteId: string | number | null) => {
-		if (noteId && noteId !== store.getActiveNote()?.ID) {
-			try {
-				await noteService.getNote(noteId);
-			} catch (error) {
-				if (handleAuthError(error)) return;
-				console.error('Failed to load note:', error);
+	const unsubActiveNoteId = store.subscribe(
+		'activeNoteId',
+		async (noteId: string | number | null) => {
+			if (noteId && noteId !== store.getActiveNote()?.ID) {
+				try {
+					await noteService.getNote(noteId);
+				} catch (error) {
+					if (handleAuthError(error)) return;
+					console.error('Failed to load note:', error);
+				}
 			}
-		}
-	});
+		},
+	);
 	unsubscribeFunctions.push(unsubActiveNoteId);
 
 	setVisibility(!!store.getActiveNote());
 	_updateActiveNoteInDOM(store.getActiveNote());
 	_updateBlocksInDOM(store.getActiveBlocks());
 
-	const addBlockBtn = container.querySelector('.note__addBlockBtn') as HTMLElement | null;
+	const addBlockBtn = container.querySelector(
+		'.note__addBlockBtn',
+	) as HTMLElement | null;
 	if (addBlockBtn) {
 		const addBlockHandler = (e: Event) => {
 			e.stopPropagation();
@@ -191,7 +225,9 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 		_addEventListener(addBlockBtn, 'click', addBlockHandler);
 	}
 
-	const dragBlockBtn = container.querySelector('.note__dragBlock') as HTMLElement | null;
+	const dragBlockBtn = container.querySelector(
+		'.note__dragBlock',
+	) as HTMLElement | null;
 	if (dragBlockBtn) {
 		const dragBlockHandler = () => {
 			const activeNoteId = store.getActiveNoteId();
@@ -202,7 +238,9 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 
 			dragMode = !dragMode;
 			dragBlockBtn.classList.toggle('note__dragBlock--active', dragMode);
-			const noteBody = container.querySelector('.note__body') as HTMLElement | null;
+			const noteBody = container.querySelector(
+				'.note__body',
+			) as HTMLElement | null;
 			if (noteBody) {
 				const blocks = noteBody.querySelectorAll('.note__block');
 				blocks.forEach((block) => {
@@ -361,7 +399,11 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 	_addEventListener(document, 'keydown', globalKeydownHandler as EventListener);
 }
 
-function _addEventListener(element: EventTarget, event: string, handler: EventListener): void {
+function _addEventListener(
+	element: EventTarget,
+	event: string,
+	handler: EventListener,
+): void {
 	if (!domEventListeners.has(element)) {
 		domEventListeners.set(element, new Map());
 	}
@@ -419,7 +461,9 @@ export async function cleanupMainPage(): Promise<void> {
 
 function _updateActiveNoteInDOM(activeNote: ActiveNote | null): void {
 	const titleEl = document.querySelector('.note__title') as HTMLElement | null;
-	const breadcrumbEl = document.querySelector('.note__breadcrumbItem--current') as HTMLElement | null;
+	const breadcrumbEl = document.querySelector(
+		'.note__breadcrumbItem--current',
+	) as HTMLElement | null;
 
 	if (!activeNote) {
 		if (titleEl) titleEl.textContent = '';
@@ -445,7 +489,9 @@ async function _updateBlocksInDOM(blocks: Block[]): Promise<void> {
 
 		if (block.block_type_id === 2 && block.content) {
 			try {
-				const imageData = JSON.parse(block.content) as { attachmentId: string | number };
+				const imageData = JSON.parse(block.content) as {
+					attachmentId: string | number;
+				};
 				const attachmentId = imageData.attachmentId;
 				const activeNoteId = store.getActiveNoteId();
 				const noteId = block.note_id || activeNoteId;
@@ -456,7 +502,11 @@ async function _updateBlocksInDOM(blocks: Block[]): Promise<void> {
 					blockEl.contentEditable = 'true';
 					blockEl.innerHTML = block.content;
 				} else {
-					const imageUrl = await attachmentService.getImageUrl(attachmentId, noteId, block.id);
+					const imageUrl = await attachmentService.getImageUrl(
+						attachmentId,
+						noteId,
+						block.id,
+					);
 
 					blockEl = document.createElement('div');
 					blockEl.className = 'note__block note__Imageblock';
@@ -524,10 +574,18 @@ async function _updateBlocksInDOM(blocks: Block[]): Promise<void> {
 	}
 }
 
-function _getDragAfterElement(container: HTMLElement, y: number): HTMLElement | undefined {
-	const draggableElements = [...container.querySelectorAll('.note__block:not(.dragging)')] as HTMLElement[];
+function _getDragAfterElement(
+	container: HTMLElement,
+	y: number,
+): HTMLElement | undefined {
+	const draggableElements = [
+		...container.querySelectorAll('.note__block:not(.dragging)'),
+	] as HTMLElement[];
 
-	const result = draggableElements.reduce<{ offset: number; element: HTMLElement | null }>(
+	const result = draggableElements.reduce<{
+		offset: number;
+		element: HTMLElement | null;
+	}>(
 		(closest, child) => {
 			const rect = child.getBoundingClientRect();
 			if (rect.height === 0 || rect.width === 0 || !child.offsetParent) {

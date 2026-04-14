@@ -1,4 +1,3 @@
-import { handleAuthError } from '../utils/handleAuthError';
 import { client } from '../client/client.js';
 import { db } from '../db.js';
 import { store } from '../store.js';
@@ -8,6 +7,7 @@ import type {
 	FormattingRange,
 	Note,
 } from '../types.js';
+import { handleAuthError } from '../utils/handleAuthError';
 import { queueService } from './requestQueueService.js';
 
 interface GetNoteResponse {

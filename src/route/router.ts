@@ -1,9 +1,7 @@
-import { db } from '../db.js';
 import { authService } from '../services/authService.js';
-import { store } from '../store.js';
-import type { User, UserSession } from '../types.js';
+import type { UserSession } from '../types.js';
 import { Layout } from './../layout.js';
-import { getRoute, Route } from './routes.js';
+import { getRoute } from './routes.js';
 
 const modules = import.meta.glob<{ default?: unknown; [key: string]: unknown }>(
 	'../pages/**/*.{ts,js}',
@@ -14,7 +12,7 @@ export const router = {
 	_currentLayout: null as Layout | null,
 	_sessionCache: null as UserSession | null,
 	_sessionCacheTime: 0 as number,
-	_SESSION_CACHE_MS: 60 * 60 * 1000 as number,
+	_SESSION_CACHE_MS: (60 * 60 * 1000) as number,
 	_isRedirecting: false as boolean,
 
 	init(): void {
@@ -83,9 +81,9 @@ export const router = {
 
 	async handleRoute(path: string): Promise<void> {
 		if (this._isRedirecting) return;
-		
+
 		this._currentPath = path;
-		
+
 		const route = getRoute(path);
 		if (!route) return;
 
@@ -138,7 +136,7 @@ export const router = {
 		}
 
 		let session = this._sessionCache;
-		
+
 		const now = Date.now();
 		if (!session || now - this._sessionCacheTime >= this._SESSION_CACHE_MS) {
 			try {
