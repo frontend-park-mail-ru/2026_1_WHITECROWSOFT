@@ -195,6 +195,7 @@ export class FormatPopup {
 		return el?.closest('.note__block') || null;
 	}
 
+<<<<<<< Updated upstream
 	private _getSpanStartPosition(
 		blockEl: HTMLElement,
 		span: HTMLElement,
@@ -266,6 +267,8 @@ export class FormatPopup {
 		element.normalize();
 	}
 
+=======
+>>>>>>> Stashed changes
 	private _detectCurrentFormatting(): void {
 		if (!this.range) return;
 		this._restoreSelection();
@@ -342,6 +345,61 @@ export class FormatPopup {
 		this._updateActiveStates(this.currentFormatting);
 	}
 
+	private _getSpanStartPosition(blockEl: HTMLElement, span: HTMLElement): number {
+		let startPos = 0;
+		let currentPos = 0;
+		const walker = document.createTreeWalker(blockEl, NodeFilter.SHOW_TEXT, null);
+		let node;
+		
+		while ((node = walker.nextNode())) {
+			const nodeText = node.textContent || '';
+			if (span.contains(node)) {
+				startPos = currentPos;
+				break;
+			}
+			currentPos += nodeText.length;
+		}
+		
+		return startPos;
+	}
+
+	private _removeFormattingInRange(element: HTMLElement, startPos: number, endPos: number): void {
+		const spans = element.querySelectorAll('.formatted-range');
+		
+		for (const span of spans) {
+			const htmlSpan = span as HTMLElement;
+			const spanStart = this._getSpanStartPosition(element, htmlSpan);
+			const spanEnd = spanStart + (htmlSpan.textContent?.length || 0);
+			
+			if (spanStart >= startPos && spanEnd <= endPos) {
+				const text = htmlSpan.textContent || '';
+				const parent = htmlSpan.parentNode;
+				if (parent) {
+					parent.replaceChild(document.createTextNode(text), htmlSpan);
+				}
+			} else if (spanEnd > startPos && spanStart < endPos) {
+				const text = htmlSpan.textContent || '';
+				const beforeText = text.substring(0, Math.max(0, startPos - spanStart));
+				const middleText = text.substring(
+					Math.max(0, startPos - spanStart),
+					Math.min(text.length, endPos - spanStart)
+				);
+				const afterText = text.substring(Math.min(text.length, endPos - spanStart));
+				
+				const parent = htmlSpan.parentNode;
+				if (parent) {
+					const fragment = document.createDocumentFragment();
+					if (beforeText) fragment.appendChild(document.createTextNode(beforeText));
+					if (middleText) fragment.appendChild(document.createTextNode(middleText));
+					if (afterText) fragment.appendChild(document.createTextNode(afterText));
+					parent.replaceChild(fragment, htmlSpan);
+				}
+			}
+		}
+		
+		element.normalize();
+	}
+
 	private _applyFormattingToDOM(
 		element: HTMLElement,
 		start: number,
@@ -352,8 +410,13 @@ export class FormatPopup {
 		const originalRange =
 			selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
 
+<<<<<<< Updated upstream
 		this._clearFormattingInRange(element, start, end);
 
+=======
+		this._removeFormattingInRange(element, start, end);
+		
+>>>>>>> Stashed changes
 		if (formatting.bold || formatting.italic || formatting.underline) {
 			applyFormattingToRange(element, start, end, {
 				bold: formatting.bold,

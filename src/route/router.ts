@@ -10,10 +10,6 @@ const modules = import.meta.glob<{ default?: unknown; [key: string]: unknown }>(
 export const router = {
 	_currentPath: null as string | null,
 	_currentLayout: null as Layout | null,
-	_sessionCache: null as UserSession | null,
-	_sessionCacheTime: 0 as number,
-	_SESSION_CACHE_MS: (60 * 60 * 1000) as number,
-	_isRedirecting: false as boolean,
 
 	init(): void {
 		window.addEventListener('popstate', (e: PopStateEvent) => {
@@ -65,23 +61,7 @@ export const router = {
 		this.handleRoute(path);
 	},
 
-	updateSessionCache(session: UserSession): void {
-		console.log('[Router] Updating session cache:', session);
-		this._sessionCache = session;
-		this._sessionCacheTime = Date.now();
-		this._isRedirecting = false;
-	},
-
-	clearSessionCache(): void {
-		console.log('[Router] Clearing session cache');
-		this._sessionCache = null;
-		this._sessionCacheTime = 0;
-		this._isRedirecting = false;
-	},
-
 	async handleRoute(path: string): Promise<void> {
-		if (this._isRedirecting) return;
-
 		this._currentPath = path;
 
 		const route = getRoute(path);
@@ -89,9 +69,7 @@ export const router = {
 
 		if (route.redirect) {
 			if (route.redirect !== path) {
-				this._isRedirecting = true;
 				this.replace(route.redirect);
-				this._isRedirecting = false;
 			}
 			return;
 		}
@@ -112,11 +90,6 @@ export const router = {
 				let modulePath = `../pages/${route.component}.ts`;
 				let moduleLoader = modules[modulePath];
 
-				if (!moduleLoader) {
-					modulePath = `../pages/${route.component}.js`;
-					moduleLoader = modules[modulePath];
-				}
-
 				if (moduleLoader) {
 					const module = await moduleLoader();
 					const initFn = module[route.init] as
@@ -135,31 +108,21 @@ export const router = {
 			return;
 		}
 
-		let session = this._sessionCache;
-
-		const now = Date.now();
-		if (!session || now - this._sessionCacheTime >= this._SESSION_CACHE_MS) {
-			try {
-				session = await authService.getUserSession();
-				this._sessionCache = session;
-				this._sessionCacheTime = now;
-			} catch (error) {
-				console.error('Failed to get user session:', error);
-				session = { isAuthenticated: false, user: null };
-			}
+		let session : UserSession;
+		try {
+			session = await authService.getUserSession();
+		} catch(err) {
+			console.error('Failed to get user session:', err);
+			session = { isAuthenticated: false, user: null };
 		}
 
 		if (route.protected && !session.isAuthenticated) {
-			this._isRedirecting = true;
 			this.replace('/signin');
-			this._isRedirecting = false;
 			return;
 		}
 
 		if (route.guest && session.isAuthenticated) {
-			this._isRedirecting = true;
 			this.replace('/');
-			this._isRedirecting = false;
 			return;
 		}
 

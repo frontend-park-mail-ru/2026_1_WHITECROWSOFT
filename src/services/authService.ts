@@ -1,6 +1,5 @@
 import { client } from '../client/client.js';
 import { db } from '../db.js';
-import { router } from '../route/router.js';
 import { store } from '../store.js';
 import type { User, UserSession } from '../types.js';
 
@@ -44,10 +43,6 @@ export const authService = {
 			};
 			await db.settingsSet('user', user);
 			store.setUser(user);
-			router.updateSessionCache({
-				isAuthenticated: true,
-				user: user,
-			});
 		}
 		return result;
 	},
@@ -63,10 +58,6 @@ export const authService = {
 			};
 			await db.settingsSet('user', user);
 			store.setUser(user);
-			router.updateSessionCache({
-				isAuthenticated: true,
-				user: user,
-			});
 		}
 		return result;
 	},
@@ -91,8 +82,6 @@ export const authService = {
 			await db.clearQueueFiles();
 			await db.clearQueuedRequests();
 			await db.settingsClear();
-
-			router.clearSessionCache();
 		}
 	},
 
@@ -147,7 +136,6 @@ export const authService = {
 			if (err?.status === 401) {
 				await db.settingsSet('user', null);
 				store.setUser(null);
-				router.clearSessionCache();
 				return {
 					isAuthenticated: false,
 					user: null,

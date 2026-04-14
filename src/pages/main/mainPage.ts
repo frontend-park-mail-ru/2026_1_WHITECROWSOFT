@@ -136,6 +136,7 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 	);
 	unsubscribeFunctions.push(unsubActiveNote);
 
+<<<<<<< Updated upstream
 	const unsubActiveBlocks = store.subscribe(
 		'activeBlocks',
 		(blocks: Block[]) => {
@@ -180,10 +181,24 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 					if (handleAuthError(error)) return;
 					console.error('Failed to load note:', error);
 				}
+=======
+	const unsubActiveNoteId = store.subscribe('activeNoteId', async (noteId: string | number | null) => {
+		if (noteId && noteId !== store.getActiveNote()?.ID) {
+			try {
+				await noteService.getNote(noteId);
+			} catch (error) {
+				if (handleAuthError(error)) return;
+				console.error('Failed to load note:', error);
+>>>>>>> Stashed changes
 			}
 		},
 	);
 	unsubscribeFunctions.push(unsubActiveNoteId);
+
+	const unsubActiveBlocks = store.subscribe('activeBlocks', (blocks: Block[]) => {
+		_updateBlocksInDOM(blocks);
+	});
+	unsubscribeFunctions.push(unsubActiveBlocks);
 
 	setVisibility(!!store.getActiveNote());
 	_updateActiveNoteInDOM(store.getActiveNote());

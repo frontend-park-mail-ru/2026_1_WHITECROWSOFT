@@ -120,6 +120,7 @@ export const queueService = {
 								String(newId),
 							);
 						}
+						
 					} else if (requestItem.type === 'IMAGE_UPLOAD') {
 						await this._commitLocalImageId(
 							requestItem.localId,
@@ -338,7 +339,7 @@ export const queueService = {
 		const newNote: Note = {
 			...localNote,
 			ID: newNoteId,
-			title: serverData.title ?? localNote.title,
+			title: localNote.title,
 			updatedAt:
 				serverData.updated_at ?? serverData.updatedAt ?? localNote.updatedAt,
 			icon: localNote.icon || null,

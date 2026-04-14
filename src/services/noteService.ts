@@ -218,6 +218,9 @@ export const noteService = {
 				console.warn(
 					`[noteService] Network failed (${error}), queueing create request`,
 				);
+				if (handleAuthError(error)) {
+					throw error;
+				}
 				await queueService.enqueueRequest({
 					method: 'POST',
 					endpoint: '/notes',
@@ -262,6 +265,9 @@ export const noteService = {
 				console.warn(
 					`[noteService] Network failed (${error}), queueing delete request`,
 				);
+				if (handleAuthError(error)) {
+					throw error;
+				}
 				await queueService.enqueueRequest({
 					method: 'DELETE',
 					endpoint: `/notes/${noteID}`,
@@ -334,6 +340,9 @@ export const noteService = {
 				console.warn(
 					`[noteService] Network failed (${error}), queueing update request`,
 				);
+				if (handleAuthError(error)) {
+					throw error;
+				}
 				await queueService.enqueueRequest({
 					method: 'PUT',
 					endpoint: `/notes/${noteID}`,
@@ -455,6 +464,9 @@ export const noteService = {
 				console.warn(
 					`[noteService] Network failed (${error}), queueing create block request`,
 				);
+				if (handleAuthError(error)) {
+					throw error;
+				}
 				await queueService.enqueueRequest({
 					method: 'POST',
 					endpoint: `/notes/${noteID}/blocks`,
@@ -492,6 +504,9 @@ export const noteService = {
 				console.warn(
 					`[noteService] Network failed (${error}), queueing block update request`,
 				);
+				if (handleAuthError(error)) {
+					throw error;
+				}
 				await queueService.enqueueRequest({
 					method: 'PUT',
 					endpoint: `/notes/${noteID}/blocks/${blockID}/content`,
@@ -553,6 +568,9 @@ export const noteService = {
 				console.warn(
 					`[noteService] Network failed (${error}), queueing block move request`,
 				);
+				if (handleAuthError(error)) {
+					throw error;
+				}
 				await queueService.enqueueRequest({
 					method: 'PUT',
 					endpoint: `/notes/${noteID}/blocks/${blockID}/move`,
@@ -594,6 +612,9 @@ export const noteService = {
 				console.warn(
 					`[noteService] Network failed (${error}), queueing block deletion request`,
 				);
+				if (handleAuthError(error)) {
+					throw error;
+				}
 				await queueService.enqueueRequest({
 					method: 'DELETE',
 					endpoint: `/notes/${noteID}/blocks/${blockID}`,
@@ -663,6 +684,9 @@ export const noteService = {
 				console.warn(
 					`[noteService] Network failed (${error}), queueing formatting request`,
 				);
+				if (handleAuthError(error)) {
+					throw error;
+				}
 				await queueService.enqueueRequest({
 					method: 'PUT',
 					endpoint,

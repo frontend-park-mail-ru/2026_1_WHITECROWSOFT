@@ -1,3 +1,4 @@
+import { handleAuthError } from '../utils/handleAuthError';
 import { client } from '../client/client.js';
 import { db } from '../db.js';
 import { store } from '../store.js';
@@ -232,6 +233,7 @@ export const attachmentService = {
 				}
 			} catch (error) {
 				console.warn('[attachmentService] Failed to fetch image:', error);
+				handleAuthError(error);
 			}
 		}
 		return null;
