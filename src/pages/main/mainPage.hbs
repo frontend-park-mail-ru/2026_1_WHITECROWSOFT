@@ -1,12 +1,13 @@
 <div class="emptyState">
-    <p>Нет заметок</p>
+    <p>У Вас пока нет заметок.</p>
+    <p>Все начинается с чистого листа. 
 </div>
 
 <div class="note__breadcrumb">
     <span class="note__breadcrumbItem">Библиотека</span>
-    <span class="note__breadcrumbItem note__breadcrumbItem--current"></span>		
+    <span class="note__breadcrumbItem note__breadcrumbItem--current"></span>
 </div>
-    
+
 <article class="note__content">
     <h1 class="note__title"></h1>
     <div class="note__body">
@@ -14,12 +15,12 @@
         <div class="note__block" data-block-id="{{id}}" contenteditable="true">{{content}}</div>
         {{/each}}
     </div>
+    <div class="note__actions">
+        <button class="note__addBlockBtn" title="Добавить новый блок">
+            <img src="/icons/block_add.svg" class="icon" />
+        </button>
+        <button class="note__dragBlock" title="Нажмите для перехода между режимами редактирования и перемещения блоков">
+            <img src="/icons/block_drag.svg" class="icon" />
+        </button>
+    </div>
 </article>
-<div class="note__actions"> 
-    <button class="note__addBlockBtn">
-        <img src="/icons/block_add.svg" class="icon" />
-    </button>
-    <button class="note__dragBlock" title="Нажмите для перехода между режимами редактирования и перемещения блоков">
-        <img src="/icons/block_drag.svg" class="icon" />
-    </button>
-</div>
