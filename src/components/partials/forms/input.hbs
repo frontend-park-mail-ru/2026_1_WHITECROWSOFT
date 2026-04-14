@@ -1,6 +1,6 @@
 <div class="form__input">
 	<label for="{{name}}" class="input__label">{{label}}</label>
-	<div class="input__wrapper">
+	<div class="input__wrapper {{#if disabled}}input__wrapper--disabled{{/if}}">
 		<input
 			type="{{#if (eq type "password")}}{{#if showPassword}}text{{else}}password{{/if}}{{else}}{{type}}{{/if}}"
 			name="{{name}}"
@@ -10,7 +10,7 @@
 			{{#if minlength}}minlength="{{minlength}}"{{/if}}
             {{#if maxlength}}maxlength="{{maxlength}}"{{/if}}
 			required
-			class="input {{#if error}}input--error{{/if}}"
+			class="input {{#if error}}input--error{{/if}} {{#if disabled}}input--disabled{{/if}}"
             {{#if (eq withrequirements "true")}}data-registration-password{{/if}}
 		/>
 		{{#if (eq type "password")}}

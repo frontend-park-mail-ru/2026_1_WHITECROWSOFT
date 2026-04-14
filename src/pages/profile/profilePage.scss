@@ -22,9 +22,31 @@
 		gap: 20px;
 		align-items: end;
 		.form__input {
+			height: auto;
 			max-width: 250px;
 			.input__error {
 				display: none;
+			}
+		}
+	}
+	/* THIS TOO SHALL PASS */
+	&__withError {
+		.input__wrapper {
+			display: flex;
+			flex-direction: row;
+			gap: 20px;
+			align-items: end;
+		}
+		.form__input {
+			width: 100%;
+			max-width: 100%;
+			.form__error {
+				max-width: 400px;
+				text-align: inherit;
+				padding-left: 15px;
+			}
+			input {
+				max-width: 250px;
 			}
 		}
 	}

@@ -9,23 +9,20 @@
         <div class="settings">
             <div class="settings__block">
                 <h2 class="settings__subtitle">Аккаунт</h2>
-                <form id="usernameForm" class="settings__form" novalidate>
-                    {{> components/partials/forms/input
-                        name="username"
-                        label="Имя пользователя"
-                        type="text"
-                        value=user.username
-                        placeholder="Введите новое имя"
-                        autocomplete="username"
-                        witherror="true"
-                    }}
-
-                    {{> components/partials/forms/button
-                        type="submit"
-                        text="Изменить"
-                        variant="primary"
-                        className="settings__button"
-                    }}
+                <form id="usernameForm" class="settings__form settings__withError" novalidate>
+                    <div class="form__input">
+                    	<label for="username" class="input__label">Имя пользователя</label>
+                    	<div class="input__wrapper">
+                    		<input type="text" name="username" value="river326" placeholder="Введите новое имя" autocomplete="username" required="" class="input ">
+                            {{> components/partials/forms/button
+                                type="submit"
+                                text="Изменить"
+                                variant="primary"
+                                className="settings__button"
+                            }}
+                    	</div>
+                    	<span class="form__error" data-field-error="username" style="visibility: hidden" role="alert"></span>
+                    </div>
                 </form>
             </div>
 
@@ -42,6 +39,7 @@
                         placeholder="Ваша почта"
                         autocomplete="email"
                         witherror="true"
+                        disabled="true"
                     }}
 
                     {{> components/partials/forms/inactiveButton
@@ -60,6 +58,7 @@
                         placeholder="*************"
                         autocomplete="new-password"
                         witherror="true"
+                        disabled="true"
                     }}
 
                     {{> components/partials/forms/inactiveButton
