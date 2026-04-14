@@ -195,16 +195,129 @@ export class FormatPopup {
 		return el?.closest('.note__block') || null;
 	}
 
+	private _getSpanStartPosition(blockEl: HTMLElement, span: HTMLElement): number {
+		let startPos = 0;
+		let currentPos = 0;
+		const walker = document.createTreeWalker(blockEl, NodeFilter.SHOW_TEXT, null);
+		let node;
+		
+		while ((node = walker.nextNode())) {
+			const nodeText = node.textContent || '';
+			if (span.contains(node)) {
+				startPos = currentPos;
+				break;
+			}
+			currentPos += nodeText.length;
+		}
+		
+		return startPos;
+	}
+
+	private _clearFormattingInRange(element: HTMLElement, startPos: number, endPos: number): void {
+		const spans = element.querySelectorAll('.formatted-range');
+		
+		for (const span of spans) {
+			const htmlSpan = span as HTMLElement;
+			const spanStart = this._getSpanStartPosition(element, htmlSpan);
+			const spanEnd = spanStart + (htmlSpan.textContent?.length || 0);
+			
+			if (spanStart >= startPos && spanEnd <= endPos) {
+				const text = htmlSpan.textContent || '';
+				const parent = htmlSpan.parentNode;
+				if (parent) {
+					parent.replaceChild(document.createTextNode(text), htmlSpan);
+				}
+			} else if (spanEnd > startPos && spanStart < endPos) {
+				const text = htmlSpan.textContent || '';
+				const beforeText = text.substring(0, Math.max(0, startPos - spanStart));
+				const middleText = text.substring(
+					Math.max(0, startPos - spanStart),
+					Math.min(text.length, endPos - spanStart)
+				);
+				const afterText = text.substring(Math.min(text.length, endPos - spanStart));
+				
+				const parent = htmlSpan.parentNode;
+				if (parent) {
+					const fragment = document.createDocumentFragment();
+					if (beforeText) fragment.appendChild(document.createTextNode(beforeText));
+					if (middleText) fragment.appendChild(document.createTextNode(middleText));
+					if (afterText) fragment.appendChild(document.createTextNode(afterText));
+					parent.replaceChild(fragment, htmlSpan);
+				}
+			}
+		}
+		
+		element.normalize();
+	}
+
 	private _detectCurrentFormatting(): void {
 		if (!this.range) return;
 		this._restoreSelection();
-
+		
+		const blockEl = this._getBlockFromRange();
+		if (!blockEl) {
+			this.currentFormatting = {
+				bold: false,
+				italic: false,
+				underline: false,
+			};
+			this._updateActiveStates(this.currentFormatting);
+			return;
+		}
+		
+		const { start, end } = getSelectionPositionsInElement(blockEl, this.range);
+		if (start >= end) {
+			this.currentFormatting = {
+				bold: false,
+				italic: false,
+				underline: false,
+			};
+			this._updateActiveStates(this.currentFormatting);
+			return;
+		}
+		
+		let hasBold = false;
+		let hasItalic = false;
+		let hasUnderline = false;
+		
+		const spans = blockEl.querySelectorAll('.formatted-range');
+		for (const span of spans) {
+			const htmlSpan = span as HTMLElement;
+			const spanStart = this._getSpanStartPosition(blockEl, htmlSpan);
+			const spanEnd = spanStart + (htmlSpan.textContent?.length || 0);
+			
+			if (spanEnd > start && spanStart < end) {
+				const styles = window.getComputedStyle(htmlSpan);
+				const fontWeight = styles.fontWeight;
+				hasBold = hasBold || (fontWeight === 'bold' || parseInt(fontWeight, 10) >= 700);
+				hasItalic = hasItalic || (styles.fontStyle === 'italic');
+				hasUnderline = hasUnderline || styles.textDecoration.includes('underline');
+			}
+		}
+		
+		if (!hasBold && !hasItalic && !hasUnderline) {
+			const selection = window.getSelection();
+			if (selection && selection.rangeCount > 0) {
+				const range = selection.getRangeAt(0);
+				const container = range.commonAncestorContainer;
+				const parent = container.nodeType === 1 ? container as HTMLElement : container.parentElement;
+				
+				if (parent) {
+					const styles = window.getComputedStyle(parent);
+					const fontWeight = styles.fontWeight;
+					hasBold = fontWeight === 'bold' || parseInt(fontWeight, 10) >= 700;
+					hasItalic = styles.fontStyle === 'italic';
+					hasUnderline = styles.textDecoration.includes('underline');
+				}
+			}
+		}
+		
 		this.currentFormatting = {
-			bold: document.queryCommandState('bold'),
-			italic: document.queryCommandState('italic'),
-			underline: document.queryCommandState('underline'),
+			bold: hasBold,
+			italic: hasItalic,
+			underline: hasUnderline,
 		};
-
+		
 		this._updateActiveStates(this.currentFormatting);
 	}
 
@@ -215,14 +328,17 @@ export class FormatPopup {
 		formatting: FormattingState,
 	): void {
 		const selection = window.getSelection();
-		const originalRange =
-			selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+		const originalRange = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
 
-		applyFormattingToRange(element, start, end, {
-			bold: formatting.bold,
-			italic: formatting.italic,
-			underline: formatting.underline,
-		});
+		this._clearFormattingInRange(element, start, end);
+		
+		if (formatting.bold || formatting.italic || formatting.underline) {
+			applyFormattingToRange(element, start, end, {
+				bold: formatting.bold,
+				italic: formatting.italic,
+				underline: formatting.underline,
+			});
+		}
 
 		if (originalRange && selection) {
 			try {
@@ -234,7 +350,7 @@ export class FormatPopup {
 		}
 	}
 
-	private _handleAction(action: string): void {
+	private async _handleAction(action: string): Promise<void> {
 		if (!this.range) return;
 		this._restoreSelection();
 		const blockEl = this._getBlockFromRange();
@@ -264,26 +380,42 @@ export class FormatPopup {
 				return;
 		}
 
+		const noteId = store.getActiveNoteId();
+		if (!noteId) return;
+
+		const currentContent = blockEl.innerHTML;
+		try {
+			await noteService.updateBlockContent(noteId, blockEl.dataset.blockId, currentContent);
+		} catch (error) {
+			console.warn('[Popup] Failed to save content before formatting:', error);
+		}
+
 		this._applyFormattingToDOM(blockEl, start, end, newFmt);
 		this.currentFormatting = newFmt;
 		this._updateActiveStates(newFmt);
 
-		const noteId = store.getActiveNoteId();
-		if (noteId) {
-			noteService
-				.saveBlockFormatting(
-					noteId,
-					blockEl.dataset.blockId,
-					start,
-					end,
-					newFmt,
-				)
-				.catch((err) => console.warn('[Popup] Save failed:', err));
+		try {
+			await noteService.saveBlockFormatting(noteId, blockEl.dataset.blockId, start, end, newFmt);
+		} catch (error) {
+			console.warn('[Popup] Save formatting failed:', error);
 		}
+
+		const newContent = blockEl.innerHTML;
+		const blocks = store.getActiveBlocks();
+		const updatedBlocks = blocks.map(b => 
+			String(b.id) === blockEl.dataset.blockId ? { ...b, content: newContent } : b
+		);
+		store.setActiveBlocks(updatedBlocks);
+
+		this._restoreSelection();
+		blockEl.focus();
 
 		const selection = window.getSelection();
 		if (selection && selection.rangeCount > 0) {
 			this.range = selection.getRangeAt(0).cloneRange();
+		} else if (this.range) {
+			selection?.removeAllRanges();
+			selection?.addRange(this.range);
 		}
 	}
 
@@ -291,9 +423,7 @@ export class FormatPopup {
 		if (!this.element) return;
 		const boldBtn = this.element.querySelector('[data-action="bold"]');
 		const italicBtn = this.element.querySelector('[data-action="italic"]');
-		const underlineBtn = this.element.querySelector(
-			'[data-action="underline"]',
-		);
+		const underlineBtn = this.element.querySelector('[data-action="underline"]');
 
 		if (boldBtn)
 			boldBtn.classList.toggle(

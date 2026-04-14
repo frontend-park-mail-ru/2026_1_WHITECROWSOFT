@@ -9,15 +9,13 @@ const modules = import.meta.glob<{ default?: unknown; [key: string]: unknown }>(
 	'../pages/**/*.{ts,js}',
 );
 
-/**
- * Роутер для навигации между страницами
- */
 export const router = {
 	_currentPath: null as string | null,
 	_currentLayout: null as Layout | null,
 	_sessionCache: null as UserSession | null,
 	_sessionCacheTime: 0 as number,
-	_SESSION_CACHE_MS: (60 * 60 * 1000) as number,
+	_SESSION_CACHE_MS: 60 * 60 * 1000 as number,
+	_isRedirecting: false as boolean,
 
 	init(): void {
 		window.addEventListener('popstate', (e: PopStateEvent) => {
@@ -69,37 +67,38 @@ export const router = {
 		this.handleRoute(path);
 	},
 
-	/**
-	 * Быстрая проверка авторизации без запроса к серверу
-	 */
-	async isAuthenticatedFast(): Promise<boolean> {
-		const cachedUser = store.getUser() || (await db.settingsGet<User>('user'));
-		return !!cachedUser;
+	updateSessionCache(session: UserSession): void {
+		console.log('[Router] Updating session cache:', session);
+		this._sessionCache = session;
+		this._sessionCacheTime = Date.now();
+		this._isRedirecting = false;
+	},
+
+	clearSessionCache(): void {
+		console.log('[Router] Clearing session cache');
+		this._sessionCache = null;
+		this._sessionCacheTime = 0;
+		this._isRedirecting = false;
 	},
 
 	async handleRoute(path: string): Promise<void> {
-		if (path === this._currentPath) {
-			return;
-		}
+		if (this._isRedirecting) return;
+		
 		this._currentPath = path;
-
+		
 		const route = getRoute(path);
 		if (!route) return;
 
 		if (route.redirect) {
 			if (route.redirect !== path) {
+				this._isRedirecting = true;
 				this.replace(route.redirect);
+				this._isRedirecting = false;
 			}
 			return;
 		}
 
 		if (route.layout === 'auth') {
-			const isAuth = await this.isAuthenticatedFast();
-			if (isAuth) {
-				this.replace('/');
-				return;
-			}
-
 			if (this._currentLayout) {
 				this._currentLayout.destroy();
 				this._currentLayout = null;
@@ -138,11 +137,31 @@ export const router = {
 			return;
 		}
 
-		const access = await this.checkAuth(route);
-		if (!access.allowed) {
-			if (access.redirectTo && access.redirectTo !== path) {
-				this.replace(access.redirectTo);
+		let session = this._sessionCache;
+		
+		const now = Date.now();
+		if (!session || now - this._sessionCacheTime >= this._SESSION_CACHE_MS) {
+			try {
+				session = await authService.getUserSession();
+				this._sessionCache = session;
+				this._sessionCacheTime = now;
+			} catch (error) {
+				console.error('Failed to get user session:', error);
+				session = { isAuthenticated: false, user: null };
 			}
+		}
+
+		if (route.protected && !session.isAuthenticated) {
+			this._isRedirecting = true;
+			this.replace('/signin');
+			this._isRedirecting = false;
+			return;
+		}
+
+		if (route.guest && session.isAuthenticated) {
+			this._isRedirecting = true;
+			this.replace('/');
+			this._isRedirecting = false;
 			return;
 		}
 
@@ -179,84 +198,5 @@ export const router = {
 				this.replace('*');
 			}
 		}
-	},
-
-	async checkAuth(
-		route: Route,
-	): Promise<{ allowed: boolean; redirectTo: string }> {
-		if (route.guest) {
-			const isAuth = await this.isAuthenticatedFast();
-			if (isAuth) {
-				return {
-					allowed: false,
-					redirectTo: '/',
-				};
-			}
-			return {
-				allowed: true,
-				redirectTo: '',
-			};
-		}
-
-		const now = Date.now();
-
-		if (
-			this._sessionCache !== null &&
-			now - this._sessionCacheTime < this._SESSION_CACHE_MS
-		) {
-			return this._checkAuthLogic(route, this._sessionCache);
-		}
-
-		let session: UserSession;
-		try {
-			session = await authService.getUserSession();
-		} catch (error) {
-			console.error('Failed to get user session:', error);
-			session = {
-				isAuthenticated: false,
-				user: null,
-			};
-		}
-		this._sessionCache = session;
-		this._sessionCacheTime = Date.now();
-		return this._checkAuthLogic(route, session);
-	},
-
-	_checkAuthLogic(
-		route: Route,
-		session: UserSession,
-	): { allowed: boolean; redirectTo: string } {
-		const { isAuthenticated, requiresRedirect } = session;
-
-		if (requiresRedirect) {
-			return {
-				allowed: false,
-				redirectTo: '/signin',
-			};
-		}
-
-		if (route.protected && !isAuthenticated) {
-			return {
-				allowed: false,
-				redirectTo: (session as any).error?.redirectTo || '/signin',
-			};
-		}
-
-		if (route.guest && isAuthenticated) {
-			return {
-				allowed: false,
-				redirectTo: '/',
-			};
-		}
-
-		return {
-			allowed: true,
-			redirectTo: '',
-		};
-	},
-
-	clearSessionCache(): void {
-		this._sessionCache = null;
-		this._sessionCacheTime = 0;
 	},
 };

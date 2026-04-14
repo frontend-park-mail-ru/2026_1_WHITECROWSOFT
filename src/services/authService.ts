@@ -44,6 +44,10 @@ export const authService = {
 			};
 			await db.settingsSet('user', user);
 			store.setUser(user);
+			router.updateSessionCache({
+				isAuthenticated: true,
+				user: user,
+			});
 		}
 		return result;
 	},
@@ -59,6 +63,10 @@ export const authService = {
 			};
 			await db.settingsSet('user', user);
 			store.setUser(user);
+			router.updateSessionCache({
+				isAuthenticated: true,
+				user: user,
+			});
 		}
 		return result;
 	},
@@ -139,6 +147,7 @@ export const authService = {
 			if (err?.status === 401) {
 				await db.settingsSet('user', null);
 				store.setUser(null);
+				router.clearSessionCache();
 				return {
 					isAuthenticated: false,
 					user: null,

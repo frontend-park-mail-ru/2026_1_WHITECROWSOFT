@@ -1,3 +1,4 @@
+import { handleAuthError } from '../utils/handleAuthError';
 import { client } from '../client/client.js';
 import { db } from '../db.js';
 import { store } from '../store.js';
@@ -52,11 +53,10 @@ export const noteService = {
 				const response = await client.get<{ notes: any[]; total?: number }>(
 					'/notes',
 				);
-				// Сервер возвращает { notes: [...], total: ... }
 				const notesArray = response.notes || [];
 
 				const notes: Note[] = notesArray.map((note: any) => ({
-					ID: note.id, // id с маленькой буквы от сервера -> ID с большой для базы
+					ID: note.id,
 					title: note.title,
 					icon: null,
 					updatedAt: note.updated_at || Date.now(),
@@ -65,7 +65,6 @@ export const noteService = {
 				await db.notesClear();
 				for (const note of notes) {
 					if (note.ID) {
-						// Проверяем, что ID существует
 						await db.notesPut(note);
 					}
 				}
@@ -74,7 +73,7 @@ export const noteService = {
 				return notes;
 			} catch (error) {
 				console.warn('[noteService] Network failed, using cache');
-				console.error('[noteService] Error fetching notes:', error);
+				handleAuthError(error);
 			}
 		}
 
@@ -88,11 +87,9 @@ export const noteService = {
 		if (isOnline) {
 			try {
 				const data = await client.get<any>(`/notes/${noteID}`);
-				// Сервер возвращает { note: {...}, blocks: [...] }
 				const serverNote = data.note;
 				const serverBlocks = data.blocks || [];
 
-				// Сохраняем в базу
 				await db.notesPut({
 					ID: serverNote.id,
 					title: serverNote.title,
@@ -101,7 +98,6 @@ export const noteService = {
 					updatedAt: serverNote.updated_at,
 				});
 
-				// Сохраняем форматирование блоков
 				for (const block of serverBlocks) {
 					if (block.formatting && block.formatting.ranges) {
 						await db.formattingPut({
@@ -132,7 +128,7 @@ export const noteService = {
 				};
 			} catch (error) {
 				console.warn('[noteService] Network failed, using cache');
-				console.error('[noteService] Error fetching note:', error);
+				handleAuthError(error);
 			}
 		}
 
@@ -199,7 +195,6 @@ export const noteService = {
 		if (isOnline) {
 			try {
 				const result = await client.post<any>('/notes', data);
-				// Сервер возвращает { id, title, ... }
 				const note: Note = {
 					ID: result.id,
 					title: result.title,
@@ -256,7 +251,6 @@ export const noteService = {
 		return localNote;
 	},
 
-	// Остальные методы остаются без изменений...
 	async deleteNote(noteID: string | number): Promise<void> {
 		const isOnline = store.getOnline();
 		const isLocal = this._isLocalNote(noteID);
@@ -411,7 +405,7 @@ export const noteService = {
 				return blocks;
 			} catch (error) {
 				console.warn('[noteService] Network failed, using cache');
-				console.error('[noteService] Error fetching blocks:', error);
+				handleAuthError(error);
 			}
 		}
 
