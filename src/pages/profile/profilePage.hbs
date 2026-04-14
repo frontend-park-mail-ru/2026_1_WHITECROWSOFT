@@ -73,21 +73,13 @@
         </div>
         <div class="settings__block">
             <h2 class="settings__subtitle">Фотография</h2>
-            {{#if user.avatar}}
                 <img
-                    src="{{user.avatar}}"
+                    src="{{#if user.avatar}}{{user.avatar}}{{else}}/icons/avatarBig.svg{{/if}}"
                     alt="Avatar"
                     class="settings__avatar"
                     data-avatar-image
                 >
-            {{else}}
-                <div class="settings__avatar" data-avatar-image>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                        <circle cx="12" cy="7" r="4" />
-                    </svg>
-                </div>
-            {{/if}}
+
             <form id="avatarForm" class="settingsForm" enctype="multipart/form-data">
                 <div class="file-input-wrapper">
                     <input
@@ -114,7 +106,7 @@
             className="settings__button settings__button--danger logoutButton"
             data-action="logout"
         }}
-    
+
         {{> components/partials/forms/button
             type="button"
             text="Удалить аккаунт"
