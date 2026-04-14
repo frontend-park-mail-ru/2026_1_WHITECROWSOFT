@@ -141,6 +141,9 @@ h5 {
 		right: 16px;
 		cursor: pointer;
 	}
+	&--disabled {
+		pointer-events: none;
+	}
 }
 
 .btn {

@@ -60,6 +60,9 @@
 		&--bottom {
 			margin-top: auto;
 		}
+		&--disabled {
+			cursor: not-allowed;
+		}
 	}
 	&__noteItemActions {
 		display: none;
@@ -119,8 +122,7 @@
 	&__input {
 		padding-left: 40px !important;
 	}
-}
-
-.disabled {
-	pointer-events: none;
+	&--disabled {
+		cursor: not-allowed;
+	}
 }
