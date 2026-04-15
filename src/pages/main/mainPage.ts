@@ -136,39 +136,9 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 	);
 	unsubscribeFunctions.push(unsubActiveNote);
 
-<<<<<<< Updated upstream
-	const unsubActiveBlocks = store.subscribe(
-		'activeBlocks',
-		(blocks: Block[]) => {
-			const noteBody = document.querySelector('.note__body');
-			if (!noteBody) return;
-			const currentBlocks = noteBody.querySelectorAll('.note__block');
-			if (currentBlocks.length !== blocks.length) {
-				_updateBlocksInDOM(blocks);
-			} else {
-				blocks.forEach((block, index) => {
-					const blockEl = noteBody.querySelector(
-						`.note__block[data-block-id="${block.id}"]`,
-					) as HTMLElement;
-					if (blockEl && blockEl.parentNode) {
-						const currentIndex = Array.from(
-							blockEl.parentNode.children,
-						).indexOf(blockEl);
-						if (currentIndex !== index) {
-							const addBlockBtn = noteBody.querySelector('.note__addBlockBtn');
-							if (addBlockBtn) {
-								if (index >= currentIndex) {
-									noteBody.insertBefore(blockEl, addBlockBtn);
-								} else {
-									noteBody.insertBefore(blockEl, addBlockBtn);
-								}
-							}
-						}
-					}
-				});
-			}
-		},
-	);
+	const unsubActiveBlocks = store.subscribe('activeBlocks', (blocks: Block[]) => {
+		_updateBlocksInDOM(blocks);
+	});
 	unsubscribeFunctions.push(unsubActiveBlocks);
 
 	const unsubActiveNoteId = store.subscribe(
@@ -181,24 +151,10 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 					if (handleAuthError(error)) return;
 					console.error('Failed to load note:', error);
 				}
-=======
-	const unsubActiveNoteId = store.subscribe('activeNoteId', async (noteId: string | number | null) => {
-		if (noteId && noteId !== store.getActiveNote()?.ID) {
-			try {
-				await noteService.getNote(noteId);
-			} catch (error) {
-				if (handleAuthError(error)) return;
-				console.error('Failed to load note:', error);
->>>>>>> Stashed changes
 			}
 		},
 	);
 	unsubscribeFunctions.push(unsubActiveNoteId);
-
-	const unsubActiveBlocks = store.subscribe('activeBlocks', (blocks: Block[]) => {
-		_updateBlocksInDOM(blocks);
-	});
-	unsubscribeFunctions.push(unsubActiveBlocks);
 
 	setVisibility(!!store.getActiveNote());
 	_updateActiveNoteInDOM(store.getActiveNote());
