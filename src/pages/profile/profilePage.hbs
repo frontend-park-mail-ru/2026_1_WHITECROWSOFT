@@ -13,7 +13,7 @@
                     <div class="form__input">
                     	<label for="username" class="input__label">Имя пользователя</label>
                     	<div class="input__wrapper">
-                    		<input type="text" name="username" value="river326" placeholder="Введите новое имя" autocomplete="username" required="" class="input ">
+                    		<input type="text" name="username" value="{{user.username}}" placeholder="Введите новое имя" autocomplete="username" required="" class="input ">
                             {{> components/partials/forms/button
                                 type="submit"
                                 text="Изменить"
