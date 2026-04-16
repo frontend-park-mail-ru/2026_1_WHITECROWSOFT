@@ -2,8 +2,9 @@ import Handlebars from 'handlebars';
 import { noteService } from '../../../services/noteService.js';
 import { store } from '../../../store.js';
 import {
-	applyFormattingToRange,
+	applyFormattingToRanges,
 	getSelectionPositionsInElement,
+	updateFormattingInRange,
 } from '../../../utils/formattingUtils.js';
 import { createElement } from '../../../utils/utils.js';
 import templateText from './formatPopup.hbs?raw';
@@ -15,8 +16,16 @@ interface FormattingState {
 	underline: boolean;
 }
 
+interface SelectionData {
+	blockEl: HTMLElement;
+	start: number;
+	end: number;
+	noteId: string | number;
+	blockId: string | number;
+}
+
 export class FormatPopup {
-	private range: Range;
+	private selectionData: SelectionData | null;
 	private editor: HTMLElement;
 	private element: HTMLElement | null;
 	private _onDocumentClick: ((e: MouseEvent) => void) | null;
@@ -25,9 +34,10 @@ export class FormatPopup {
 	private _onScroll: (() => void) | null;
 	private currentFormatting: FormattingState | null;
 	private _checkSelectionInterval: number | null;
+	private rangeForPosition: Range | null;
 
 	constructor(range: Range, editorElement: HTMLElement) {
-		this.range = range;
+		this.rangeForPosition = range.cloneRange();
 		this.editor = editorElement;
 		this.element = null;
 		this._onDocumentClick = null;
@@ -36,10 +46,44 @@ export class FormatPopup {
 		this._onScroll = null;
 		this.currentFormatting = null;
 		this._checkSelectionInterval = null;
+		this.selectionData = null;
 	}
 
 	open(): void {
 		this.close();
+		if (!this.rangeForPosition) return;
+
+		const blockEl = this._getBlockFromRange(this.rangeForPosition);
+		if (!blockEl?.dataset.blockId) {
+			this.close();
+			return;
+		}
+
+		const noteId = store.getActiveNoteId();
+		if (!noteId) {
+			this.close();
+			return;
+		}
+
+		const { start, end } = getSelectionPositionsInElement(
+			blockEl,
+			this.rangeForPosition,
+		);
+		if (start >= end) {
+			this.close();
+			return;
+		}
+
+		this.selectionData = {
+			blockEl,
+			start,
+			end,
+			noteId,
+			blockId: blockEl.dataset.blockId,
+		};
+
+		this._detectCurrentFormatting();
+
 		const html = Handlebars.compile(templateText)({
 			font: 'Inter',
 			fontSize: '14',
@@ -48,13 +92,13 @@ export class FormatPopup {
 			isUnderline: false,
 			isStrike: false,
 		});
+
 		this.element = createElement('div', 'formattingPopup');
 		this.element.innerHTML = html;
 		document.body.appendChild(this.element);
 		this._position();
 		this._bindGlobalCloseHandlers();
 		this._bindPopupEvents();
-		this._detectCurrentFormatting();
 		this.element.classList.add('formattingPopup--visible');
 
 		this.element.addEventListener('mousedown', (e: MouseEvent) =>
@@ -81,10 +125,11 @@ export class FormatPopup {
 			this.element.remove();
 			this.element = null;
 		}
+		this.selectionData = null;
 	}
 
 	private _position(): void {
-		if (!this.range || !this.element) return;
+		if (!this.rangeForPosition || !this.element) return;
 
 		this.element.style.visibility = 'hidden';
 		this.element.style.display = 'flex';
@@ -92,7 +137,7 @@ export class FormatPopup {
 
 		void this.element.offsetHeight;
 
-		const rect = this.range.getBoundingClientRect();
+		const rect = this.rangeForPosition.getBoundingClientRect();
 		const popupRect = this.element.getBoundingClientRect();
 
 		let top = rect.top - popupRect.height - 15;
@@ -179,47 +224,38 @@ export class FormatPopup {
 		});
 	}
 
-	private _restoreSelection(): void {
-		if (!this.range) return;
-		const selection = window.getSelection();
-		if (selection) {
-			selection.removeAllRanges();
-			selection.addRange(this.range);
-		}
-	}
+	private _getBlockFromRange(range: Range): HTMLElement | null {
+		if (!range) return null;
 
-	private _getBlockFromRange(): HTMLElement | null {
-		if (!this.range) return null;
-		const node = this.range.commonAncestorContainer;
-		const el = node.nodeType === 1 ? (node as HTMLElement) : node.parentElement;
-		return el?.closest('.note__block') || null;
+		let container = range.commonAncestorContainer;
+		if (container.nodeType === Node.TEXT_NODE) {
+			container = container.parentElement as HTMLElement;
+		}
+
+		let block = (container as HTMLElement).closest?.('.note__block');
+		if (block) return block as HTMLElement;
+
+		container = range.startContainer;
+		if (container.nodeType === Node.TEXT_NODE) {
+			container = container.parentElement as HTMLElement;
+		}
+		block = (container as HTMLElement).closest?.('.note__block');
+		if (block) return block as HTMLElement;
+
+		container = range.endContainer;
+		if (container.nodeType === Node.TEXT_NODE) {
+			container = container.parentElement as HTMLElement;
+		}
+		block = (container as HTMLElement).closest?.('.note__block');
+		if (block) return block as HTMLElement;
+
+		return null;
 	}
 
 	private _detectCurrentFormatting(): void {
-		if (!this.range) return;
-		this._restoreSelection();
+		if (!this.selectionData) return;
 
-		const blockEl = this._getBlockFromRange();
-		if (!blockEl) {
-			this.currentFormatting = {
-				bold: false,
-				italic: false,
-				underline: false,
-			};
-			this._updateActiveStates(this.currentFormatting);
-			return;
-		}
-
-		const { start, end } = getSelectionPositionsInElement(blockEl, this.range);
-		if (start >= end) {
-			this.currentFormatting = {
-				bold: false,
-				italic: false,
-				underline: false,
-			};
-			this._updateActiveStates(this.currentFormatting);
-			return;
-		}
+		const { blockEl, start, end } = this.selectionData;
 
 		let hasBold = false;
 		let hasItalic = false;
@@ -242,26 +278,6 @@ export class FormatPopup {
 			}
 		}
 
-		if (!hasBold && !hasItalic && !hasUnderline) {
-			const selection = window.getSelection();
-			if (selection && selection.rangeCount > 0) {
-				const range = selection.getRangeAt(0);
-				const container = range.commonAncestorContainer;
-				const parent =
-					container.nodeType === 1
-						? (container as HTMLElement)
-						: container.parentElement;
-
-				if (parent) {
-					const styles = window.getComputedStyle(parent);
-					const fontWeight = styles.fontWeight;
-					hasBold = fontWeight === 'bold' || parseInt(fontWeight, 10) >= 700;
-					hasItalic = styles.fontStyle === 'italic';
-					hasUnderline = styles.textDecoration.includes('underline');
-				}
-			}
-		}
-
 		this.currentFormatting = {
 			bold: hasBold,
 			italic: hasItalic,
@@ -271,12 +287,19 @@ export class FormatPopup {
 		this._updateActiveStates(this.currentFormatting);
 	}
 
-	private _getSpanStartPosition(blockEl: HTMLElement, span: HTMLElement): number {
+	private _getSpanStartPosition(
+		blockEl: HTMLElement,
+		span: HTMLElement,
+	): number {
 		let startPos = 0;
 		let currentPos = 0;
-		const walker = document.createTreeWalker(blockEl, NodeFilter.SHOW_TEXT, null);
-		let node;
-		
+		const walker = document.createTreeWalker(
+			blockEl,
+			NodeFilter.SHOW_TEXT,
+			null,
+		);
+		let node: Node | null;
+
 		while ((node = walker.nextNode())) {
 			const nodeText = node.textContent || '';
 			if (span.contains(node)) {
@@ -285,85 +308,17 @@ export class FormatPopup {
 			}
 			currentPos += nodeText.length;
 		}
-		
+
 		return startPos;
 	}
 
-	private _removeFormattingInRange(element: HTMLElement, startPos: number, endPos: number): void {
-		const spans = element.querySelectorAll('.formatted-range');
-		
-		for (const span of spans) {
-			const htmlSpan = span as HTMLElement;
-			const spanStart = this._getSpanStartPosition(element, htmlSpan);
-			const spanEnd = spanStart + (htmlSpan.textContent?.length || 0);
-			
-			if (spanStart >= startPos && spanEnd <= endPos) {
-				const text = htmlSpan.textContent || '';
-				const parent = htmlSpan.parentNode;
-				if (parent) {
-					parent.replaceChild(document.createTextNode(text), htmlSpan);
-				}
-			} else if (spanEnd > startPos && spanStart < endPos) {
-				const text = htmlSpan.textContent || '';
-				const beforeText = text.substring(0, Math.max(0, startPos - spanStart));
-				const middleText = text.substring(
-					Math.max(0, startPos - spanStart),
-					Math.min(text.length, endPos - spanStart)
-				);
-				const afterText = text.substring(Math.min(text.length, endPos - spanStart));
-				
-				const parent = htmlSpan.parentNode;
-				if (parent) {
-					const fragment = document.createDocumentFragment();
-					if (beforeText) fragment.appendChild(document.createTextNode(beforeText));
-					if (middleText) fragment.appendChild(document.createTextNode(middleText));
-					if (afterText) fragment.appendChild(document.createTextNode(afterText));
-					parent.replaceChild(fragment, htmlSpan);
-				}
-			}
-		}
-		
-		element.normalize();
-	}
-
-	private _applyFormattingToDOM(
-		element: HTMLElement,
-		start: number,
-		end: number,
-		formatting: FormattingState,
-	): void {
-		const selection = window.getSelection();
-		const originalRange =
-			selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-
-		this._removeFormattingInRange(element, start, end);
-		
-		if (formatting.bold || formatting.italic || formatting.underline) {
-			applyFormattingToRange(element, start, end, {
-				bold: formatting.bold,
-				italic: formatting.italic,
-				underline: formatting.underline,
-			});
-		}
-
-		if (originalRange && selection) {
-			try {
-				selection.removeAllRanges();
-				selection.addRange(originalRange);
-			} catch (e) {
-				console.warn('Failed to restore selection:', e);
-			}
-		}
-	}
-
 	private async _handleAction(action: string): Promise<void> {
-		if (!this.range) return;
-		this._restoreSelection();
-		const blockEl = this._getBlockFromRange();
-		if (!blockEl?.dataset.blockId) return;
+		if (!this.selectionData) {
+			this.close();
+			return;
+		}
 
-		const { start, end } = getSelectionPositionsInElement(blockEl, this.range);
-		if (start >= end) return;
+		const { blockEl, start, end, noteId, blockId } = this.selectionData;
 
 		const currentFmt = this.currentFormatting || {
 			bold: false,
@@ -386,55 +341,138 @@ export class FormatPopup {
 				return;
 		}
 
-		const noteId = store.getActiveNoteId();
-		if (!noteId) return;
+		this._applyFormattingToDOM(
+			blockEl,
+			start,
+			end,
+			action,
+			newFmt[action as keyof FormattingState],
+		);
 
-		const currentContent = blockEl.innerHTML;
-		try {
-			await noteService.updateBlockContent(
-				noteId,
-				blockEl.dataset.blockId,
-				currentContent,
-			);
-		} catch (error) {
-			console.warn('[Popup] Failed to save content before formatting:', error);
-		}
-
-		this._applyFormattingToDOM(blockEl, start, end, newFmt);
 		this.currentFormatting = newFmt;
 		this._updateActiveStates(newFmt);
 
+		const newContent = blockEl.innerHTML;
+
 		try {
+			await noteService.updateBlockContent(noteId, blockId, newContent);
+		} catch (error) {
+			console.warn('[Popup] Failed to save content:', error);
+		}
+
+		try {
+			const formattingPayload: {
+				bold?: boolean;
+				italic?: boolean;
+				underline?: boolean;
+			} = {};
+			if (action === 'bold') formattingPayload.bold = newFmt.bold;
+			if (action === 'italic') formattingPayload.italic = newFmt.italic;
+			if (action === 'underline')
+				formattingPayload.underline = newFmt.underline;
+
 			await noteService.saveBlockFormatting(
 				noteId,
-				blockEl.dataset.blockId,
+				blockId,
 				start,
 				end,
-				newFmt,
+				formattingPayload,
 			);
+
+			const blocks = store.getActiveBlocks();
+			const updatedBlocks = blocks.map((b) => {
+				if (String(b.id) === String(blockId)) {
+					const existingRanges = b.formatting?.ranges || [];
+					const newRange = {
+						start_pos: start,
+						end_pos: end,
+						bold: action === 'bold' ? newFmt.bold : null,
+						italic: action === 'italic' ? newFmt.italic : null,
+						underline: action === 'underline' ? newFmt.underline : null,
+					};
+					const newRanges = applyFormattingToRanges(existingRanges, newRange);
+					return { ...b, formatting: { ranges: newRanges } };
+				}
+				return b;
+			});
+			store.setActiveBlocks(updatedBlocks);
 		} catch (error) {
 			console.warn('[Popup] Save formatting failed:', error);
 		}
 
-		const newContent = blockEl.innerHTML;
-		const blocks = store.getActiveBlocks();
-		const updatedBlocks = blocks.map((b) =>
-			String(b.id) === blockEl.dataset.blockId
-				? { ...b, content: newContent }
-				: b,
-		);
-		store.setActiveBlocks(updatedBlocks);
-
-		this._restoreSelection();
+		this._restoreSelectionByPositions(blockEl, start, end);
 		blockEl.focus();
+	}
 
+	private _restoreSelectionByPositions(
+		element: HTMLElement,
+		start: number,
+		end: number,
+	): void {
 		const selection = window.getSelection();
-		if (selection && selection.rangeCount > 0) {
-			this.range = selection.getRangeAt(0).cloneRange();
-		} else if (this.range) {
-			selection?.removeAllRanges();
-			selection?.addRange(this.range);
+		if (!selection) return;
+		selection.removeAllRanges();
+
+		const currentElement = document.querySelector(
+			`.note__block[data-block-id="${element.dataset.blockId}"]`,
+		) as HTMLElement;
+		if (!currentElement) {
+			console.log('[FormatPopup] Element not found in DOM');
+			return;
 		}
+
+		const walker = document.createTreeWalker(
+			currentElement,
+			NodeFilter.SHOW_TEXT,
+			null,
+		);
+		let currentNode: Text | null = walker.nextNode() as Text | null;
+		let currentPos = 0;
+		let startNode: Text | null = null;
+		let startOffset = 0;
+		let endNode: Text | null = null;
+		let endOffset = 0;
+
+		while (currentNode) {
+			const nodeLength = currentNode.textContent?.length || 0;
+			const nodeStart = currentPos;
+			const nodeEnd = currentPos + nodeLength;
+
+			if (nodeStart <= start && nodeEnd >= start) {
+				startNode = currentNode;
+				startOffset = start - nodeStart;
+			}
+
+			if (nodeStart <= end && nodeEnd >= end) {
+				endNode = currentNode;
+				endOffset = end - nodeStart;
+				break;
+			}
+
+			currentPos = nodeEnd;
+			currentNode = walker.nextNode() as Text | null;
+		}
+
+		if (startNode && endNode) {
+			try {
+				const newRange = document.createRange();
+				newRange.setStart(startNode, startOffset);
+				newRange.setEnd(endNode, endOffset);
+				selection.addRange(newRange);
+			} catch (e) {
+				console.log('[FormatPopup] Error creating range:', e);
+			}
+		}
+	}
+
+	private _applyFormattingToDOM(
+		element: HTMLElement,
+		start: number,
+		end: number,
+		action: string,
+		value: boolean,
+	): void {
+		updateFormattingInRange(element, start, end, action, value);
 	}
 
 	private _updateActiveStates(formatting: FormattingState | null): void {

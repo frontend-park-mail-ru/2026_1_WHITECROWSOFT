@@ -6,10 +6,7 @@ import { attachmentService } from '../../services/attachmentService.js';
 import { noteService } from '../../services/noteService.js';
 import { store } from '../../store.js';
 import type { ActiveNote, Block } from '../../types.js';
-import {
-	applyFormattingToRange,
-	clearFormattingFromBlock,
-} from '../../utils/formattingUtils.js';
+import { rebuildBlockFromRanges } from '../../utils/formattingUtils.js';
 import { handleAuthError } from '../../utils/handleAuthError.js';
 import { registerHelpers } from '../../utils/utils.js';
 import templateText from './mainPage.hbs?raw';
@@ -136,9 +133,12 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 	);
 	unsubscribeFunctions.push(unsubActiveNote);
 
-	const unsubActiveBlocks = store.subscribe('activeBlocks', (blocks: Block[]) => {
-		_updateBlocksInDOM(blocks);
-	});
+	const unsubActiveBlocks = store.subscribe(
+		'activeBlocks',
+		(blocks: Block[]) => {
+			_updateBlocksInDOM(blocks);
+		},
+	);
 	unsubscribeFunctions.push(unsubActiveBlocks);
 
 	const unsubActiveNoteId = store.subscribe(
@@ -168,10 +168,7 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 			e.stopPropagation();
 
 			const activeNoteId = store.getActiveNoteId();
-			if (!activeNoteId) {
-				console.warn('No active note to add block');
-				return;
-			}
+			if (!activeNoteId) return;
 
 			if (attachPopupInstance) {
 				attachPopupInstance.close();
@@ -179,19 +176,15 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 			} else {
 				attachPopupInstance = new AttachPopup(addBlockBtn);
 				attachPopupInstance.open();
-
-				const closeOnNoteChange = () => {
+				const unsub = store.subscribe('activeNoteId', () => {
 					if (attachPopupInstance) {
 						attachPopupInstance.close();
 						attachPopupInstance = null;
 					}
-				};
-
-				const unsub = store.subscribe('activeNoteId', closeOnNoteChange);
+				});
 				unsubscribeFunctions.push(unsub);
 			}
 		};
-
 		addBlockBtn.addEventListener('click', addBlockHandler);
 		_addEventListener(addBlockBtn, 'click', addBlockHandler);
 	}
@@ -202,10 +195,7 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 	if (dragBlockBtn) {
 		const dragBlockHandler = () => {
 			const activeNoteId = store.getActiveNoteId();
-			if (!activeNoteId) {
-				console.warn('No active note to drag blocks');
-				return;
-			}
+			if (!activeNoteId) return;
 
 			dragMode = !dragMode;
 			dragBlockBtn.classList.toggle('note__dragBlock--active', dragMode);
@@ -216,15 +206,10 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 				const blocks = noteBody.querySelectorAll('.note__block');
 				blocks.forEach((block) => {
 					(block as HTMLElement).draggable = dragMode;
-					if (dragMode) {
-						block.classList.add('note__block--draggable');
-					} else {
-						block.classList.remove('note__block--draggable');
-					}
+					block.classList.toggle('note__block--draggable', dragMode);
 				});
 			}
 		};
-
 		dragBlockBtn.addEventListener('click', dragBlockHandler);
 		_addEventListener(dragBlockBtn, 'click', dragBlockHandler);
 	}
@@ -238,14 +223,9 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 			return wrappedHandler;
 		};
 
-		createHandler('contextmenu', (e: Event) => {
-			e.preventDefault();
-		});
-
-		createHandler('mousedown', (e: Event) => {
-			const target = e.target as HTMLElement;
-			if (target.closest('.formattingPopup')) return;
-
+		createHandler('contextmenu', (e) => e.preventDefault());
+		createHandler('mousedown', (e) => {
+			if ((e.target as HTMLElement).closest('.formattingPopup')) return;
 			if (formattingPopup) {
 				formattingPopup.close();
 				formattingPopup = null;
@@ -256,16 +236,13 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 		createHandler('mouseup', () => {
 			if (!isDraggingSelection) return;
 			isDraggingSelection = false;
-
 			if (selectionTimeout) clearTimeout(selectionTimeout);
 			selectionTimeout = window.setTimeout(() => {
 				const selection = window.getSelection();
 				if (selection && !selection.isCollapsed && selection.rangeCount > 0) {
 					const range = selection.getRangeAt(0);
 					if (noteBody.contains(range.commonAncestorContainer)) {
-						if (formattingPopup) {
-							formattingPopup.close();
-						}
+						if (formattingPopup) formattingPopup.close();
 						formattingPopup = new FormatPopup(range.cloneRange(), noteBody);
 						formattingPopup.open();
 					}
@@ -273,12 +250,10 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 			}, 10);
 		});
 
-		createHandler('click', (e: Event) => {
-			const target = e.target as HTMLElement;
-			if (target.closest('.formattingPopup')) return;
-
+		createHandler('click', (e) => {
+			if ((e.target as HTMLElement).closest('.formattingPopup')) return;
 			const selection = window.getSelection();
-			if (selection && selection.isCollapsed && formattingPopup) {
+			if (selection?.isCollapsed && formattingPopup) {
 				formattingPopup.close();
 				formattingPopup = null;
 			}
@@ -291,13 +266,14 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 			}
 		});
 
-		createHandler('dragstart', (e: Event) => {
+		createHandler('dragstart', (e) => {
 			const dragEvent = e as DragEvent;
 			const target = dragEvent.target as HTMLElement;
 			if (target.classList.contains('note__block') && dragMode) {
 				draggedBlock = target;
-				const blocks = noteBody.querySelectorAll('.note__block');
-				draggedFromIndex = Array.from(blocks).indexOf(target);
+				draggedFromIndex = Array.from(
+					noteBody.querySelectorAll('.note__block'),
+				).indexOf(target);
 				target.classList.add('note__block--dragging');
 				if (dragEvent.dataTransfer) {
 					dragEvent.dataTransfer.effectAllowed = 'move';
@@ -306,54 +282,38 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 			}
 		});
 
-		createHandler('dragover', (e: Event) => {
+		createHandler('dragover', (e) => {
 			const dragEvent = e as DragEvent;
 			if (dragMode && draggedBlock) {
 				dragEvent.preventDefault();
-				if (dragEvent.dataTransfer) {
-					dragEvent.dataTransfer.dropEffect = 'move';
-				}
-
+				if (dragEvent.dataTransfer) dragEvent.dataTransfer.dropEffect = 'move';
 				const afterElement = _getDragAfterElement(noteBody, dragEvent.clientY);
-				if (afterElement == null) {
-					noteBody.appendChild(draggedBlock);
-				} else if (afterElement !== draggedBlock) {
+				if (!afterElement) noteBody.appendChild(draggedBlock);
+				else if (afterElement !== draggedBlock)
 					noteBody.insertBefore(draggedBlock, afterElement);
-				}
 			}
 		});
 
-		createHandler('drop', async (e: Event) => {
-			const dragEvent = e as DragEvent;
-			if (dragMode && draggedBlock) {
-				dragEvent.preventDefault();
-				dragEvent.stopPropagation();
-			}
-		});
-
+		createHandler('drop', (e) => e.preventDefault());
 		noteBody.addEventListener('dragend', async () => {
 			if (draggedBlock) {
 				draggedBlock.classList.remove('note__block--dragging');
-
 				if (dragMode) {
 					const blocks = noteBody.querySelectorAll('.note__block');
 					const newIndex = Array.from(blocks).indexOf(draggedBlock);
-
 					if (draggedFromIndex !== newIndex && newIndex !== -1) {
 						const activeNoteId = store.getActiveNoteId();
 						const blockId = draggedBlock.dataset.blockId;
-
 						if (activeNoteId && blockId) {
 							try {
 								await noteService.moveBlock(activeNoteId, blockId, newIndex);
 							} catch (error) {
-								if (handleAuthError(error)) return;
-								console.error('Error moving block:', error);
+								if (!handleAuthError(error))
+									console.error('Error moving block:', error);
 							}
 						}
 					}
 				}
-
 				draggedBlock = null;
 				draggedFromIndex = null;
 			}
@@ -375,55 +335,40 @@ function _addEventListener(
 	event: string,
 	handler: EventListener,
 ): void {
-	if (!domEventListeners.has(element)) {
+	if (!domEventListeners.has(element))
 		domEventListeners.set(element, new Map());
-	}
 	const elementListeners = domEventListeners.get(element)!;
-	if (!elementListeners.has(event)) {
-		elementListeners.set(event, []);
-	}
+	if (!elementListeners.has(event)) elementListeners.set(event, []);
 	elementListeners.get(event)!.push(handler);
 }
 
 export async function cleanupMainPage(): Promise<void> {
-	unsubscribeFunctions.forEach((unsubscribe) => {
-		if (typeof unsubscribe === 'function') {
-			unsubscribe();
-		}
-	});
+	unsubscribeFunctions.forEach((fn) => typeof fn === 'function' && fn());
 	unsubscribeFunctions = [];
-
 	for (const [element, events] of domEventListeners.entries()) {
 		if (element && 'removeEventListener' in element) {
 			for (const [event, handlers] of events.entries()) {
-				handlers.forEach((handler) => {
-					element.removeEventListener(event, handler);
-				});
+				handlers.forEach((h) => element.removeEventListener(event, h));
 			}
 		}
 	}
 	domEventListeners.clear();
-
 	if (formattingPopup) {
 		formattingPopup.close();
 		formattingPopup = null;
 	}
-
 	if (attachPopupInstance) {
 		attachPopupInstance.close();
 		attachPopupInstance = null;
 	}
-
 	if (selectionTimeout) {
 		clearTimeout(selectionTimeout);
 		selectionTimeout = null;
 	}
-
 	dragMode = false;
 	draggedBlock = null;
 	draggedFromIndex = null;
 	isDraggingSelection = false;
-
 	if (currentContainer) {
 		currentContainer.innerHTML = '';
 		currentContainer = null;
@@ -435,13 +380,11 @@ function _updateActiveNoteInDOM(activeNote: ActiveNote | null): void {
 	const breadcrumbEl = document.querySelector(
 		'.note__breadcrumbItem--current',
 	) as HTMLElement | null;
-
 	if (!activeNote) {
 		if (titleEl) titleEl.textContent = '';
 		if (breadcrumbEl) breadcrumbEl.textContent = '';
 		return;
 	}
-
 	if (titleEl) titleEl.textContent = activeNote.title;
 	if (breadcrumbEl) breadcrumbEl.textContent = activeNote.breadcrumb;
 }
@@ -449,7 +392,6 @@ function _updateActiveNoteInDOM(activeNote: ActiveNote | null): void {
 async function _updateBlocksInDOM(blocks: Block[]): Promise<void> {
 	const noteBody = document.querySelector('.note__body') as HTMLElement | null;
 	if (!noteBody) return;
-
 	const currentDragMode = dragMode;
 
 	const existingBlocks = noteBody.querySelectorAll('.note__block');
@@ -466,6 +408,7 @@ async function _updateBlocksInDOM(blocks: Block[]): Promise<void> {
 				const attachmentId = imageData.attachmentId;
 				const activeNoteId = store.getActiveNoteId();
 				const noteId = block.note_id || activeNoteId;
+
 				if (!noteId) {
 					blockEl = document.createElement('div');
 					blockEl.className = 'note__block';
@@ -515,9 +458,7 @@ async function _updateBlocksInDOM(blocks: Block[]): Promise<void> {
 			blockEl.innerHTML = block.content;
 		}
 
-		blockEl.addEventListener('blur', () => {
-			saveBlockContent(blockEl);
-		});
+		blockEl.addEventListener('blur', () => saveBlockContent(blockEl));
 
 		blockEl.draggable = currentDragMode;
 		if (currentDragMode) {
@@ -532,15 +473,8 @@ async function _updateBlocksInDOM(blocks: Block[]): Promise<void> {
 		}
 
 		if (block.block_type_id !== 2) {
-			clearFormattingFromBlock(blockEl);
 			const ranges = block.formatting?.ranges || [];
-			ranges.forEach((rng) => {
-				applyFormattingToRange(blockEl, rng.start_pos, rng.end_pos, {
-					bold: rng.bold || false,
-					italic: rng.italic || false,
-					underline: rng.underline || false,
-				});
-			});
+			rebuildBlockFromRanges(blockEl, ranges);
 		}
 	}
 }
@@ -552,26 +486,18 @@ function _getDragAfterElement(
 	const draggableElements = [
 		...container.querySelectorAll('.note__block:not(.dragging)'),
 	] as HTMLElement[];
-
-	const result = draggableElements.reduce<{
-		offset: number;
-		element: HTMLElement | null;
-	}>(
-		(closest, child) => {
-			const rect = child.getBoundingClientRect();
-			if (rect.height === 0 || rect.width === 0 || !child.offsetParent) {
-				return closest;
-			}
-			const offset = y - rect.top - rect.height / 2;
-
-			if (offset < 0 && offset > closest.offset) {
-				return { offset: offset, element: child };
-			} else {
-				return closest;
-			}
-		},
-		{ offset: Number.NEGATIVE_INFINITY, element: null },
+	return (
+		draggableElements.reduce<{ offset: number; element: HTMLElement | null }>(
+			(closest, child) => {
+				const rect = child.getBoundingClientRect();
+				if (rect.height === 0 || rect.width === 0 || !child.offsetParent)
+					return closest;
+				const offset = y - rect.top - rect.height / 2;
+				return offset < 0 && offset > closest.offset
+					? { offset, element: child }
+					: closest;
+			},
+			{ offset: Number.NEGATIVE_INFINITY, element: null },
+		).element || undefined
 	);
-
-	return result.element || undefined;
 }

@@ -693,6 +693,7 @@ export const noteService = {
 					body: payload,
 				});
 				await this._saveFormattingToCache(noteId, blockId, payload, false);
+				return { block_id: blockId, ranges: [payload] };
 			}
 		} else {
 			await queueService.enqueueRequest({
@@ -701,8 +702,8 @@ export const noteService = {
 				body: payload,
 			});
 			await this._saveFormattingToCache(noteId, blockId, payload, false);
+			return { block_id: blockId, ranges: [payload] };
 		}
-		return { block_id: blockId, ranges: [payload] };
 	},
 
 	async _saveFormattingToCache(
@@ -720,7 +721,32 @@ export const noteService = {
 					r.end_pos === formatting.end_pos,
 			);
 			if (rangeIndex !== -1) {
-				ranges[rangeIndex] = formatting as FormattingRange;
+				const existingRange = ranges[rangeIndex];
+				ranges[rangeIndex] = {
+					...existingRange,
+					start_pos: formatting.start_pos,
+					end_pos: formatting.end_pos,
+					bold:
+						formatting.bold !== undefined
+							? formatting.bold
+							: existingRange.bold,
+					italic:
+						formatting.italic !== undefined
+							? formatting.italic
+							: existingRange.italic,
+					underline:
+						formatting.underline !== undefined
+							? formatting.underline
+							: existingRange.underline,
+				};
+				const hasAnyFormatting =
+					ranges[rangeIndex].bold ||
+					ranges[rangeIndex].italic ||
+					ranges[rangeIndex].underline;
+
+				if (!hasAnyFormatting) {
+					ranges.splice(rangeIndex, 1);
+				}
 			} else {
 				ranges.push(formatting as FormattingRange);
 			}

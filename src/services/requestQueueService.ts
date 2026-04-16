@@ -120,7 +120,6 @@ export const queueService = {
 								String(newId),
 							);
 						}
-						
 					} else if (requestItem.type === 'IMAGE_UPLOAD') {
 						await this._commitLocalImageId(
 							requestItem.localId,

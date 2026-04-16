@@ -1,15 +1,9 @@
+import { FormattingRange } from './../types.js';
+
 export interface Formatting {
 	bold: boolean;
 	italic: boolean;
 	underline: boolean;
-}
-
-export interface FormattingRange {
-	start_pos: number;
-	end_pos: number;
-	bold: boolean | null;
-	italic: boolean | null;
-	underline: boolean | null;
 }
 
 export const defaultFormatting: Formatting = {
@@ -17,12 +11,6 @@ export const defaultFormatting: Formatting = {
 	italic: false,
 	underline: false,
 };
-
-interface TargetNode {
-	node: Text;
-	overlapStart: number;
-	overlapEnd: number;
-}
 
 export function getSelectionPositionsInElement(
 	element: HTMLElement,
@@ -39,6 +27,126 @@ export function getSelectionPositionsInElement(
 	return { start, end };
 }
 
+export function applyFormattingToRanges(
+	existingRanges: FormattingRange[],
+	newRange: {
+		start_pos: number;
+		end_pos: number;
+		bold?: boolean | null;
+		italic?: boolean | null;
+		underline?: boolean | null;
+	},
+): FormattingRange[] {
+	const points = new Set<number>();
+	for (const r of existingRanges) {
+		points.add(r.start_pos);
+		points.add(r.end_pos);
+	}
+	points.add(newRange.start_pos);
+	points.add(newRange.end_pos);
+
+	const pointList = Array.from(points).sort((a, b) => a - b);
+
+	const segments: Array<{ start: number; end: number }> = [];
+	for (let i = 0; i < pointList.length - 1; i++) {
+		if (pointList[i] < pointList[i + 1]) {
+			segments.push({ start: pointList[i], end: pointList[i + 1] });
+		}
+	}
+
+	const result: FormattingRange[] = [];
+	for (const seg of segments) {
+		let bold = false,
+			italic = false,
+			underline = false;
+
+		for (const r of existingRanges) {
+			if (seg.start >= r.start_pos && seg.end <= r.end_pos) {
+				if (r.bold !== null) bold = r.bold;
+				if (r.italic !== null) italic = r.italic;
+				if (r.underline !== null) underline = r.underline;
+			}
+		}
+
+		if (seg.start >= newRange.start_pos && seg.end <= newRange.end_pos) {
+			if (newRange.bold !== undefined && newRange.bold !== null)
+				bold = newRange.bold;
+			if (newRange.italic !== undefined && newRange.italic !== null)
+				italic = newRange.italic;
+			if (newRange.underline !== undefined && newRange.underline !== null)
+				underline = newRange.underline;
+		}
+
+		if (bold || italic || underline) {
+			result.push({
+				start_pos: seg.start,
+				end_pos: seg.end,
+				bold,
+				italic,
+				underline,
+			});
+		}
+	}
+
+	if (result.length === 0) return [];
+
+	const merged: FormattingRange[] = [result[0]];
+	for (let i = 1; i < result.length; i++) {
+		const last = merged[merged.length - 1];
+		const curr = result[i];
+
+		const same =
+			last.bold === curr.bold &&
+			last.italic === curr.italic &&
+			last.underline === curr.underline;
+
+		if (last.end_pos === curr.start_pos && same) {
+			last.end_pos = curr.end_pos;
+		} else {
+			merged.push(curr);
+		}
+	}
+
+	return merged;
+}
+
+export function rebuildBlockFromRanges(
+	element: HTMLElement,
+	ranges: FormattingRange[],
+): void {
+	const text = element.textContent || '';
+	if (!text) return;
+
+	const sorted = [...ranges].sort((a, b) => a.start_pos - b.start_pos);
+	const fragment = document.createDocumentFragment();
+	let lastPos = 0;
+
+	for (const rng of sorted) {
+		if (rng.start_pos > lastPos) {
+			fragment.appendChild(
+				document.createTextNode(text.slice(lastPos, rng.start_pos)),
+			);
+		}
+
+		const span = document.createElement('span');
+		span.className = 'formatted-range';
+		span.textContent = text.slice(rng.start_pos, rng.end_pos);
+		if (rng.bold) span.style.fontWeight = 'bold';
+		if (rng.italic) span.style.fontStyle = 'italic';
+		if (rng.underline) span.style.textDecoration = 'underline';
+		fragment.appendChild(span);
+
+		lastPos = rng.end_pos;
+	}
+
+	if (lastPos < text.length) {
+		fragment.appendChild(document.createTextNode(text.slice(lastPos)));
+	}
+
+	element.innerHTML = '';
+	element.appendChild(fragment);
+}
+
 export function applyFormattingToRange(
 	element: HTMLElement,
 	startPos: number,
@@ -47,74 +155,83 @@ export function applyFormattingToRange(
 ): void {
 	if (!element || startPos >= endPos) return;
 
-	const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
+	const existingRanges = extractFormattingRangesFromBlock(element);
+	const newRanges = applyFormattingToRanges(existingRanges, {
+		start_pos: startPos,
+		end_pos: endPos,
+		bold: formatting.bold,
+		italic: formatting.italic,
+		underline: formatting.underline,
+	});
+
+	rebuildBlockFromRanges(element, newRanges);
+}
+
+export function extractFormattingRangesFromBlock(
+	blockEl: HTMLElement,
+): FormattingRange[] {
+	const ranges: FormattingRange[] = [];
+	const walker = document.createTreeWalker(blockEl, NodeFilter.SHOW_TEXT, null);
 	let currentNode: Text | null = walker.nextNode() as Text | null;
 	let currentPos = 0;
-	const targetNodes: TargetNode[] = [];
 
 	while (currentNode) {
 		const nodeLength = currentNode.textContent?.length || 0;
-		const nodeStart = currentPos;
-		const nodeEnd = currentPos + nodeLength;
+		const parent = currentNode.parentNode as HTMLElement | null;
 
-		if (nodeEnd > startPos && nodeStart < endPos) {
-			targetNodes.push({
-				node: currentNode,
-				overlapStart: Math.max(startPos, nodeStart) - nodeStart,
-				overlapEnd: Math.min(endPos, nodeEnd) - nodeStart,
+		if (parent?.classList?.contains('formatted-range')) {
+			const styles = window.getComputedStyle(parent);
+			const fontWeight = styles.fontWeight;
+			ranges.push({
+				start_pos: currentPos,
+				end_pos: currentPos + nodeLength,
+				bold: fontWeight === 'bold' || parseInt(fontWeight, 10) >= 700,
+				italic: styles.fontStyle === 'italic',
+				underline: (
+					styles.textDecorationLine ||
+					styles.textDecoration ||
+					''
+				).includes('underline'),
 			});
 		}
-		currentPos = nodeEnd;
+		currentPos += nodeLength;
 		currentNode = walker.nextNode() as Text | null;
 	}
 
-	targetNodes.forEach(({ node, overlapStart, overlapEnd }) => {
-		if (overlapStart === 0 && overlapEnd === (node.textContent?.length || 0)) {
-			wrapTextNode(node, formatting);
-		} else {
-			splitAndWrapTextNode(node, overlapStart, overlapEnd, formatting);
-		}
-	});
+	return ranges;
 }
 
-function wrapTextNode(textNode: Text, formatting: Formatting): void {
-	if (!textNode.parentNode) return;
-
-	const span = document.createElement('span');
-	span.className = 'formatted-range';
-	applyFormattingStyles(span, formatting);
-
-	textNode.parentNode.replaceChild(span, textNode);
-	span.appendChild(textNode);
+export function clearFormattingFromBlock(blockEl: HTMLElement | null): void {
+	if (!blockEl) return;
+	blockEl.innerHTML = blockEl.textContent || '';
 }
 
-function splitAndWrapTextNode(
-	textNode: Text,
-	startOffset: number,
-	endOffset: number,
-	formatting: Formatting,
+export function updateFormattingInRange(
+	element: HTMLElement,
+	startPos: number,
+	endPos: number,
+	action: string,
+	value: boolean,
 ): void {
-	if (!textNode.parentNode) return;
+	const existingRanges = extractFormattingRangesFromBlock(element);
 
-	const text = textNode.textContent || '';
-	const before = text.substring(0, startOffset);
-	const middle = text.substring(startOffset, endOffset);
-	const after = text.substring(endOffset);
+	const formattingUpdate: {
+		start_pos: number;
+		end_pos: number;
+		bold?: boolean | null;
+		italic?: boolean | null;
+		underline?: boolean | null;
+	} = {
+		start_pos: startPos,
+		end_pos: endPos,
+	};
 
-	const parent = textNode.parentNode;
-	const fragment = document.createDocumentFragment();
+	if (action === 'bold') formattingUpdate.bold = value;
+	if (action === 'italic') formattingUpdate.italic = value;
+	if (action === 'underline') formattingUpdate.underline = value;
 
-	if (before) fragment.appendChild(document.createTextNode(before));
-
-	const span = document.createElement('span');
-	span.className = 'formatted-range';
-	applyFormattingStyles(span, formatting);
-	span.appendChild(document.createTextNode(middle));
-	fragment.appendChild(span);
-
-	if (after) fragment.appendChild(document.createTextNode(after));
-
-	parent.replaceChild(fragment, textNode);
+	const newRanges = applyFormattingToRanges(existingRanges, formattingUpdate);
+	rebuildBlockFromRanges(element, newRanges);
 }
 
 export function applyFormattingStyles(
@@ -140,47 +257,4 @@ export function getFormattingFromElement(el: HTMLElement | null): Formatting {
 			''
 		).includes('underline'),
 	};
-}
-
-export function extractFormattingRangesFromBlock(
-	blockEl: HTMLElement,
-): FormattingRange[] {
-	const ranges: FormattingRange[] = [];
-	const walker = document.createTreeWalker(blockEl, NodeFilter.SHOW_TEXT, null);
-	let currentNode: Text | null = walker.nextNode() as Text | null;
-	let currentPos = 0;
-
-	while (currentNode) {
-		const nodeLength = currentNode.textContent?.length || 0;
-		const parent = currentNode.parentNode as HTMLElement | null;
-
-		if (parent?.classList?.contains('formatted-range')) {
-			const fmt = getFormattingFromElement(parent);
-			ranges.push({
-				start_pos: currentPos,
-				end_pos: currentPos + nodeLength,
-				bold: fmt.bold ?? null,
-				italic: fmt.italic ?? null,
-				underline: fmt.underline ?? null,
-			});
-		}
-		currentPos += nodeLength;
-		currentNode = walker.nextNode() as Text | null;
-	}
-
-	return ranges;
-}
-
-export function clearFormattingFromBlock(blockEl: HTMLElement | null): void {
-	if (!blockEl) return;
-	const spans = blockEl.querySelectorAll('.formatted-range');
-	spans.forEach((span) => {
-		const parent = span.parentNode;
-		if (parent) {
-			while (span.firstChild) {
-				parent.insertBefore(span.firstChild, span);
-			}
-			parent.removeChild(span);
-		}
-	});
 }
