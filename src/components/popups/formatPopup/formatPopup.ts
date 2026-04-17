@@ -341,6 +341,10 @@ export class FormatPopup {
 				return;
 		}
 
+		// Сохраняем текущий HTML для сравнения
+		const oldContent = blockEl.innerHTML;
+
+		// Применяем форматирование к DOM напрямую
 		this._applyFormattingToDOM(
 			blockEl,
 			start,
@@ -354,12 +358,24 @@ export class FormatPopup {
 
 		const newContent = blockEl.innerHTML;
 
-		try {
-			await noteService.updateBlockContent(noteId, blockId, newContent);
-		} catch (error) {
-			console.warn('[Popup] Failed to save content:', error);
+		// Если контент изменился, сохраняем на сервер
+		if (oldContent !== newContent) {
+			try {
+				// Обновляем контент блока на сервере
+				await noteService.updateBlockContent(noteId, blockId, newContent);
+
+				// Обновляем store без перерисовки
+				const blocks = store.getActiveBlocks();
+				const updatedBlocks = blocks.map((b) =>
+					String(b.id) === String(blockId) ? { ...b, content: newContent } : b,
+				);
+				store.setActiveBlocksSilently(updatedBlocks);
+			} catch (error) {
+				console.warn('[Popup] Failed to save content:', error);
+			}
 		}
 
+		// Сохраняем форматирование в отдельном endpoint
 		try {
 			const formattingPayload: {
 				bold?: boolean;
@@ -379,6 +395,7 @@ export class FormatPopup {
 				formattingPayload,
 			);
 
+			// Обновляем ranges в store без перерисовки
 			const blocks = store.getActiveBlocks();
 			const updatedBlocks = blocks.map((b) => {
 				if (String(b.id) === String(blockId)) {
@@ -395,11 +412,12 @@ export class FormatPopup {
 				}
 				return b;
 			});
-			store.setActiveBlocks(updatedBlocks);
+			store.setActiveBlocksSilently(updatedBlocks);
 		} catch (error) {
 			console.warn('[Popup] Save formatting failed:', error);
 		}
 
+		// Восстанавливаем выделение
 		this._restoreSelectionByPositions(blockEl, start, end);
 		blockEl.focus();
 	}
@@ -416,10 +434,7 @@ export class FormatPopup {
 		const currentElement = document.querySelector(
 			`.note__block[data-block-id="${element.dataset.blockId}"]`,
 		) as HTMLElement;
-		if (!currentElement) {
-			console.log('[FormatPopup] Element not found in DOM');
-			return;
-		}
+		if (!currentElement) return;
 
 		const walker = document.createTreeWalker(
 			currentElement,

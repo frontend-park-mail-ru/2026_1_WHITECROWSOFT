@@ -137,7 +137,6 @@ export const queueService = {
 				const retryCount = requestItem.retryCount;
 
 				if (retryCount < 3) {
-					// Обновляем retryCount в базе
 					const updatedRequest = { ...requestItem, retryCount: retryCount + 1 };
 					await db.queueRequest(updatedRequest);
 					await db.deleteQueuedRequest(requestItem.id!);
@@ -320,33 +319,88 @@ export const queueService = {
 			return;
 		}
 
-		try {
-			const imagesToUpdate = await db.imagesGetByNoteId(localId);
+		console.log(`[Queue] Migrating local note ${localId} -> ${newNoteId}`);
 
-			for (const image of imagesToUpdate) {
-				await db.imagesDelete(image.id);
-				await db.imagesPut({
-					...image,
-					id: image.id,
-					noteId: newNoteId,
-				});
-			}
-		} catch (error) {
-			console.warn('[Queue] Failed to update images for note:', error);
+		// 🔑 1. Обновляем noteId во всех связанных изображениях
+		const images = await db.imagesGetByNoteId(localId);
+		for (const img of images) {
+			await db.imagesDelete(img.id);
+			await db.imagesPut({
+				...img,
+				noteId: newNoteId, // 🔑 Заменяем локальный ID на реальный
+			});
 		}
+
+		// 🔑 2. Обновляем noteId в записях очереди файлов
+		const queueFiles = await db.queueFileGetByNoteId(localId);
+		for (const file of queueFiles) {
+			await db.queueFileDelete(file.id);
+			await db.queueFilePut({
+				...file,
+				noteId: newNoteId, // 🔑 Заменяем локальный ID на реальный
+			});
+		}
+
+		// 🔑 3. Обновляем блоки заметки
+		const updatedBlocks = (localNote.blocks || []).map((block) => ({
+			...block,
+			note_id: newNoteId,
+		}));
 
 		const newNote: Note = {
 			...localNote,
 			ID: newNoteId,
-			title: localNote.title,
+			title: serverData.title || localNote.title,
 			updatedAt:
 				serverData.updated_at ?? serverData.updatedAt ?? localNote.updatedAt,
 			icon: localNote.icon || null,
+			blocks: updatedBlocks,
+			isLocal: false,
 		};
 
 		await db.notesDelete(localId);
 		await db.notesPut(newNote);
 
+		// 🔑 4. Обновляем все запросы в очереди
+		const pendingRequests = await db.getQueuedRequests();
+		for (const req of pendingRequests) {
+			let needUpdate = false;
+			let newEndpoint = req.endpoint;
+			let newBody = req.body;
+
+			if (req.endpoint && req.endpoint.includes(String(localId))) {
+				newEndpoint = req.endpoint.replace(
+					new RegExp(String(localId), 'g'),
+					String(newNoteId),
+				);
+				needUpdate = true;
+			}
+
+			if (req.body) {
+				const body = req.body as Record<string, unknown>;
+				if (body.note_id === localId) {
+					newBody = { ...body, note_id: newNoteId };
+					needUpdate = true;
+				}
+				if (body.noteId === localId) {
+					newBody = { ...body, noteId: newNoteId };
+					needUpdate = true;
+				}
+			}
+
+			if (needUpdate && req.id) {
+				await db.deleteQueuedRequest(req.id);
+				await db.queueRequest({
+					...req,
+					endpoint: newEndpoint,
+					body: newBody,
+					queuedAt: Date.now(),
+				});
+				console.log(`[Queue] Updated request to use new note ID: ${newNoteId}`);
+			}
+		}
+
+		// 🔑 5. Обновляем store
 		const notes = store
 			.getNotes()
 			.map((note) => (note.ID === localId ? newNote : note));
@@ -362,7 +416,12 @@ export const queueService = {
 				});
 			}
 			store.setActiveNoteId(newNoteId);
+			store.setActiveBlocksSilently(updatedBlocks);
 		}
+
+		console.log(
+			`[Queue] Note migrated, ${images.length} images updated, ${pendingRequests.length} requests updated`,
+		);
 	},
 
 	async _commitLocalBlockId(
@@ -377,69 +436,32 @@ export const queueService = {
 
 		try {
 			const imagesToUpdate = await db.imagesGetByBlockId(localId);
-
 			for (const image of imagesToUpdate) {
 				await db.imagesDelete(image.id);
-				await db.imagesPut({
-					...image,
-					id: image.id,
-					blockId: newBlockId,
-				});
+				await db.imagesPut({ ...image, id: image.id, blockId: newBlockId });
 			}
 		} catch (error) {
 			console.warn('[Queue] Failed to update images for block:', error);
 		}
 
-		try {
-			const queueFilesToUpdate = await db.queueFileGetByBlockId(localId);
-
-			for (const queueFile of queueFilesToUpdate) {
-				await db.queueFileDelete(queueFile.id);
-				await db.queueFilePut({
-					...queueFile,
-					id: queueFile.id,
-					blockId: newBlockId,
-				});
-			}
-		} catch (error) {
-			console.warn('[Queue] Failed to update queueFiles for block:', error);
-		}
-
 		const activeBlocks = store.getActiveBlocks();
 		const updatedActiveBlocks = activeBlocks.map((block) =>
-			block.id === localId ? { ...block, id: newBlockId } : block,
+			block.id === localId
+				? { ...block, id: newBlockId, isLocal: false }
+				: block,
 		);
-		store.setActiveBlocks(updatedActiveBlocks);
-
-		let foundNoteId: string | number | null = null;
+		store.setActiveBlocksSilently(updatedActiveBlocks);
 
 		const activeNoteId = store.getActiveNoteId();
 		if (activeNoteId) {
 			const activeNote = await db.notesGet(activeNoteId);
-			if (
-				activeNote &&
-				activeNote.blocks &&
-				activeNote.blocks.some((b) => b.id === localId)
-			) {
-				foundNoteId = activeNoteId;
+			if (activeNote && activeNote.blocks) {
 				const updatedBlocks = activeNote.blocks.map((block) =>
-					block.id === localId ? { ...block, id: newBlockId } : block,
+					block.id === localId
+						? { ...block, id: newBlockId, isLocal: false }
+						: block,
 				);
 				await db.notesPut({ ...activeNote, blocks: updatedBlocks });
-			}
-		}
-
-		if (!foundNoteId) {
-			const allNotes = await db.notesGetAll();
-			for (const note of allNotes) {
-				if (note.blocks && note.blocks.some((b) => b.id === localId)) {
-					foundNoteId = note.ID;
-					const updatedBlocks = note.blocks.map((block) =>
-						block.id === localId ? { ...block, id: newBlockId } : block,
-					);
-					await db.notesPut({ ...note, blocks: updatedBlocks });
-					break;
-				}
 			}
 		}
 	},
@@ -449,19 +471,24 @@ export const queueService = {
 		serverData: AttachmentApiResponse,
 	): Promise<void> {
 		let image = await db.imagesGet(localId);
-
 		if (!image) {
 			const imagesByUrl = await db.imagesGetByUrl(`local://${localId}`);
 			image = imagesByUrl[0];
 		}
-
 		if (!image) {
 			console.warn('[Queue] Image not found for localId:', localId);
 			return;
 		}
 
 		const newImageId = serverData.id;
-		const newImageUrl = serverData.attach_url;
+		const newImageUrl = serverData.attach_url.replace(
+			'http://minio:9000',
+			'/minio',
+		);
+
+		console.log(
+			`[Queue] Syncing image ${localId} -> ${newImageId} for block ${image.blockId}`,
+		);
 
 		const updatedImage = {
 			...image,
@@ -471,9 +498,11 @@ export const queueService = {
 			syncedAt: Date.now(),
 		};
 
+		// Обновляем изображение в БД
 		await db.imagesDelete(localId);
 		await db.imagesPut(updatedImage);
 		await db.queueFileDelete(localId);
+
 		const newImageContent = JSON.stringify({
 			url: newImageUrl,
 			filename: serverData.minio_key || image.filename,
@@ -481,36 +510,47 @@ export const queueService = {
 			mimeType: image.mimeType,
 			attachmentId: newImageId,
 		});
-		try {
-			const response = await client.put(
-				`/notes/${image.noteId}/blocks/${image.blockId}/content`,
-				{
-					content: newImageContent,
-				},
-			);
-			console.log(
-				'[Queue] Block content updated on server, response:',
-				response,
-			);
 
-			const cachedNote = await db.notesGet(image.noteId);
+		// Важно: используем актуальные ID заметки и блока
+		const noteId = image.noteId;
+		const blockId = image.blockId;
+
+		console.log(
+			`[Queue] Updating block content for note ${noteId}, block ${blockId}`,
+		);
+
+		try {
+			// Обновляем контент блока на сервере
+			await client.put(`/notes/${noteId}/blocks/${blockId}/content`, {
+				content: newImageContent,
+			});
+
+			// Обновляем кэш
+			const cachedNote = await db.notesGet(noteId);
 			if (cachedNote && cachedNote.blocks) {
 				const updatedBlocks = cachedNote.blocks.map((b) =>
-					b.id === image.blockId ? { ...b, content: newImageContent } : b,
+					String(b.id) === String(blockId)
+						? { ...b, content: newImageContent }
+						: b,
 				);
 				await db.notesPut({ ...cachedNote, blocks: updatedBlocks });
 			}
+
+			// Обновляем store
 			const blocks = store.getActiveBlocks();
 			const updatedBlocks = blocks.map((b) =>
-				b.id === image.blockId ? { ...b, content: newImageContent } : b,
+				String(b.id) === String(blockId)
+					? { ...b, content: newImageContent }
+					: b,
 			);
-			store.setActiveBlocks(updatedBlocks);
+			store.setActiveBlocksSilently(updatedBlocks);
+
+			console.log(`[Queue] Image synced successfully for block ${blockId}`);
 		} catch (error) {
 			console.error('[Queue] Failed to update block content:', error);
 			throw error;
 		}
 	},
-
 	async clearQueue(): Promise<void> {
 		await db.clearQueuedRequests();
 	},

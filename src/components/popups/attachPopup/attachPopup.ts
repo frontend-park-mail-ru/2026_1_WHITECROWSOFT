@@ -1,5 +1,6 @@
 import Handlebars from 'handlebars';
 import '../../../assets/style/genericPopup.scss';
+import { insertBlockInDOM } from '../../../pages/main/mainPage.js';
 import { attachmentService } from '../../../services/attachmentService.js';
 import { noteService } from '../../../services/noteService.js';
 import { store } from '../../../store.js';
@@ -12,13 +13,15 @@ export class AttachPopup {
 	private _onDocumentClick: ((e: MouseEvent) => void) | null;
 	private _onEscape: ((e: KeyboardEvent) => void) | null;
 	private fileInput: HTMLInputElement | null;
+	private afterBlockId: string | null;
 
-	constructor(anchorElement: HTMLElement) {
+	constructor(anchorElement: HTMLElement, afterBlockId: string | null = null) {
 		this.anchorElement = anchorElement;
 		this.element = null;
 		this._onDocumentClick = null;
 		this._onEscape = null;
 		this.fileInput = null;
+		this.afterBlockId = afterBlockId;
 	}
 
 	open(): void {
@@ -85,6 +88,23 @@ export class AttachPopup {
 		this._onEscape = null;
 	}
 
+	private async _createAndInsertBlock(
+		blockPromise: Promise<any>,
+	): Promise<void> {
+		const block = await blockPromise;
+		if (block) {
+			await insertBlockInDOM(block, this.afterBlockId);
+
+			const currentBlocks = store.getActiveBlocks();
+			const exists = currentBlocks.some((b) => b.id === block.id);
+			if (!exists) {
+				const updatedBlocks = [...currentBlocks, block];
+				updatedBlocks.sort((a, b) => a.position - b.position);
+				store.setActiveBlocksSilently(updatedBlocks);
+			}
+		}
+	}
+
 	private _bindPopupEvents(): void {
 		if (!this.element) return;
 
@@ -93,12 +113,16 @@ export class AttachPopup {
 			textBtn.addEventListener('click', async () => {
 				const activeNoteId = store.getActiveNoteId();
 				if (activeNoteId) {
-					await noteService.createBlock(activeNoteId, {
-						note_id: activeNoteId,
-						block_type_id: 1,
-						position: store.getActiveBlocks().length,
-						content: '',
-					});
+					const blockPromise = noteService.createBlockAfter(
+						activeNoteId,
+						{
+							note_id: activeNoteId,
+							block_type_id: 1,
+							content: '',
+						},
+						this.afterBlockId,
+					);
+					await this._createAndInsertBlock(blockPromise);
 				}
 				this.close();
 			});
@@ -144,7 +168,12 @@ export class AttachPopup {
 				}
 
 				try {
-					await attachmentService.createImageBlock(activeNoteId, file);
+					const blockPromise = attachmentService.createImageBlock(
+						activeNoteId,
+						file,
+						this.afterBlockId,
+					);
+					await this._createAndInsertBlock(blockPromise);
 				} catch (error) {
 					console.error('[AttachPopup] Error:', error);
 					alert('Ошибка при загрузке изображения');
