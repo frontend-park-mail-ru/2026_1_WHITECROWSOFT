@@ -41,9 +41,9 @@ export interface BlockFormatting {
 export interface FormattingRange {
 	start_pos: number;
 	end_pos: number;
-	bold?: boolean | null;
-	italic?: boolean | null;
-	underline?: boolean | null;
+	bold: boolean | null;
+	italic: boolean | null;
+	underline: boolean | null;
 }
 
 export interface ActiveNote {

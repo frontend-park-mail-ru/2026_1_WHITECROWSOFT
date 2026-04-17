@@ -1,8 +1,8 @@
-import { handleAuthError } from '../utils/handleAuthError';
 import { client } from '../client/client.js';
 import { db } from '../db.js';
 import { store } from '../store.js';
 import type { AttachmentApiResponse, Block } from '../types.js';
+import { handleAuthError } from '../utils/handleAuthError';
 import { noteService } from './noteService.js';
 import { queueService } from './requestQueueService.js';
 

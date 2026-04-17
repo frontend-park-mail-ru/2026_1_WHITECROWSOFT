@@ -108,10 +108,10 @@ export const router = {
 			return;
 		}
 
-		let session : UserSession;
+		let session: UserSession;
 		try {
 			session = await authService.getUserSession();
-		} catch(err) {
+		} catch (err) {
 			console.error('Failed to get user session:', err);
 			session = { isAuthenticated: false, user: null };
 		}
