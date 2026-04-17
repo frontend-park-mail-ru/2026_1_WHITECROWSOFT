@@ -10,11 +10,17 @@
 	gap: 6px;
 	pointer-events: auto;
 	visibility: hidden;
-	transform: translateX(-50%);
+	transform: translateX(-50%) translateY(6px);
+	opacity: 0;
+	transition:
+		opacity 0.15s ease,
+		transform 0.15s ease;
 	&--visible {
 		display: flex;
 		flex-direction: column;
 		visibility: visible;
+		opacity: 1;
+		transform: translateX(-50%) translateY(0);
 	}
 	&__row {
 		display: flex;
@@ -40,8 +46,8 @@
 				filter: brightness(0) invert(1);
 			}
 		}
-		&--disabled {	
-            cursor: not-allowed;
+		&--disabled {
+			cursor: not-allowed;
 			color: var(--faint-b);
 		}
 	}

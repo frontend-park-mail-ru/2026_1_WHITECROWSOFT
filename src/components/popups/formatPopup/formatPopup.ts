@@ -99,7 +99,9 @@ export class FormatPopup {
 		this._position();
 		this._bindGlobalCloseHandlers();
 		this._bindPopupEvents();
-		this.element.classList.add('formattingPopup--visible');
+		requestAnimationFrame(() => {
+			this.element?.classList.add('formattingPopup--visible');
+		});
 
 		this.element.addEventListener('mousedown', (e: MouseEvent) =>
 			e.stopPropagation(),

@@ -3,7 +3,7 @@
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	padding: 32px 20px 0px;
+	padding: 32px 20px 0px 85px;
 	height: 100vh;
 	overflow-y: auto;
 	background-color: var(--background);
@@ -23,7 +23,9 @@
 
 	&__content {
 		width: 100%;
-		max-width: 740px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
 		padding-bottom: 600px !important;
 	}
 	&__breadcrumb {
@@ -51,6 +53,21 @@
 		margin-bottom: 16px;
 		width: 100%;
 		text-align: left;
+		max-width: 740px;
+		&-input {
+			width: 100%;
+			border: none;
+			outline: none;
+			font-size: 2rem;
+			font-weight: 800;
+			padding: 0;
+			margin: 0;
+			max-width: 740px;
+			margin-bottom: 16px;
+
+			line-height: inherit;
+			box-sizing: content-box;
+		}
 	}
 	&__body {
 		width: 100%;
@@ -61,27 +78,27 @@
 		/* ??? */
 		word-wrap: break-word;
 		overflow-wrap: break-word;
-		padding-left: 48px;
 	}
 
 	&__block-wrapper {
 		position: relative;
-		margin-bottom: 4px;
+		margin: 0 auto 4px auto;
+		max-width: 740px;
 		border-radius: 4px;
 		transition: background-color 0.15s ease;
 
 		&:focus-within {
-		background-color: rgba(0, 0, 0, 0.03);
-		.note__block-actions {
-			opacity: 1;
-			visibility: visible;
-			transform: translateX(0);
-		}
+			background-color: rgba(0, 0, 0, 0.03);
+			.note__block-actions {
+				opacity: 1;
+				visibility: visible;
+				transform: translateX(0);
+			}
 		}
 
 		&--dragging {
-		opacity: 0.5;
-		background: var(--highlight);
+			opacity: 0.5;
+			background: var(--highlight);
 		}
 	}
 
@@ -125,45 +142,52 @@
 
 	&__block-actions {
 		position: absolute;
-		left: -44px;
-		top: 50%;
-		transform: translateX(-4px) translateY(-50%);
+		right: 100%;
+		margin-right: 8px;
+		top: 8px;
 		display: flex;
-		flex-direction: column;
+		flex-direction: row;
 		gap: 6px;
 		opacity: 0;
 		visibility: hidden;
-		transition: opacity 0.15s ease, visibility 0.15s ease, transform 0.15s ease;
+		transition:
+			opacity 0.15s ease,
+			visibility 0.15s ease,
+			transform 0.15s ease;
 		z-index: 10;
 
 		button {
-		width: 28px;
-		height: 28px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		border: none;
-		background: transparent;
-		border-radius: 6px;
-		cursor: pointer;
-		transition: background-color 0.15s ease;
-		
-		.icon {
-			width: 16px;
-			height: 16px;
-			opacity: 0.6;
-			transition: opacity 0.15s ease;
-		}
+			width: 28px;
+			height: 28px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			border: none;
+			background: transparent;
+			border-radius: 6px;
+			cursor: pointer;
+			transition: background-color 0.15s ease;
 
-		&:hover {
-			background-color: rgba(0, 0, 0, 0.08);
-			.icon { opacity: 1; }
-		}
+			.icon {
+				width: 16px;
+				height: 16px;
+				opacity: 0.6;
+				transition: opacity 0.15s ease;
+			}
 
-		&[data-action="drag"] {
-			cursor: grab;
-			&:active { cursor: grabbing; }
-		}
+			&:hover {
+				background-color: rgba(0, 0, 0, 0.08);
+				.icon {
+					opacity: 1;
+				}
+			}
+
+			&[data-action='drag'] {
+				cursor: grab;
+				&:active {
+					cursor: grabbing;
+				}
+			}
 		}
 	}
 }
