@@ -1,12 +1,12 @@
 .settings {
 	display: flex;
-	gap: 40px;
+	gap: 28px;
 	flex-direction: column;
 
 	&__block {
 		display: flex;
 		flex-direction: column;
-		gap: 16px;
+		gap: 8px;
 	}
 	&__wrapper {
 		display: flex;
