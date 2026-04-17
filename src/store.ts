@@ -83,6 +83,10 @@ class Store {
 		this._notify('activeNote', this.state.activeNote);
 	}
 
+	setActiveBlocksSilently(blocks: Block[]): void {
+		this.state.activeBlocks = blocks;
+	}
+
 	setActiveBlocks(blocks: Block[]): void {
 		this.state.activeBlocks = [...blocks];
 		this._notify('activeBlocks', this.state.activeBlocks);

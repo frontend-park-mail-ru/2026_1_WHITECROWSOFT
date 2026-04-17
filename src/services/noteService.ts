@@ -184,12 +184,15 @@ export const noteService = {
 
 	async createNote(data: CreateNoteData): Promise<Note> {
 		const isOnline = store.getOnline();
+		const localNoteId = `local-${Date.now()}`;
+
 		const localNote: Note = {
 			...data,
-			ID: `local-${Date.now()}`,
+			ID: localNoteId,
 			isLocal: true,
 			icon: null,
 			updatedAt: Date.now(),
+			blocks: [], // ⚠️ Не создаём блок здесь
 		};
 
 		if (isOnline) {
@@ -200,8 +203,20 @@ export const noteService = {
 					title: result.title,
 					icon: null,
 					updatedAt: result.updated_at || result.UpdatedAt || Date.now(),
+					blocks: [],
 				};
-				await db.notesPut(note);
+
+				// Создаём блок уже после синхронизации заметки
+				const createdBlock = await this.createBlock(note.ID, {
+					note_id: note.ID,
+					block_type_id: 1,
+					position: 0,
+					content: '',
+				});
+
+				const updatedNote = { ...note, blocks: [createdBlock] };
+				await db.notesPut(updatedNote);
+
 				const currentNotes = store.getNotes();
 				store.setNotes([note, ...currentNotes]);
 
@@ -212,45 +227,60 @@ export const noteService = {
 					text: '',
 				};
 				await this._setActiveNoteState(activeNote);
-				store.setActiveBlocks([]);
+				store.setActiveBlocks([createdBlock]);
 				return note;
 			} catch (error) {
-				console.warn(
-					`[noteService] Network failed (${error}), queueing create request`,
-				);
-				if (handleAuthError(error)) {
-					throw error;
-				}
+				console.warn(`[noteService] Network failed, queueing create request`);
+				if (handleAuthError(error)) throw error;
+
+				// Оффлайн режим - заметка без блоков
+				await db.notesPut(localNote);
+
+				const currentNotes = store.getNotes();
+				store.setNotes([localNote, ...currentNotes]);
+
+				const activeNote = {
+					ID: localNoteId,
+					title: localNote.title,
+					breadcrumb: localNote.title,
+					text: '',
+				};
+				await this._setActiveNoteState(activeNote);
+				store.setActiveBlocks([]); // ⚠️ Нет блоков
+
 				await queueService.enqueueRequest({
 					method: 'POST',
 					endpoint: '/notes',
 					body: data,
-					localId: localNote.ID as string,
+					localId: localNoteId,
 				});
+
+				return localNote;
 			}
 		}
 
+		// Оффлайн режим
 		await db.notesPut(localNote);
+
 		const currentNotes = store.getNotes();
 		store.setNotes([localNote, ...currentNotes]);
 
 		const activeNote = {
-			ID: localNote.ID,
+			ID: localNoteId,
 			title: localNote.title,
 			breadcrumb: localNote.title,
 			text: '',
 		};
 		await this._setActiveNoteState(activeNote);
-		store.setActiveBlocks([]);
+		store.setActiveBlocks([]); // ⚠️ Нет блоков
 
-		if (!isOnline) {
-			await queueService.enqueueRequest({
-				method: 'POST',
-				endpoint: '/notes',
-				body: data,
-				localId: localNote.ID as string,
-			});
-		}
+		await queueService.enqueueRequest({
+			method: 'POST',
+			endpoint: '/notes',
+			body: data,
+			localId: localNoteId,
+		});
+
 		return localNote;
 	},
 
@@ -432,6 +462,48 @@ export const noteService = {
 		return blocks;
 	},
 
+	async createBlockAfter(
+		noteID: string | number,
+		blockData: Omit<CreateBlockData, 'position'>,
+		afterBlockId: string | null = null,
+	): Promise<Block> {
+		let position = 0;
+		const blocks = store.getActiveBlocks();
+		const sortedBlocks = [...blocks].sort((a, b) => a.position - b.position);
+
+		if (afterBlockId) {
+			const afterBlock = sortedBlocks.find(
+				(b) => String(b.id) === afterBlockId,
+			);
+			if (afterBlock) {
+				const afterIndex = sortedBlocks.findIndex(
+					(b) => String(b.id) === afterBlockId,
+				);
+				if (afterIndex === sortedBlocks.length - 1) {
+					position = afterBlock.position + 1;
+				} else {
+					const nextBlock = sortedBlocks[afterIndex + 1];
+					position = nextBlock.position;
+				}
+			} else {
+				position =
+					sortedBlocks.length > 0
+						? sortedBlocks[sortedBlocks.length - 1].position + 1
+						: 0;
+			}
+		} else {
+			position =
+				sortedBlocks.length > 0
+					? sortedBlocks[sortedBlocks.length - 1].position + 1
+					: 0;
+		}
+
+		return this.createBlock(noteID, {
+			...blockData,
+			position,
+		});
+	},
+
 	async createBlock(
 		noteID: string | number,
 		blockData: CreateBlockData,
@@ -457,8 +529,7 @@ export const noteService = {
 					position: result.position,
 					formatting: { ranges: [] },
 				};
-				await this._updateCachedBlocks(noteID, block, 'add');
-				store.setActiveBlocks([...store.getActiveBlocks(), block]);
+				await this._updateCachedBlocksWithPosition(noteID, block, 'add');
 				return block;
 			} catch (error) {
 				console.warn(
@@ -476,15 +547,16 @@ export const noteService = {
 			}
 		}
 
-		await this._updateCachedBlocks(noteID, localBlock, 'add');
-		const currentBlocks = store.getActiveBlocks();
-		store.setActiveBlocks([...currentBlocks, localBlock]);
+		// Офлайн режим - только кэш и очередь, без обновления store
+		await this._updateCachedBlocksWithPosition(noteID, localBlock, 'add');
+
 		await queueService.enqueueRequest({
 			method: 'POST',
 			endpoint: `/notes/${noteID}/blocks`,
 			body: blockData,
 			localId: localBlock.id as string,
 		});
+
 		return localBlock;
 	},
 
@@ -514,6 +586,7 @@ export const noteService = {
 				});
 			}
 		} else {
+			console.log('CONTENT UPDATE');
 			await queueService.enqueueRequest({
 				method: 'PUT',
 				endpoint: `/notes/${noteID}/blocks/${blockID}/content`,
@@ -530,13 +603,8 @@ export const noteService = {
 			position: existingBlock?.position || 0,
 			formatting: existingBlock?.formatting || null,
 		};
-		await this._updateCachedBlocks(noteID, block, 'update');
-		const blocks = store.getActiveBlocks();
-		store.setActiveBlocks(
-			blocks.map((b) =>
-				b.id === blockID ? { ...b, content, updatedAt: Date.now() } : b,
-			),
-		);
+		await this._updateCachedBlocksWithPosition(noteID, block, 'update');
+
 		return block;
 	},
 
@@ -546,10 +614,22 @@ export const noteService = {
 		newPosition: number,
 	): Promise<Block> {
 		const isOnline = store.getOnline();
-		const isLocal = String(blockID).startsWith('local-');
-		store.reorderBlocks(blockID, newPosition);
+		const isLocalBlock = String(blockID).startsWith('local-');
+		const isLocalNote = this._isLocalNote(noteID);
 
-		if (isOnline && !isLocal) {
+		const existingBlocks = store.getActiveBlocks();
+		const existingBlock = existingBlocks.find((b) => b.id === blockID);
+
+		if (!existingBlock) {
+			throw new Error(`Block ${blockID} not found`);
+		}
+
+		// 🔑 Определяем, нужно ли ставить запрос в очередь
+		// (локальный блок/заметка ИЛИ оффлайн-режим)
+		const shouldQueue = isLocalBlock || isLocalNote || !isOnline;
+
+		// 🔑 Онлайн + не локальные сущности → пробуем отправить на сервер
+		if (isOnline && !isLocalBlock && !isLocalNote) {
 			try {
 				const result = await client.put<BlockApiResponse>(
 					`/notes/${noteID}/blocks/${blockID}/move`,
@@ -562,39 +642,50 @@ export const noteService = {
 					position: result.position,
 					formatting: { ranges: [] },
 				};
-				await this._updateCachedBlocks(noteID, block, 'update');
+				await this._updateCachedBlocksWithPosition(noteID, block, 'update');
 				return block;
 			} catch (error) {
 				console.warn(
-					`[noteService] Network failed (${error}), queueing block move request`,
+					`[noteService] Network failed, queueing block move request`,
 				);
 				if (handleAuthError(error)) {
 					throw error;
 				}
-				await queueService.enqueueRequest({
-					method: 'PUT',
-					endpoint: `/notes/${noteID}/blocks/${blockID}/move`,
-					body: { new_position: newPosition },
-				});
+				// При ошибке сети — ставим в очередь и продолжаем с локальным обновлением
 			}
-		} else if (!isOnline && !isLocal) {
+		}
+
+		// 🔑 Оффлайн или локальные сущности — сразу ставим в очередь
+		if (shouldQueue) {
 			await queueService.enqueueRequest({
 				method: 'PUT',
 				endpoint: `/notes/${noteID}/blocks/${blockID}/move`,
 				body: { new_position: newPosition },
 			});
+			console.log(
+				'[noteService] Queued block move:',
+				blockID,
+				'→',
+				newPosition,
+			);
 		}
 
-		const existingBlocks = store.getActiveBlocks();
-		const existingBlock = existingBlocks.find((b) => b.id === blockID);
+		// 🔑 Обновляем локальное состояние для мгновенного отклика UI
 		const block: Block = {
-			id: blockID,
-			block_type_id: existingBlock?.block_type_id || 0,
-			content: existingBlock?.content || '',
+			...existingBlock,
 			position: newPosition,
-			formatting: existingBlock?.formatting || null,
 		};
-		await this._updateCachedBlocks(noteID, block, 'update');
+
+		await this._updateCachedBlocksWithPosition(noteID, block, 'update');
+
+		const updatedBlocks = existingBlocks.map((b) =>
+			b.id === blockID ? block : b,
+		);
+		updatedBlocks.sort((a, b) => a.position - b.position);
+
+		store.setActiveBlocksSilently(updatedBlocks);
+		store.reorderBlocks(blockID, newPosition);
+
 		return block;
 	},
 
@@ -629,13 +720,19 @@ export const noteService = {
 			});
 		}
 
-		await this._updateCachedBlocks(noteID, { id: blockID } as Block, 'delete');
+		await this._updateCachedBlocksWithPosition(
+			noteID,
+			{ id: blockID } as Block,
+			'delete',
+		);
 		const currentBlocks = store.getActiveBlocks();
 		const updatedBlocks = currentBlocks.filter((b) => b.id !== blockID);
-		store.setActiveBlocks(updatedBlocks);
+		updatedBlocks.forEach((block, idx) => {
+			block.position = idx;
+		});
 	},
 
-	async _updateCachedBlocks(
+	async _updateCachedBlocksWithPosition(
 		noteID: string | number,
 		block: Block,
 		action: 'add' | 'update' | 'delete',
@@ -643,14 +740,24 @@ export const noteService = {
 		const cachedNote = await db.notesGet(noteID);
 		if (!cachedNote) return;
 		let blocks = cachedNote.blocks || [];
+
 		if (action === 'add') {
-			blocks.push(block);
+			// Проверяем, не существует ли уже такой блок
+			const exists = blocks.some((b) => b.id === block.id);
+			if (!exists) {
+				blocks.push(block);
+				blocks.sort((a, b) => a.position - b.position);
+			}
 		} else if (action === 'update') {
 			blocks = blocks.map((b) =>
 				b.id === block.id ? { ...b, ...block, updatedAt: Date.now() } : b,
 			);
+			blocks.sort((a, b) => a.position - b.position);
 		} else if (action === 'delete') {
 			blocks = blocks.filter((b) => b.id !== block.id);
+			blocks.forEach((b, idx) => {
+				b.position = idx;
+			});
 		}
 		await db.notesPut({ ...cachedNote, blocks, updatedAt: Date.now() });
 	},

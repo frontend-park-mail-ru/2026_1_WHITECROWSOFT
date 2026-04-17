@@ -61,7 +61,30 @@
 		/* ??? */
 		word-wrap: break-word;
 		overflow-wrap: break-word;
+		padding-left: 48px;
 	}
+
+	&__block-wrapper {
+		position: relative;
+		margin-bottom: 4px;
+		border-radius: 4px;
+		transition: background-color 0.15s ease;
+
+		&:focus-within {
+		background-color: rgba(0, 0, 0, 0.03);
+		.note__block-actions {
+			opacity: 1;
+			visibility: visible;
+			transform: translateX(0);
+		}
+		}
+
+		&--dragging {
+		opacity: 0.5;
+		background: var(--highlight);
+		}
+	}
+
 	&__header {
 		margin-bottom: 30px;
 	}
@@ -100,28 +123,47 @@
 		}
 	}
 
-	&__actions {
+	&__block-actions {
+		position: absolute;
+		left: -44px;
+		top: 50%;
+		transform: translateX(-4px) translateY(-50%);
 		display: flex;
-		margin-top: 24px;
-		justify-content: flex-start;
-		max-width: 740px;
-		width: 100%;
-		gap: 8px;
-		button {
-			border: 1px solid var(--faint-b);
-			background: var(--background);
-			padding: 6px 6px;
-			border-radius: 10px;
-			cursor: pointer;
-			&:hover {
-				background-color: var(--highlight);
-			}
-		}
-	}
+		flex-direction: column;
+		gap: 6px;
+		opacity: 0;
+		visibility: hidden;
+		transition: opacity 0.15s ease, visibility 0.15s ease, transform 0.15s ease;
+		z-index: 10;
 
-	&__dragBlock {
-		&--active {
-			background-color: var(--highlight) !important;
+		button {
+		width: 28px;
+		height: 28px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: none;
+		background: transparent;
+		border-radius: 6px;
+		cursor: pointer;
+		transition: background-color 0.15s ease;
+		
+		.icon {
+			width: 16px;
+			height: 16px;
+			opacity: 0.6;
+			transition: opacity 0.15s ease;
+		}
+
+		&:hover {
+			background-color: rgba(0, 0, 0, 0.08);
+			.icon { opacity: 1; }
+		}
+
+		&[data-action="drag"] {
+			cursor: grab;
+			&:active { cursor: grabbing; }
+		}
 		}
 	}
 }
