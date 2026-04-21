@@ -78,7 +78,6 @@ export const router = {
 			if (this._currentLayout) {
 				this._currentLayout.destroy();
 				this._currentLayout = null;
-				(window as any).appLayout = null;
 			}
 
 			const app = document.querySelector('#app');
@@ -87,8 +86,8 @@ export const router = {
 			}
 
 			try {
-				let modulePath = `../pages/${route.component}.ts`;
-				let moduleLoader = modules[modulePath];
+				const modulePath = `../pages/${route.component}.ts`;
+				const moduleLoader = modules[modulePath];
 
 				if (moduleLoader) {
 					const module = await moduleLoader();
@@ -145,7 +144,6 @@ export const router = {
 					if (!this._currentLayout) {
 						this._currentLayout = new Layout();
 						await this._currentLayout.init(false);
-						(window as any).appLayout = this._currentLayout;
 					}
 
 					await this._currentLayout.setPage(initFn, route.data);

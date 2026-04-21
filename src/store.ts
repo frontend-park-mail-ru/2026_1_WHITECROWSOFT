@@ -1,7 +1,7 @@
 import type { ActiveNote, Block, Note, StoreState, User } from './types';
 
-type SubscriberCallback<T> = (value: T) => void;
-type Subscribers = {
+export type SubscriberCallback<T> = (value: T) => void;
+export type Subscribers = {
 	user: Map<number, SubscriberCallback<User | null>>;
 	notes: Map<number, SubscriberCallback<Note[]>>;
 	activeNoteId: Map<number, SubscriberCallback<string | number | null>>;

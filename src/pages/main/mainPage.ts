@@ -19,7 +19,7 @@ let isDraggingSelection = false;
 let selectionTimeout: number | null = null;
 let currentContainer: HTMLElement | null = null;
 let unsubscribeFunctions: Array<() => void> = [];
-let domEventListeners: Map<
+const domEventListeners: Map<
 	EventTarget,
 	Map<string, EventListener[]>
 > = new Map();
@@ -99,10 +99,7 @@ async function saveBlockContent(blockEl: HTMLElement): Promise<void> {
 	}
 }
 
-async function deleteBlock(
-	blockId: string,
-	blockEl: HTMLElement,
-): Promise<void> {
+async function deleteBlock(blockId: string): Promise<void> {
 	const activeNoteId = store.getActiveNoteId();
 	if (!activeNoteId) return;
 
@@ -567,7 +564,7 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 
 	await _fullRenderBlocks(store.getActiveBlocks());
 
-	window.addEventListener('beforeunload', async (e) => {
+	window.addEventListener('beforeunload', async () => {
 		await saveAllBlocksContent();
 	});
 
@@ -734,7 +731,7 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 				e.preventDefault();
 				const blocks = store.getActiveBlocks();
 				if (blocks.length > 1) {
-					await deleteBlock(blockId, blockEl);
+					await deleteBlock(blockId);
 					removeBlockFromDOM(blockId);
 				}
 			}

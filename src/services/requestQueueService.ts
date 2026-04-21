@@ -278,10 +278,7 @@ export const queueService = {
 				return await client.put(endpoint, body as Record<string, unknown>);
 
 			case 'PATCH':
-				return await (client as any).patch(
-					endpoint,
-					body as Record<string, unknown>,
-				);
+				return await client.patch(endpoint, body as Record<string, unknown>);
 
 			case 'DELETE':
 				return await client.delete(endpoint);

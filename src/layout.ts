@@ -71,8 +71,8 @@ export class Layout {
 		this._unsubscribeActiveNoteId?.();
 		this._unsubscribeUser?.();
 
-		if (this.sidebar && typeof (this.sidebar as any).destroy === 'function') {
-			(this.sidebar as any).destroy();
+		if (this.sidebar) {
+			this.sidebar.destroy();
 		}
 
 		this.sidebar = null;

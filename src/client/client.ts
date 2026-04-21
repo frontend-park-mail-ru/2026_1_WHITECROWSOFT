@@ -116,7 +116,9 @@ class Client {
 			let responseData: T | null = null;
 			try {
 				responseData = (await response.json()) as T;
-			} catch {}
+			} catch {
+				console.log('[CLIENT] Getting response JSON failed *for some reason*');
+			}
 
 			if (!response.ok) {
 				throw createError.fromResponse(response, responseData);

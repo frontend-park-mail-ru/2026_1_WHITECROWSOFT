@@ -110,7 +110,7 @@ export interface ApiResponse<T = unknown> {
 export interface NoteApiResponse {
 	id: string | number;
 	title: string;
-	updated_at?: string;
+	updated_at?: string; // FIXME: Why the two "updated at" fields? Huh?
 	UpdatedAt?: string;
 }
 

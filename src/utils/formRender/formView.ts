@@ -1,3 +1,4 @@
+import { FormState } from '@/types.js';
 import { render } from '../utils.js';
 
 export interface ErrorCache {
@@ -7,7 +8,7 @@ export interface ErrorCache {
 }
 
 export interface FormView {
-	renderFull: (state: any) => void;
+	renderFull: (state: FormState) => void;
 	renderErrors: (errors: Record<string, string>, serverError?: string) => void;
 	updatePasswordVisibility: (
 		showPassword: boolean,
@@ -66,7 +67,7 @@ export function createFormView(
 	 * Полностью рендерит форму с текущим состоянием
 	 * @param state - состояние формы
 	 */
-	function renderFull(state: any): void {
+	function renderFull(state: FormState): void {
 		if (!container) return;
 		const html = template(state);
 		render(container, html);

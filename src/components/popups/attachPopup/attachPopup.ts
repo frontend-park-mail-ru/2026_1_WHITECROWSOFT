@@ -1,3 +1,4 @@
+import { Block } from '@/types';
 import Handlebars from 'handlebars';
 import '../../../assets/style/genericPopup.scss';
 import { insertBlockInDOM } from '../../../pages/main/mainPage.js';
@@ -60,7 +61,7 @@ export class AttachPopup {
 		if (!this.anchorElement || !this.element) return;
 		const rect = this.anchorElement.getBoundingClientRect();
 		const popupRect = this.element.getBoundingClientRect();
-		let top = rect.bottom + window.scrollY + 5;
+		const top = rect.bottom + window.scrollY + 5;
 		let left = rect.left + window.scrollX;
 		if (left + popupRect.width > window.innerWidth) {
 			left = window.innerWidth - popupRect.width - 10;
@@ -89,7 +90,7 @@ export class AttachPopup {
 	}
 
 	private async _createAndInsertBlock(
-		blockPromise: Promise<any>,
+		blockPromise: Promise<Block>,
 	): Promise<void> {
 		const block = await blockPromise;
 		if (block) {

@@ -11,10 +11,7 @@ import { setupForm } from './profileForms.js';
 import templateText from './profilePage.hbs?raw';
 import './profilePage.scss';
 
-export async function initProfilePage(
-	container: HTMLElement,
-	data: Record<string, unknown> = {},
-): Promise<void> {
+export async function initProfilePage(container: HTMLElement): Promise<void> {
 	registerHelpers();
 	registerPartials();
 

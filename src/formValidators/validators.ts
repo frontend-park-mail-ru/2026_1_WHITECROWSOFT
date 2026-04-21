@@ -108,7 +108,7 @@ export function validatePasswordState(password: string = ''): ValidationState {
 			id: 'no_special',
 			label: 'Не содержит символы: /@;<>',
 			error: 'Недопустимы символы: /@;<>',
-			isMet: !/[\/@;<>]/.test(password),
+			isMet: !/[/@;<>]/.test(password),
 		},
 	];
 }

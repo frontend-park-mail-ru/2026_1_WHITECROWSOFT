@@ -6,6 +6,7 @@ import type {
 	BlockApiResponse,
 	FormattingRange,
 	Note,
+	NoteApiResponse,
 } from '../types.js';
 import { handleAuthError } from '../utils/handleAuthError';
 import { queueService } from './requestQueueService.js';
@@ -50,12 +51,13 @@ export const noteService = {
 		if (isOnline) {
 			await queueService.flushQueue();
 			try {
-				const response = await client.get<{ notes: any[]; total?: number }>(
-					'/notes',
-				);
+				const response = await client.get<{
+					notes: NoteApiResponse[];
+					total?: number;
+				}>('/notes');
 				const notesArray = response.notes || [];
 
-				const notes: Note[] = notesArray.map((note: any) => ({
+				const notes: Note[] = notesArray.map((note) => ({
 					ID: note.id,
 					title: note.title,
 					icon: null,
@@ -86,7 +88,7 @@ export const noteService = {
 		const isOnline = store.getOnline();
 		if (isOnline) {
 			try {
-				const data = await client.get<any>(`/notes/${noteID}`);
+				const data = await client.get<GetNoteResponse>(`/notes/${noteID}`);
 				const serverNote = data.note;
 				const serverBlocks = data.blocks || [];
 
@@ -192,12 +194,12 @@ export const noteService = {
 			isLocal: true,
 			icon: null,
 			updatedAt: Date.now(),
-			blocks: [], // ⚠️ Не создаём блок здесь
+			blocks: [],
 		};
 
 		if (isOnline) {
 			try {
-				const result = await client.post<any>('/notes', data);
+				const result = await client.post<NoteApiResponse>('/notes', data);
 				const note: Note = {
 					ID: result.id,
 					title: result.title,
@@ -206,7 +208,6 @@ export const noteService = {
 					blocks: [],
 				};
 
-				// Создаём блок уже после синхронизации заметки
 				const createdBlock = await this.createBlock(note.ID, {
 					note_id: note.ID,
 					block_type_id: 1,
@@ -233,7 +234,6 @@ export const noteService = {
 				console.warn(`[noteService] Network failed, queueing create request`);
 				if (handleAuthError(error)) throw error;
 
-				// Оффлайн режим - заметка без блоков
 				await db.notesPut(localNote);
 
 				const currentNotes = store.getNotes();
@@ -246,7 +246,7 @@ export const noteService = {
 					text: '',
 				};
 				await this._setActiveNoteState(activeNote);
-				store.setActiveBlocks([]); // ⚠️ Нет блоков
+				store.setActiveBlocks([]);
 
 				await queueService.enqueueRequest({
 					method: 'POST',
@@ -259,7 +259,6 @@ export const noteService = {
 			}
 		}
 
-		// Оффлайн режим
 		await db.notesPut(localNote);
 
 		const currentNotes = store.getNotes();
@@ -272,7 +271,7 @@ export const noteService = {
 			text: '',
 		};
 		await this._setActiveNoteState(activeNote);
-		store.setActiveBlocks([]); // ⚠️ Нет блоков
+		store.setActiveBlocks([]);
 
 		await queueService.enqueueRequest({
 			method: 'POST',
@@ -341,7 +340,10 @@ export const noteService = {
 
 		if (isOnline && !isLocal) {
 			try {
-				const result = await client.put<any>(`/notes/${noteID}`, data);
+				const result = await client.put<NoteApiResponse>(
+					`/notes/${noteID}`,
+					data,
+				);
 				const note: Note = {
 					ID: result.id,
 					title: result.title,
@@ -467,7 +469,7 @@ export const noteService = {
 		blockData: Omit<CreateBlockData, 'position'>,
 		afterBlockId: string | null = null,
 	): Promise<Block> {
-		let position = 0;
+		let position;
 		const blocks = store.getActiveBlocks();
 		const sortedBlocks = [...blocks].sort((a, b) => a.position - b.position);
 
@@ -547,7 +549,6 @@ export const noteService = {
 			}
 		}
 
-		// Офлайн режим - только кэш и очередь, без обновления store
 		await this._updateCachedBlocksWithPosition(noteID, localBlock, 'add');
 
 		await queueService.enqueueRequest({
@@ -624,11 +625,8 @@ export const noteService = {
 			throw new Error(`Block ${blockID} not found`);
 		}
 
-		// 🔑 Определяем, нужно ли ставить запрос в очередь
-		// (локальный блок/заметка ИЛИ оффлайн-режим)
 		const shouldQueue = isLocalBlock || isLocalNote || !isOnline;
 
-		// 🔑 Онлайн + не локальные сущности → пробуем отправить на сервер
 		if (isOnline && !isLocalBlock && !isLocalNote) {
 			try {
 				const result = await client.put<BlockApiResponse>(
@@ -651,11 +649,9 @@ export const noteService = {
 				if (handleAuthError(error)) {
 					throw error;
 				}
-				// При ошибке сети — ставим в очередь и продолжаем с локальным обновлением
 			}
 		}
 
-		// 🔑 Оффлайн или локальные сущности — сразу ставим в очередь
 		if (shouldQueue) {
 			await queueService.enqueueRequest({
 				method: 'PUT',
@@ -670,7 +666,6 @@ export const noteService = {
 			);
 		}
 
-		// 🔑 Обновляем локальное состояние для мгновенного отклика UI
 		const block: Block = {
 			...existingBlock,
 			position: newPosition,
@@ -742,7 +737,6 @@ export const noteService = {
 		let blocks = cachedNote.blocks || [];
 
 		if (action === 'add') {
-			// Проверяем, не существует ли уже такой блок
 			const exists = blocks.some((b) => b.id === block.id);
 			if (!exists) {
 				blocks.push(block);
@@ -821,7 +815,7 @@ export const noteService = {
 	): Promise<void> {
 		try {
 			const existing = await db.formattingGet(blockId);
-			let ranges = existing?.formatting?.ranges || [];
+			const ranges = existing?.formatting?.ranges || [];
 			const rangeIndex = ranges.findIndex(
 				(r: FormattingRange) =>
 					r.start_pos === formatting.start_pos &&
