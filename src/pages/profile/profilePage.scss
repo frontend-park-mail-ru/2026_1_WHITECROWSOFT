@@ -1,12 +1,12 @@
 .settings {
 	display: flex;
-	gap: 40px;
+	gap: 28px;
 	flex-direction: column;
 
 	&__block {
 		display: flex;
 		flex-direction: column;
-		gap: 16px;
+		gap: 8px;
 	}
 	&__wrapper {
 		display: flex;
@@ -60,7 +60,7 @@
 		background: none;
 		color: var(--oceanic);
 		font-size: 16px;
-		font-weight: 800;
+		font-weight: 600;
 		cursor: pointer;
 
 		display: inline-flex;

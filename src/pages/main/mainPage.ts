@@ -520,7 +520,7 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 		if (!emptyState || !notePath || !noteContent) return;
 		emptyState.style.display = hasNote ? 'none' : 'flex';
 		notePath.style.display = hasNote ? 'flex' : 'none';
-		noteContent.style.display = hasNote ? 'block' : 'none';
+		noteContent.style.display = hasNote ? 'flex' : 'none';
 	}
 
 	const unsubActiveNote = store.subscribe(
