@@ -469,36 +469,26 @@ export const noteService = {
 		blockData: Omit<CreateBlockData, 'position'>,
 		afterBlockId: string | null = null,
 	): Promise<Block> {
-		let position;
 		const blocks = store.getActiveBlocks();
 		const sortedBlocks = [...blocks].sort((a, b) => a.position - b.position);
 
+		let insertIndex: number;
+
 		if (afterBlockId) {
-			const afterBlock = sortedBlocks.find(
+			const afterIndex = sortedBlocks.findIndex(
 				(b) => String(b.id) === afterBlockId,
 			);
-			if (afterBlock) {
-				const afterIndex = sortedBlocks.findIndex(
-					(b) => String(b.id) === afterBlockId,
-				);
-				if (afterIndex === sortedBlocks.length - 1) {
-					position = afterBlock.position + 1;
-				} else {
-					const nextBlock = sortedBlocks[afterIndex + 1];
-					position = nextBlock.position;
-				}
-			} else {
-				position =
-					sortedBlocks.length > 0
-						? sortedBlocks[sortedBlocks.length - 1].position + 1
-						: 0;
-			}
+			insertIndex = afterIndex !== -1 ? afterIndex + 1 : sortedBlocks.length;
 		} else {
-			position =
-				sortedBlocks.length > 0
-					? sortedBlocks[sortedBlocks.length - 1].position + 1
-					: 0;
+			insertIndex = sortedBlocks.length;
 		}
+
+		const shifted = sortedBlocks.map((b, i) =>
+			i >= insertIndex ? { ...b, position: i + 1 } : { ...b, position: i },
+		);
+		store.setActiveBlocksSilently(shifted);
+
+		const position = insertIndex;
 
 		return this.createBlock(noteID, {
 			...blockData,
@@ -532,6 +522,14 @@ export const noteService = {
 					formatting: { ranges: [] },
 				};
 				await this._updateCachedBlocksWithPosition(noteID, block, 'add');
+				const existingBlocks = store.getActiveBlocks();
+				const alreadyInStore = existingBlocks.some((b) => b.id === block.id);
+				if (!alreadyInStore) {
+					const updated = [...existingBlocks, block].sort(
+						(a, b) => a.position - b.position,
+					);
+					store.setActiveBlocksSilently(updated);
+				}
 				return block;
 			} catch (error) {
 				console.warn(
@@ -550,6 +548,14 @@ export const noteService = {
 		}
 
 		await this._updateCachedBlocksWithPosition(noteID, localBlock, 'add');
+		const existingBlocks = store.getActiveBlocks();
+		const alreadyInStore = existingBlocks.some((b) => b.id === localBlock.id);
+		if (!alreadyInStore) {
+			const updated = [...existingBlocks, localBlock].sort(
+				(a, b) => a.position - b.position,
+			);
+			store.setActiveBlocksSilently(updated);
+		}
 
 		await queueService.enqueueRequest({
 			method: 'POST',

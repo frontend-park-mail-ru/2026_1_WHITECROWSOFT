@@ -369,6 +369,83 @@ export function removeBlockFromDOM(blockId: string): void {
 	}
 }
 
+function _getCaretParts(
+	blockEl: HTMLElement,
+): { before: string; after: string } | null {
+	const selection = window.getSelection();
+	if (!selection || selection.rangeCount === 0) return null;
+
+	const range = selection.getRangeAt(0);
+	range.collapse(true);
+
+	const marker = document.createElement('span');
+	marker.id = '__split_marker__';
+	range.insertNode(marker);
+
+	const fullHTML = blockEl.innerHTML;
+
+	marker.remove();
+
+	const MARKER = '<span id="__split_marker__"></span>';
+	const splitIndex = fullHTML.indexOf(MARKER);
+	if (splitIndex === -1) return null;
+
+	return {
+		before: fullHTML.slice(0, splitIndex),
+		after: fullHTML.slice(splitIndex + MARKER.length),
+	};
+}
+
+function _isCaretAtStart(blockEl: HTMLElement): boolean {
+	const selection = window.getSelection();
+	if (!selection || selection.rangeCount === 0) return false;
+	if (!selection.isCollapsed) return false;
+
+	const range = selection.getRangeAt(0);
+	const beforeRange = document.createRange();
+	beforeRange.setStart(blockEl, 0);
+	beforeRange.setEnd(range.startContainer, range.startOffset);
+	return beforeRange.toString().length === 0;
+}
+
+function _placeCursorAtStart(el: HTMLElement): void {
+	const selection = window.getSelection();
+	if (!selection) return;
+	const range = document.createRange();
+	range.setStart(el, 0);
+	range.collapse(true);
+	selection.removeAllRanges();
+	selection.addRange(range);
+}
+
+function _setCursorAtTextOffset(el: HTMLElement, offset: number): void {
+	const selection = window.getSelection();
+	if (!selection) return;
+
+	const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+	let remaining = offset;
+	let node: Text | null;
+
+	while ((node = walker.nextNode() as Text | null)) {
+		if (remaining <= (node as Text).length) {
+			const range = document.createRange();
+			range.setStart(node, remaining);
+			range.collapse(true);
+			selection.removeAllRanges();
+			selection.addRange(range);
+			return;
+		}
+		remaining -= (node as Text).length;
+	}
+
+	// fallback: place cursor at end
+	const range = document.createRange();
+	range.selectNodeContents(el);
+	range.collapse(false);
+	selection.removeAllRanges();
+	selection.addRange(range);
+}
+
 async function _fullRenderBlocks(blocks: Block[]): Promise<void> {
 	const noteBody = document.querySelector('.note__body') as HTMLElement | null;
 	if (!noteBody) return;
@@ -712,8 +789,7 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 
 			const isDelete = e.key === 'Delete';
 			const isBackspace = e.key === 'Backspace';
-
-			if (!isDelete && !isBackspace) return;
+			const isEnter = e.key === 'Enter';
 
 			const wrapper = blockEl.closest('.note__block-wrapper') as HTMLElement;
 			if (!wrapper) return;
@@ -722,10 +798,84 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 			if (!blockId) return;
 
 			const isTextBlock = blockEl.contentEditable === 'true';
+			const isImageBlock = blockEl.classList.contains('note__imageBlock');
+
+			// Split
+			if (isEnter && !e.shiftKey && isTextBlock) {
+				e.preventDefault();
+				const activeNoteId = store.getActiveNoteId();
+				if (!activeNoteId) return;
+
+				const parts = _getCaretParts(blockEl);
+				if (!parts) return;
+
+				blockEl.innerHTML = parts.before;
+				await saveBlockContent(blockEl);
+
+				const createdBlock = await noteService.createBlockAfter(
+					activeNoteId,
+					{ note_id: activeNoteId, block_type_id: 1, content: '' },
+					blockId,
+				);
+				const newBlock = await noteService.updateBlockContent(
+					activeNoteId,
+					createdBlock.id,
+					parts.after,
+				);
+
+				await insertBlockInDOM({ ...newBlock, content: parts.after }, blockId);
+
+				const newBlockEl = document.querySelector(
+					`.note__block-wrapper[data-block-id="${newBlock.id}"] .note__block`,
+				) as HTMLElement | null;
+				if (newBlockEl) {
+					newBlockEl.focus();
+					_placeCursorAtStart(newBlockEl);
+				}
+				return;
+			}
+
+			if (!isDelete && !isBackspace) return;
+
 			const isEmpty = isTextBlock && blockEl.innerText.trim() === '';
+
+			// Join
+			if (isBackspace && isTextBlock && !isEmpty && _isCaretAtStart(blockEl)) {
+				e.preventDefault();
+				const activeNoteId = store.getActiveNoteId();
+				if (!activeNoteId) return;
+
+				const allWrappers = Array.from(
+					noteBody.querySelectorAll('.note__block-wrapper'),
+				);
+				const currentIndex = allWrappers.indexOf(wrapper);
+				if (currentIndex <= 0) return;
+
+				const prevWrapper = allWrappers[currentIndex - 1] as HTMLElement;
+				const prevBlockEl = prevWrapper.querySelector(
+					'.note__block',
+				) as HTMLElement | null;
+				const prevBlockId = prevWrapper.dataset.blockId;
+
+				if (
+					!prevBlockEl ||
+					prevBlockEl.contentEditable !== 'true' ||
+					!prevBlockId
+				)
+					return;
+
+				const joinOffset = prevBlockEl.innerText.length;
+				prevBlockEl.innerHTML = prevBlockEl.innerHTML + blockEl.innerHTML;
+				await saveBlockContent(prevBlockEl);
+				await deleteBlock(blockId);
+				removeBlockFromDOM(blockId);
+				prevBlockEl.focus();
+				_setCursorAtTextOffset(prevBlockEl, joinOffset);
+				return;
+			}
+
 			const isLastChar =
 				isBackspace && isTextBlock && blockEl.innerText.length === 0;
-			const isImageBlock = blockEl.classList.contains('note__imageBlock');
 
 			if (isImageBlock || isEmpty || isLastChar) {
 				e.preventDefault();
