@@ -121,78 +121,34 @@ async function deleteBlock(blockId: string): Promise<void> {
 	}
 }
 
-function startTitleInlineEdit(
-	titleEl: HTMLElement,
-	currentTitle: string,
-): void {
-	const input = document.createElement('input');
-	input.type = 'text';
-	input.value = currentTitle;
-	input.className = 'note__title-input';
-	input.style.width = '100%';
-	input.style.border = 'none';
-	input.style.outline = 'none';
-	input.style.background = 'transparent';
-	input.style.fontSize = '2rem';
-	input.style.fontWeight = '800';
-	input.style.fontFamily = 'inherit';
-	input.style.color = 'var(--text)';
+async function saveTitleEdit(
+	input: HTMLInputElement,
+	originalTitle: string,
+): Promise<void> {
+	const newTitle = input.value.trim();
+	const activeNoteId = store.getActiveNoteId();
 
-	titleEl.replaceWith(input);
-	input.focus();
-	input.select();
+	if (!newTitle) {
+		input.value = originalTitle;
+		return;
+	}
 
-	const saveEdit = async (): Promise<void> => {
-		const newTitle = input.value.trim();
-		const activeNoteId = store.getActiveNoteId();
-
-		if (activeNoteId && newTitle && newTitle !== currentTitle) {
-			try {
-				await noteService.updateNote(activeNoteId, { title: newTitle });
-				const activeNote = store.getActiveNote();
-				if (activeNote) {
-					const updatedNote = {
-						...activeNote,
-						title: newTitle,
-						breadcrumb: newTitle,
-					};
-					store.setActiveNote(updatedNote);
-				}
-			} catch (error) {
-				console.error('Error renaming note:', error);
+	if (activeNoteId && newTitle !== originalTitle) {
+		try {
+			await noteService.updateNote(activeNoteId, { title: newTitle });
+			const activeNote = store.getActiveNote();
+			if (activeNote) {
+				store.setActiveNote({
+					...activeNote,
+					title: newTitle,
+					breadcrumb: newTitle,
+				});
 			}
+		} catch (error) {
+			console.error('Error renaming note:', error);
+			input.value = originalTitle;
 		}
-
-		const newTitleEl = document.createElement('h1');
-		newTitleEl.className = 'note__title';
-		newTitleEl.textContent = newTitle || currentTitle;
-		input.replaceWith(newTitleEl);
-
-		newTitleEl.addEventListener('dblclick', () => {
-			startTitleInlineEdit(newTitleEl, newTitleEl.textContent || '');
-		});
-	};
-
-	const cancelEdit = (): void => {
-		const newTitleEl = document.createElement('h1');
-		newTitleEl.className = 'note__title';
-		newTitleEl.textContent = currentTitle;
-		input.replaceWith(newTitleEl);
-
-		newTitleEl.addEventListener('dblclick', () => {
-			startTitleInlineEdit(newTitleEl, currentTitle);
-		});
-	};
-
-	input.addEventListener('blur', saveEdit);
-	input.addEventListener('keydown', (e: KeyboardEvent) => {
-		if (e.key === 'Enter') {
-			e.preventDefault();
-			saveEdit();
-		} else if (e.key === 'Escape') {
-			cancelEdit();
-		}
-	});
+	}
 }
 
 export async function createBlockWrapperDOM(
@@ -577,16 +533,32 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 	const noteContent = container.querySelector(
 		'.note__content',
 	) as HTMLElement | null;
-	const titleEl = container.querySelector('.note__title') as HTMLElement | null;
+	const titleEl = container.querySelector(
+		'.note__title',
+	) as HTMLInputElement | null;
 	const breadcrumbEl = container.querySelector(
 		'.note__breadcrumbItem--current',
 	) as HTMLElement | null;
 
 	if (titleEl) {
-		titleEl.addEventListener('dblclick', (e) => {
-			e.stopPropagation();
-			const currentTitle = titleEl?.textContent || '';
-			startTitleInlineEdit(titleEl!, currentTitle);
+		let savedTitle = titleEl.value;
+
+		titleEl.addEventListener('focus', () => {
+			savedTitle = titleEl.value;
+		});
+
+		titleEl.addEventListener('blur', () => {
+			saveTitleEdit(titleEl, savedTitle);
+		});
+
+		titleEl.addEventListener('keydown', (e: KeyboardEvent) => {
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				titleEl.blur();
+			} else if (e.key === 'Escape') {
+				titleEl.value = savedTitle;
+				titleEl.blur();
+			}
 		});
 	}
 
@@ -602,9 +574,9 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 		(activeNoteData: ActiveNote | null) => {
 			const currentTitleEl = document.querySelector(
 				'.note__title',
-			) as HTMLElement | null;
+			) as HTMLInputElement | null;
 			if (currentTitleEl) {
-				currentTitleEl.textContent = activeNoteData?.title || '';
+				currentTitleEl.value = activeNoteData?.title || '';
 			}
 			if (breadcrumbEl)
 				breadcrumbEl.textContent = activeNoteData?.breadcrumb || '';
@@ -955,16 +927,18 @@ export async function cleanupMainPage(): Promise<void> {
 }
 
 function _updateActiveNoteInDOM(activeNote: ActiveNote | null): void {
-	const titleEl = document.querySelector('.note__title') as HTMLElement | null;
+	const titleEl = document.querySelector(
+		'.note__title',
+	) as HTMLInputElement | null;
 	const breadcrumbEl = document.querySelector(
 		'.note__breadcrumbItem--current',
 	) as HTMLElement | null;
 	if (!activeNote) {
-		if (titleEl) titleEl.textContent = '';
+		if (titleEl) titleEl.value = '';
 		if (breadcrumbEl) breadcrumbEl.textContent = '';
 		return;
 	}
-	if (titleEl) titleEl.textContent = activeNote.title;
+	if (titleEl) titleEl.value = activeNote.title;
 	if (breadcrumbEl) breadcrumbEl.textContent = activeNote.breadcrumb;
 }
 
