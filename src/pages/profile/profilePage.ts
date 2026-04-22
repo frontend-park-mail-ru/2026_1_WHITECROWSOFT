@@ -63,21 +63,15 @@ function setupProfileForms(app: HTMLElement): void {
 			const file = target.files?.[0];
 			if (!file) return;
 
-			if (file.size > 1024 * 1024) {
-				alert('Файл слишком большой (макс. 1 МБ)');
+			if (file.size > 1024 * 1024 * 5) {
+				alert('Файл слишком большой (макс. 5 МБ)');
 				avatarInput.value = '';
 				return;
 			}
 
-			const allowedTypes = [
-				'image/png',
-				'image/jpeg',
-				'image/jpg',
-				'image/gif',
-				'image/webp',
-			];
+			const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
 			if (!allowedTypes.includes(file.type)) {
-				alert('Недопустимый формат (PNG, JPG, GIF, WEBP)');
+				alert('Недопустимый формат (разрешены PNG, JPG, WEBP)');
 				avatarInput.value = '';
 				return;
 			}
