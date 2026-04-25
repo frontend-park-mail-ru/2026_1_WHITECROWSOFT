@@ -16,6 +16,18 @@ export interface TicketStats {
 	averageRating?: number;
 }
 
+interface ServerStatsResponse {
+	total: number;
+	open: number;
+	in_progress: number;
+	waiting_user: number;
+	closed: number;
+	bug_count: number;
+	suggestion_count: number;
+	complaint_count: number;
+	average_rating?: number;
+}
+
 let currentContainer: HTMLElement | null = null;
 let refreshInterval: number | null = null;
 
@@ -43,12 +55,11 @@ export async function initStatsPage(container: HTMLElement): Promise<void> {
 
 	await loadStats(container);
 	attachEvents(container);
-	startAutoRefresh();
 }
 
 async function loadStats(container: HTMLElement): Promise<void> {
 	try {
-		const response = await fetch('/api/tickets/stats', {
+		const response = await fetch('/api/support/stats', {
 			method: 'GET',
 			headers: {
 				'Content-Type': 'application/json',
@@ -61,7 +72,20 @@ async function loadStats(container: HTMLElement): Promise<void> {
 			throw new Error(errorData.error || 'Ошибка загрузки статистики');
 		}
 
-		const stats: TicketStats = await response.json();
+		const serverStats: ServerStatsResponse = await response.json();
+
+		const stats: TicketStats = {
+			total: serverStats.total,
+			open: serverStats.open,
+			inProgress: serverStats.in_progress,
+			waitingUser: serverStats.waiting_user,
+			closed: serverStats.closed,
+			bugCount: serverStats.bug_count,
+			suggestionCount: serverStats.suggestion_count,
+			complaintCount: serverStats.complaint_count,
+			averageRating: serverStats.average_rating,
+		};
+
 		updateStatsUI(container, stats);
 	} catch (error) {
 		if (handleAuthError(error)) return;
@@ -114,6 +138,16 @@ function updateStatsUI(container: HTMLElement, stats: TicketStats): void {
 		updateProgressPercent(container, 'inProgressPercent', inProgressPercent);
 		updateProgressPercent(container, 'waitingUserPercent', waitingUserPercent);
 		updateProgressPercent(container, 'closedPercent', closedPercent);
+	} else {
+		updateProgressBar(container, 'open', 0);
+		updateProgressBar(container, 'inProgress', 0);
+		updateProgressBar(container, 'waitingUser', 0);
+		updateProgressBar(container, 'closed', 0);
+
+		updateProgressPercent(container, 'openPercent', 0);
+		updateProgressPercent(container, 'inProgressPercent', 0);
+		updateProgressPercent(container, 'waitingUserPercent', 0);
+		updateProgressPercent(container, 'closedPercent', 0);
 	}
 }
 
@@ -185,17 +219,6 @@ function attachEvents(container: HTMLElement): void {
 			btn.disabled = false;
 		});
 	}
-}
-
-function startAutoRefresh(): void {
-	if (refreshInterval) {
-		clearInterval(refreshInterval);
-	}
-	refreshInterval = window.setInterval(() => {
-		if (currentContainer && document.body.contains(currentContainer)) {
-			loadStats(currentContainer);
-		}
-	}, 30000);
 }
 
 export async function cleanupStatsPage(): Promise<void> {

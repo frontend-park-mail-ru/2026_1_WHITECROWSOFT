@@ -208,6 +208,9 @@
                 if (response.ok) {
                     const data = await response.json();
                     csrfToken = data.csrf_token || data.token;
+                    console.log('CSRF token fetched:', csrfToken ? 'Yes' : 'No');
+                } else {
+                    console.warn('Failed to fetch CSRF token, status:', response.status);
                 }
             } catch (error) {
                 console.warn('Failed to fetch CSRF token:', error);
@@ -220,7 +223,10 @@
                 ...options.headers
             };
             
-            if (csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE')) {
+            const method = options.method || 'GET';
+            const isMutatingMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+            
+            if (csrfToken && isMutatingMethod) {
                 headers['X-CSRF-Token'] = csrfToken;
             }
             
@@ -230,22 +236,36 @@
                 credentials: 'include'
             });
             
-            if (response.status === 403 && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE')) {
+            if (response.status === 403 && isMutatingMethod) {
+                console.warn('CSRF validation failed, refreshing token...');
                 await fetchCsrfToken();
-                headers['X-CSRF-Token'] = csrfToken;
-                const retryResponse = await fetch(url, {
-                    ...options,
-                    headers: headers,
-                    credentials: 'include'
-                });
-                if (!retryResponse.ok) {
-                    throw new Error(`HTTP ${retryResponse.status}`);
+                
+                if (csrfToken) {
+                    headers['X-CSRF-Token'] = csrfToken;
+                    const retryResponse = await fetch(url, {
+                        ...options,
+                        headers: headers,
+                        credentials: 'include'
+                    });
+                    
+                    if (!retryResponse.ok) {
+                        const errorText = await retryResponse.text();
+                        throw new Error(`HTTP ${retryResponse.status}: ${errorText}`);
+                    }
+                    
+                    if (retryResponse.status === 204) {
+                        return null;
+                    }
+                    
+                    return retryResponse.json();
+                } else {
+                    throw new Error('Failed to get CSRF token');
                 }
-                return retryResponse.json();
             }
             
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+                const errorText = await response.text();
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
             
             if (response.status === 204) {
@@ -263,12 +283,16 @@
         }
 
         async function getUserTickets() {
-            const response = await fetchWithAuth('/api/support/tickets');
+            const response = await fetchWithAuth('/api/support/tickets', {
+                method: 'GET'
+            });
             return response.tickets || [];
         }
 
         async function getStats() {
-            return await fetchWithAuth('/api/support/stats');
+            return await fetchWithAuth('/api/support/stats', {
+                method: 'GET'
+            });
         }
 
         function escapeHtml(text) {
@@ -315,21 +339,22 @@
                 
                 try {
                     const newTicket = await createTicket(data);
-                    alert('Обращение успешно создано!');
                     form.reset();
-                    
+                    alert('Обращение успешно создано!');
                     window.parent.postMessage({ 
                         type: 'support:ticketCreated', 
                         data: newTicket 
                     }, '*');
                 } catch (error) {
-                    alert('Ошибка при создании: ' + error.message);
+                    console.error('Error creating ticket:', error);
+                    alert('Ошибка при создании обращения: ' + error.message);
                 }
             });
         }
 
         async function loadMyTickets() {
             const app = document.getElementById('app');
+            app.innerHTML = '<div class="loading">Загрузка обращений...</div>';
             
             try {
                 const tickets = await getUserTickets();
@@ -385,13 +410,13 @@
                 
                 app.innerHTML = html;
             } catch (error) {
+                console.error('Error loading tickets:', error);
                 app.innerHTML = '<div class="empty-state">Ошибка загрузки обращений: ' + error.message + '</div>';
             }
         }
 
         async function loadStats() {
             const app = document.getElementById('app');
-            
             try {
                 const stats = await getStats();
                 
@@ -416,6 +441,10 @@
                         <div class="stat-card">
                             <div class="stat-value">${stats.in_progress || 0}</div>
                             <div class="stat-label">${statusMap.in_progress}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.waiting_user || 0}</div>
+                            <div class="stat-label">${statusMap.waiting_user}</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-value">${stats.closed || 0}</div>
@@ -450,6 +479,7 @@
                 
                 app.innerHTML = html;
             } catch (error) {
+                console.error('Error loading stats:', error);
                 app.innerHTML = '<div class="empty-state">Ошибка загрузки статистики: ' + error.message + '</div>';
             }
         }
