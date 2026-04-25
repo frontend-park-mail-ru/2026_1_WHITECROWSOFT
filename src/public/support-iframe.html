@@ -18,19 +18,33 @@
             height: 100vh;
         }
 
-        .container {
-            padding: 20px;
+        .support-container {
+            padding: 24px;
+        }
+
+        .support-title {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 24px;
+            color: var(--text-primary, #333);
+        }
+
+        .support-subtitle {
+            font-weight: 600;
+            font-size: 20px;
+            margin-bottom: 16px;
+            color: var(--text-primary, #333);
         }
 
         .form-group {
-            margin-bottom: 16px;
+            margin-bottom: 20px;
         }
 
         label {
             display: block;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             font-weight: 500;
-            color: #333;
+            color: var(--text-secondary, #666);
             font-size: 14px;
         }
 
@@ -46,24 +60,24 @@
 
         select:focus, input:focus, textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--oceanic, #667eea);
         }
 
         button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--oceanic, #667eea);
             color: white;
             border: none;
             padding: 10px 20px;
             border-radius: 8px;
             cursor: pointer;
             font-size: 14px;
-            font-weight: 500;
-            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: 600;
+            transition: all 0.2s;
         }
 
         button:hover {
+            background: var(--cornflower, #5a67d8);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
 
         .ticket {
@@ -72,18 +86,13 @@
             padding: 16px;
             margin-bottom: 12px;
             background: #fafafa;
-            transition: all 0.2s;
-        }
-
-        .ticket:hover {
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .ticket-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
 
         .ticket-subject {
@@ -124,9 +133,6 @@
             font-size: 11px;
             color: #999;
             margin-top: 10px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
         }
 
         .stats-grid {
@@ -137,7 +143,7 @@
         }
 
         .stat-card {
-            background: linear-gradient(135deg, #f5f7fa 0%, #f3f4f6 100%);
+            background: #f5f7fa;
             padding: 20px;
             border-radius: 12px;
             text-align: center;
@@ -146,10 +152,7 @@
         .stat-value {
             font-size: 36px;
             font-weight: bold;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
+            color: var(--oceanic, #667eea);
         }
 
         .stat-label {
@@ -171,7 +174,7 @@
 
         .loading {
             text-align: center;
-            padding: 40px;
+            padding: 60px;
             color: #999;
         }
 
@@ -181,35 +184,28 @@
             color: #999;
         }
 
-        .error {
+        .error-message {
             color: #dc3545;
-            padding: 12px;
-            background: #f8d7da;
-            border-radius: 8px;
-            margin-bottom: 16px;
+            font-size: 12px;
+            margin-top: 4px;
         }
 
-        h3 {
-            margin-bottom: 20px;
-            color: #333;
-        }
-
-        h4 {
-            margin: 16px 0 12px;
-            color: #555;
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
         }
     </style>
 </head>
 <body>
-    <div class="container" id="app">
+    <div class="support-container" id="app">
         <div class="loading">Загрузка...</div>
     </div>
-
+    
     <script>
         class SupportStorage {
             constructor(userId = 'current-user') {
                 this.userId = userId;
-                this.storageKey = `support_tickets_${userId}`;
+                this.storageKey = 'support_tickets_' + userId;
             }
 
             getTickets() {
@@ -226,10 +222,6 @@
 
             getAllTickets() {
                 return this.getTickets();
-            }
-
-            clear() {
-                localStorage.removeItem(this.storageKey);
             }
         }
 
@@ -266,19 +258,17 @@
         function getStats() {
             const tickets = storage.getAllTickets();
             
-            const stats = {
+            return {
                 total: tickets.length,
-                open: tickets.filter(t => t.status === 'open').length,
-                in_progress: tickets.filter(t => t.status === 'in_progress').length,
-                closed: tickets.filter(t => t.status === 'closed').length,
+                open: tickets.filter(function(t) { return t.status === 'open'; }).length,
+                in_progress: tickets.filter(function(t) { return t.status === 'in_progress'; }).length,
+                closed: tickets.filter(function(t) { return t.status === 'closed'; }).length,
                 byCategory: {
-                    bug: tickets.filter(t => t.category === 'bug').length,
-                    suggestion: tickets.filter(t => t.category === 'suggestion').length,
-                    complaint: tickets.filter(t => t.category === 'complaint').length
+                    bug: tickets.filter(function(t) { return t.category === 'bug'; }).length,
+                    suggestion: tickets.filter(function(t) { return t.category === 'suggestion'; }).length,
+                    complaint: tickets.filter(function(t) { return t.category === 'complaint'; }).length
                 }
             };
-            
-            return stats;
         }
 
         function escapeHtml(text) {
@@ -287,17 +277,17 @@
             return div.innerHTML;
         }
 
-        async function loadNewForm() {
+        function loadNewForm() {
             const app = document.getElementById('app');
             app.innerHTML = `
-                <h3>✍️ Новое обращение</h3>
+                <h1 class="support-title">Новое обращение</h1>
                 <form id="supportForm">
                     <div class="form-group">
                         <label>Категория</label>
                         <select name="category" required>
-                            <option value="bug">🐛 Баг / Ошибка</option>
-                            <option value="suggestion">💡 Предложение / Идея</option>
-                            <option value="complaint">😞 Продуктовая жалоба</option>
+                            <option value="bug">Баг / Ошибка</option>
+                            <option value="suggestion">Предложение / Идея</option>
+                            <option value="complaint">Продуктовая жалоба</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -308,19 +298,23 @@
                         <label>Описание</label>
                         <textarea name="description" rows="6" required placeholder="Подробное описание..." maxlength="1000"></textarea>
                     </div>
-                    <button type="submit">📨 Отправить обращение</button>
+                    <button type="submit">Отправить обращение</button>
                 </form>
             `;
 
             const form = document.getElementById('supportForm');
-            form.addEventListener('submit', (e) => {
+            form.addEventListener('submit', function(e) {
                 e.preventDefault();
                 const formData = new FormData(form);
-                const data = Object.fromEntries(formData.entries());
+                const data = {
+                    category: formData.get('category'),
+                    subject: formData.get('subject'),
+                    description: formData.get('description')
+                };
                 
                 try {
                     const newTicket = createTicket(data);
-                    alert('✅ Обращение успешно создано и сохранено локально!');
+                    alert('Обращение успешно создано!');
                     form.reset();
                     
                     window.parent.postMessage({ 
@@ -328,7 +322,7 @@
                         data: newTicket 
                     }, '*');
                 } catch (error) {
-                    alert('❌ Ошибка при сохранении: ' + error.message);
+                    alert('Ошибка при сохранении: ' + error.message);
                 }
             });
         }
@@ -338,7 +332,7 @@
             const tickets = getUserTickets();
             
             if (!tickets || tickets.length === 0) {
-                app.innerHTML = '<div class="empty-state">📭 У вас пока нет обращений</div>';
+                app.innerHTML = '<div class="empty-state">У вас пока нет обращений</div>';
                 return;
             }
 
@@ -349,18 +343,19 @@
             };
 
             const categoryMap = {
-                'bug': '🐛 Баг',
-                'suggestion': '💡 Предложение',
-                'complaint': '😞 Жалоба'
+                'bug': 'Баг',
+                'suggestion': 'Предложение',
+                'complaint': 'Жалоба'
             };
 
-            let html = `<h3>📋 Мои обращения (${tickets.length})</h3>`;
+            let html = '<h1 class="support-title">Мои обращения (' + tickets.length + ')</h1>';
             
-            tickets.forEach(ticket => {
-                const statusClass = `status-${ticket.status}`;
-                const statusText = statusMap[ticket.status] || ticket.status;
-                const categoryText = categoryMap[ticket.category] || ticket.category;
-                const date = new Date(ticket.createdAt).toLocaleString('ru-RU');
+            for (var i = 0; i < tickets.length; i++) {
+                var ticket = tickets[i];
+                var statusClass = 'status-' + ticket.status;
+                var statusText = statusMap[ticket.status] || ticket.status;
+                var categoryText = categoryMap[ticket.category] || ticket.category;
+                var date = new Date(ticket.createdAt).toLocaleString('ru-RU');
                 
                 html += `
                     <div class="ticket">
@@ -373,11 +368,11 @@
                             <span class="ticket-status ${statusClass}">${statusText}</span>
                         </div>
                         <div class="ticket-date">
-                            📅 ${date}
+                            ${date}
                         </div>
                     </div>
                 `;
-            });
+            }
             
             app.innerHTML = html;
         }
@@ -393,13 +388,25 @@
             };
 
             const categoryMap = {
-                'bug': '🐛 Баги',
-                'suggestion': '💡 Предложения',
-                'complaint': '😞 Жалобы'
+                'bug': 'Баги',
+                'suggestion': 'Предложения',
+                'complaint': 'Жалобы'
             };
 
-            const html = `
-                <h3>📊 Статистика обращений</h3>
+            var categoryItems = '';
+            for (var key in stats.byCategory) {
+                if (stats.byCategory.hasOwnProperty(key)) {
+                    categoryItems += `
+                        <div class="category-item">
+                            <span>${categoryMap[key] || key}</span>
+                            <strong>${stats.byCategory[key]}</strong>
+                        </div>
+                    `;
+                }
+            }
+
+            var html = `
+                <h1 class="support-title">Статистика обращений</h1>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-value">${stats.total || 0}</div>
@@ -419,37 +426,39 @@
                     </div>
                 </div>
                 
+                <h2 class="support-subtitle">По категориям</h2>
                 <div class="category-stats">
-                    <h4>По категориям</h4>
-                    ${Object.entries(stats.byCategory).map(([key, value]) => `
-                        <div class="category-item">
-                            <span>${categoryMap[key] || key}</span>
-                            <strong>${value}</strong>
-                        </div>
-                    `).join('')}
+                    ${categoryItems}
                 </div>
             `;
             
             app.innerHTML = html;
         }
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const view = urlParams.get('view') || 'new';
-
-        if (view === 'my') {
-            loadMyTickets();
-        } else if (view === 'stats') {
-            loadStats();
-        } else {
-            loadNewForm();
+        function init(view) {
+            if (view === 'my') {
+                loadMyTickets();
+            } else if (view === 'stats') {
+                loadStats();
+            } else {
+                loadNewForm();
+            }
         }
 
-        window.addEventListener('message', (event) => {
-            if (event.data?.type === 'support:switchTab') {
-                const { view } = event.data;
-                if (view === 'my') loadMyTickets();
-                else if (view === 'stats') loadStats();
-                else loadNewForm();
+        var urlParams = new URLSearchParams(window.location.search);
+        var view = urlParams.get('view') || 'new';
+        init(view);
+
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'support:switchTab') {
+                var newView = event.data.view;
+                if (newView === 'my') {
+                    loadMyTickets();
+                } else if (newView === 'stats') {
+                    loadStats();
+                } else {
+                    loadNewForm();
+                }
             }
         });
     </script>

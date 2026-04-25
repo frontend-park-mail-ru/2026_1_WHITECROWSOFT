@@ -71,18 +71,20 @@ export class Sidebar {
 					});
 				}
 			});
-		};
+		}
 
-		const supportBtn = this.container.querySelector('[data-action="support"]') as HTMLButtonElement | null;
+		const supportBtn = this.container.querySelector(
+			'[data-action="support"]',
+		) as HTMLButtonElement | null;
 		if (supportBtn) {
 			let supportPopup: SupportPopup | null = null;
-		
+
 			supportBtn.addEventListener('click', () => {
 				if (!supportPopup) {
 					supportPopup = new SupportPopup(supportBtn as HTMLElement);
 				}
 				supportPopup.toggle();
-    		});
+			});
 		}
 
 		this.container.addEventListener('sidebar:openPopup', (e: Event) => {
