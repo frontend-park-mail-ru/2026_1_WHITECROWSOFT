@@ -189,11 +189,6 @@
             font-size: 12px;
             margin-top: 4px;
         }
-
-        .file-input-wrapper {
-            position: relative;
-            display: inline-block;
-        }
     </style>
 </head>
 <body>
@@ -202,73 +197,78 @@
     </div>
     
     <script>
-        class SupportStorage {
-            constructor(userId = 'current-user') {
-                this.userId = userId;
-                this.storageKey = 'support_tickets_' + userId;
-            }
+        let csrfToken = null;
 
-            getTickets() {
-                const tickets = localStorage.getItem(this.storageKey);
-                return tickets ? JSON.parse(tickets) : [];
-            }
-
-            saveTicket(ticket) {
-                const tickets = this.getTickets();
-                tickets.unshift(ticket);
-                localStorage.setItem(this.storageKey, JSON.stringify(tickets));
-                return ticket;
-            }
-
-            getAllTickets() {
-                return this.getTickets();
-            }
-        }
-
-        const storage = new SupportStorage();
-
-        function generateId() {
-            return Date.now().toString() + Math.random().toString(36).substr(2, 6);
-        }
-
-        function getCurrentDate() {
-            return new Date().toISOString();
-        }
-
-        function createTicket(data) {
-            const ticket = {
-                id: generateId(),
-                userId: storage.userId,
-                category: data.category,
-                subject: data.subject,
-                description: data.description,
-                status: 'open',
-                createdAt: getCurrentDate(),
-                updatedAt: getCurrentDate()
-            };
-            
-            storage.saveTicket(ticket);
-            return ticket;
-        }
-
-        function getUserTickets() {
-            return storage.getTickets();
-        }
-
-        function getStats() {
-            const tickets = storage.getAllTickets();
-            
-            return {
-                total: tickets.length,
-                open: tickets.filter(function(t) { return t.status === 'open'; }).length,
-                in_progress: tickets.filter(function(t) { return t.status === 'in_progress'; }).length,
-                closed: tickets.filter(function(t) { return t.status === 'closed'; }).length,
-                byCategory: {
-                    bug: tickets.filter(function(t) { return t.category === 'bug'; }).length,
-                    suggestion: tickets.filter(function(t) { return t.category === 'suggestion'; }).length,
-                    complaint: tickets.filter(function(t) { return t.category === 'complaint'; }).length
+        async function fetchCsrfToken() {
+            try {
+                const response = await fetch('/api/csrf-token', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    csrfToken = data.csrf_token || data.token;
                 }
+            } catch (error) {
+                console.warn('Failed to fetch CSRF token:', error);
+            }
+        }
+
+        async function fetchWithAuth(url, options = {}) {
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
             };
+            
+            if (csrfToken && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE')) {
+                headers['X-CSRF-Token'] = csrfToken;
+            }
+            
+            const response = await fetch(url, {
+                ...options,
+                headers: headers,
+                credentials: 'include'
+            });
+            
+            if (response.status === 403 && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || options.method === 'DELETE')) {
+                await fetchCsrfToken();
+                headers['X-CSRF-Token'] = csrfToken;
+                const retryResponse = await fetch(url, {
+                    ...options,
+                    headers: headers,
+                    credentials: 'include'
+                });
+                if (!retryResponse.ok) {
+                    throw new Error(`HTTP ${retryResponse.status}`);
+                }
+                return retryResponse.json();
+            }
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            if (response.status === 204) {
+                return null;
+            }
+            
+            return response.json();
+        }
+
+        async function createTicket(data) {
+            return await fetchWithAuth('/api/support/tickets', {
+                method: 'POST',
+                body: JSON.stringify(data)
+            });
+        }
+
+        async function getUserTickets() {
+            const response = await fetchWithAuth('/api/support/tickets');
+            return response.tickets || [];
+        }
+
+        async function getStats() {
+            return await fetchWithAuth('/api/support/stats');
         }
 
         function escapeHtml(text) {
@@ -277,22 +277,23 @@
             return div.innerHTML;
         }
 
-        function loadNewForm() {
+        async function loadNewForm() {
             const app = document.getElementById('app');
+            
             app.innerHTML = `
                 <h1 class="support-title">Новое обращение</h1>
                 <form id="supportForm">
                     <div class="form-group">
                         <label>Категория</label>
-                        <select name="category" required>
-                            <option value="bug">Баг / Ошибка</option>
-                            <option value="suggestion">Предложение / Идея</option>
-                            <option value="complaint">Продуктовая жалоба</option>
+                        <select name="category_id" required>
+                            <option value="1">Баг / Ошибка</option>
+                            <option value="2">Предложение / Идея</option>
+                            <option value="3">Продуктовая жалоба</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Тема</label>
-                        <input name="subject" type="text" required placeholder="Кратко опишите проблему" maxlength="100" />
+                        <input name="title" type="text" required placeholder="Кратко опишите проблему" maxlength="255" />
                     </div>
                     <div class="form-group">
                         <label>Описание</label>
@@ -303,17 +304,17 @@
             `;
 
             const form = document.getElementById('supportForm');
-            form.addEventListener('submit', function(e) {
+            form.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 const formData = new FormData(form);
                 const data = {
-                    category: formData.get('category'),
-                    subject: formData.get('subject'),
-                    description: formData.get('description')
+                    title: formData.get('title'),
+                    description: formData.get('description'),
+                    category_id: parseInt(formData.get('category_id'))
                 };
                 
                 try {
-                    const newTicket = createTicket(data);
+                    const newTicket = await createTicket(data);
                     alert('Обращение успешно создано!');
                     form.reset();
                     
@@ -322,132 +323,153 @@
                         data: newTicket 
                     }, '*');
                 } catch (error) {
-                    alert('Ошибка при сохранении: ' + error.message);
+                    alert('Ошибка при создании: ' + error.message);
                 }
             });
         }
 
-        function loadMyTickets() {
+        async function loadMyTickets() {
             const app = document.getElementById('app');
-            const tickets = getUserTickets();
             
-            if (!tickets || tickets.length === 0) {
-                app.innerHTML = '<div class="empty-state">У вас пока нет обращений</div>';
-                return;
-            }
-
-            const statusMap = {
-                'open': 'Открыто',
-                'in_progress': 'В работе',
-                'closed': 'Закрыто'
-            };
-
-            const categoryMap = {
-                'bug': 'Баг',
-                'suggestion': 'Предложение',
-                'complaint': 'Жалоба'
-            };
-
-            let html = '<h1 class="support-title">Мои обращения (' + tickets.length + ')</h1>';
-            
-            for (var i = 0; i < tickets.length; i++) {
-                var ticket = tickets[i];
-                var statusClass = 'status-' + ticket.status;
-                var statusText = statusMap[ticket.status] || ticket.status;
-                var categoryText = categoryMap[ticket.category] || ticket.category;
-                var date = new Date(ticket.createdAt).toLocaleString('ru-RU');
+            try {
+                const tickets = await getUserTickets();
                 
-                html += `
-                    <div class="ticket">
-                        <div class="ticket-header">
-                            <span class="ticket-subject">${escapeHtml(ticket.subject)}</span>
-                            <span class="ticket-category">${categoryText}</span>
-                        </div>
-                        <div class="ticket-description">${escapeHtml(ticket.description)}</div>
-                        <div>
-                            <span class="ticket-status ${statusClass}">${statusText}</span>
-                        </div>
-                        <div class="ticket-date">
-                            ${date}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            app.innerHTML = html;
-        }
+                if (!tickets || tickets.length === 0) {
+                    app.innerHTML = '<div class="empty-state">У вас пока нет обращений</div>';
+                    return;
+                }
 
-        function loadStats() {
-            const app = document.getElementById('app');
-            const stats = getStats();
-            
-            const statusMap = {
-                'open': 'Открыто',
-                'in_progress': 'В работе',
-                'closed': 'Закрыто'
-            };
+                const statusMap = {
+                    1: 'Открыто',
+                    2: 'В работе',
+                    3: 'Ожидает ответа',
+                    4: 'Закрыто'
+                };
 
-            const categoryMap = {
-                'bug': 'Баги',
-                'suggestion': 'Предложения',
-                'complaint': 'Жалобы'
-            };
+                const categoryMap = {
+                    1: 'Баг',
+                    2: 'Предложение',
+                    3: 'Жалоба'
+                };
 
-            var categoryItems = '';
-            for (var key in stats.byCategory) {
-                if (stats.byCategory.hasOwnProperty(key)) {
-                    categoryItems += `
-                        <div class="category-item">
-                            <span>${categoryMap[key] || key}</span>
-                            <strong>${stats.byCategory[key]}</strong>
+                let html = '<h1 class="support-title">Мои обращения (' + tickets.length + ')</h1>';
+                
+                for (var i = 0; i < tickets.length; i++) {
+                    var ticket = tickets[i];
+                    var statusClass = '';
+                    var statusText = statusMap[ticket.status_id] || 'Неизвестно';
+                    
+                    if (ticket.status_id === 1) statusClass = 'status-open';
+                    else if (ticket.status_id === 2) statusClass = 'status-in_progress';
+                    else if (ticket.status_id === 4) statusClass = 'status-closed';
+                    
+                    var categoryText = categoryMap[ticket.category_id] || ticket.category_name;
+                    var date = new Date(ticket.created_at).toLocaleString('ru-RU');
+                    
+                    html += `
+                        <div class="ticket">
+                            <div class="ticket-header">
+                                <span class="ticket-subject">${escapeHtml(ticket.title)}</span>
+                                <span class="ticket-category">${escapeHtml(categoryText)}</span>
+                            </div>
+                            <div class="ticket-description">${escapeHtml(ticket.description)}</div>
+                            <div>
+                                <span class="ticket-status ${statusClass}">${statusText}</span>
+                            </div>
+                            <div class="ticket-date">
+                                ${date}
+                            </div>
                         </div>
                     `;
                 }
-            }
-
-            var html = `
-                <h1 class="support-title">Статистика обращений</h1>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value">${stats.total || 0}</div>
-                        <div class="stat-label">Всего обращений</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${stats.open || 0}</div>
-                        <div class="stat-label">${statusMap.open}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${stats.in_progress || 0}</div>
-                        <div class="stat-label">${statusMap.in_progress}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${stats.closed || 0}</div>
-                        <div class="stat-label">${statusMap.closed}</div>
-                    </div>
-                </div>
                 
-                <h2 class="support-subtitle">По категориям</h2>
-                <div class="category-stats">
-                    ${categoryItems}
-                </div>
-            `;
-            
-            app.innerHTML = html;
-        }
-
-        function init(view) {
-            if (view === 'my') {
-                loadMyTickets();
-            } else if (view === 'stats') {
-                loadStats();
-            } else {
-                loadNewForm();
+                app.innerHTML = html;
+            } catch (error) {
+                app.innerHTML = '<div class="empty-state">Ошибка загрузки обращений: ' + error.message + '</div>';
             }
         }
 
-        var urlParams = new URLSearchParams(window.location.search);
-        var view = urlParams.get('view') || 'new';
-        init(view);
+        async function loadStats() {
+            const app = document.getElementById('app');
+            
+            try {
+                const stats = await getStats();
+                
+                const statusMap = {
+                    'open': 'Открыто',
+                    'in_progress': 'В работе',
+                    'waiting_user': 'Ожидает ответа',
+                    'closed': 'Закрыто'
+                };
+
+                const html = `
+                    <h1 class="support-title">Статистика обращений</h1>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.total || 0}</div>
+                            <div class="stat-label">Всего обращений</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.open || 0}</div>
+                            <div class="stat-label">${statusMap.open}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.in_progress || 0}</div>
+                            <div class="stat-label">${statusMap.in_progress}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.closed || 0}</div>
+                            <div class="stat-label">${statusMap.closed}</div>
+                        </div>
+                    </div>
+                    
+                    <h2 class="support-subtitle">По категориям</h2>
+                    <div class="category-stats">
+                        <div class="category-item">
+                            <span>Баги</span>
+                            <strong>${stats.bug_count || 0}</strong>
+                        </div>
+                        <div class="category-item">
+                            <span>Предложения</span>
+                            <strong>${stats.suggestion_count || 0}</strong>
+                        </div>
+                        <div class="category-item">
+                            <span>Жалобы</span>
+                            <strong>${stats.complaint_count || 0}</strong>
+                        </div>
+                    </div>
+                    ${stats.average_rating ? `
+                        <div class="category-stats">
+                            <div class="category-item">
+                                <span>Средняя оценка</span>
+                                <strong>${stats.average_rating.toFixed(1)} / 5</strong>
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+                
+                app.innerHTML = html;
+            } catch (error) {
+                app.innerHTML = '<div class="empty-state">Ошибка загрузки статистики: ' + error.message + '</div>';
+            }
+        }
+
+        async function init() {
+            await fetchCsrfToken();
+            
+            var urlParams = new URLSearchParams(window.location.search);
+            var view = urlParams.get('view') || 'new';
+            
+            if (view === 'my') {
+                await loadMyTickets();
+            } else if (view === 'stats') {
+                await loadStats();
+            } else {
+                await loadNewForm();
+            }
+        }
+
+        init();
 
         window.addEventListener('message', function(event) {
             if (event.data && event.data.type === 'support:switchTab') {
