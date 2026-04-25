@@ -157,19 +157,19 @@
         }
 
         &--open::before {
-            background-color: #3b82f6;
+            background-color: #289774;
         }
 
         &--progress::before {
-            background-color: #f59e0b;
+            background-color: #D77C26;
         }
 
         &--waiting::before {
-            background-color: #8b5cf6;
+            background-color: #8C14AB;
         }
 
         &--closed::before {
-            background-color: #10b981;
+            background-color: var(--cornflower);
         }
     }
 

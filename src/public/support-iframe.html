@@ -18,6 +18,10 @@
     	--danger-red: #a12427;
     	--coral-red: #d72d2d;
     	--clown-red: #f11e23;
+     
+        --trail: #289774;
+        --autumn: #D77C26;
+        --valley: #DA2424;
         
     	--font-main: 'Inter', Helvetica, sans-serif;
     	--size-base: 16px;
@@ -75,6 +79,7 @@
             font-size: 14px;
             font-family: inherit;
             transition: border-color 0.2s;
+            background: var(--background);
         }
 
         select:focus, input:focus, textarea:focus {
@@ -137,9 +142,9 @@
             font-weight: 500;
         }
 
-        .status-open { background: #d4edda; color: #155724; }
-        .status-in_progress { background: #fff3cd; color: #856404; }
-        .status-closed { background: #f8d7da; color: #721c24; }
+        .status-open { background: var(--trail); color: var(--background); }
+        .status-in_progress { background: var(--autumn); color: var(--background); }
+        .status-closed { background: var(--faint-b); color: var(--background); }
 
         .ticket-description {
             margin-top: 10px;
