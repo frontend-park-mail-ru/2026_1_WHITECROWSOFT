@@ -37,17 +37,6 @@ export class SupportPopup {
         this.element = createElement('div', 'support-popup__wrapper');
         this.element.innerHTML = html;
         document.body.appendChild(this.element);
-        if (this.anchorElement) {
-            this.position();
-        }
-    }
-
-    private position(): void {
-        if (!this.anchorElement || !this.element) return;
-        
-        const rect = this.anchorElement.getBoundingClientRect();
-        this.element.style.top = `${rect.bottom + window.scrollY + 5}px`;
-        this.element.style.left = `${rect.left + window.scrollX}px`;
     }
 
     private bindEvents(): void {
