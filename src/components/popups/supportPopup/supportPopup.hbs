@@ -1,14 +1,21 @@
-<div class="support-popup__container">
-  <div class="support-popup__header">
+<div class="supportPopup__container">
+  <div class="supportPopup__header">
     <h3>Поддержка</h3>
-    <button class="support-popup__close" data-action="close">&times;</button>
+    <button class="supportPopup__close" data-action="close">&times;</button>
   </div>
-  <div class="support-popup__tabs">
-    <button class="support-popup__tab" data-tab="new">Новое обращение</button>
-    <button class="support-popup__tab" data-tab="my">Мои обращения</button>
-    <button class="support-popup__tab" data-tab="stats">Статистика</button>
+
+  <div class="supportPopup__tabs segmented-control">
+    <input type="radio" name="support-view" id="tab-new" data-tab="new" checked>
+    <input type="radio" name="support-view" id="tab-my" data-tab="my">
+
+    <label for="tab-new" class="supportPopup__tab">Новое обращение</label>
+    <label for="tab-my" class="supportPopup__tab">Мои обращения</label>
+
+    <div class="selection-pill"></div>
   </div>
-  <div class="support-popup__content">
-    <iframe id="supportIframe" class="support-popup__iframe" src="/support/iframe"></iframe>
+
+  <div class="supportPopup__content">
+    <iframe id="supportIframe" class="supportPopup__iframe" src="/support/iframe"></iframe>
   </div>
+  <button class="supportPopup__stats" data-action="open-stats">Статистика</button>
 </div>

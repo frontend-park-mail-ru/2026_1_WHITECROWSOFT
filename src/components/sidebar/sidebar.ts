@@ -81,7 +81,7 @@ export class Sidebar {
 
 			supportBtn.addEventListener('click', () => {
 				if (!supportPopup) {
-					supportPopup = new SupportPopup(supportBtn as HTMLElement);
+					supportPopup = new SupportPopup();
 				}
 				supportPopup.toggle();
 			});
