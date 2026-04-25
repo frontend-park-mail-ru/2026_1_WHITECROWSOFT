@@ -1,0 +1,138 @@
+<div class="stats">
+    <div class="stats__overwrapper">
+        <div class="stats__header">
+            <h1 class="stats__title">Статистика обращений</h1>
+            <p class="stats__description">Общая аналитика по всем тикетам поддержки</p>
+        </div>
+
+        <div class="stats__grid">
+            <div class="stats__section">
+                <h2 class="stats__subtitle">Общая информация</h2>
+                <div class="stats__cards">
+                    <div class="stats__card">
+                        <div class="stats__card-icon stats__card-icon--total">
+                            <img src="/icons/ticket.svg" class="icon" alt="total">
+                        </div>
+                        <div class="stats__card-content">
+                            <span class="stats__card-label">Всего обращений</span>
+                            <span class="stats__card-value" data-stat="total">{{total}}</span>
+                        </div>
+                    </div>
+                    <div class="stats__card">
+                        <div class="stats__card-icon stats__card-icon--avg">
+                            <img src="/icons/star.svg" class="icon" alt="rating">
+                        </div>
+                        <div class="stats__card-content">
+                            <span class="stats__card-label">Средний рейтинг</span>
+                            <span class="stats__card-value" data-stat="averageRating">
+                                {{#if averageRating}}{{averageRating}}{{else}}—{{/if}}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats__section">
+                <h2 class="stats__subtitle">По статусам</h2>
+                <div class="stats__status-list">
+                    <div class="stats__status-item">
+                        <span class="stats__status-label stats__status-label--open">Открытые</span>
+                        <span class="stats__status-value" data-stat="open">{{open}}</span>
+                    </div>
+                    <div class="stats__status-item">
+                        <span class="stats__status-label stats__status-label--progress">В работе</span>
+                        <span class="stats__status-value" data-stat="inProgress">{{inProgress}}</span>
+                    </div>
+                    <div class="stats__status-item">
+                        <span class="stats__status-label stats__status-label--waiting">Ожидание клиента</span>
+                        <span class="stats__status-value" data-stat="waitingUser">{{waitingUser}}</span>
+                    </div>
+                    <div class="stats__status-item">
+                        <span class="stats__status-label stats__status-label--closed">Закрытые</span>
+                        <span class="stats__status-value" data-stat="closed">{{closed}}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats__section">
+                <h2 class="stats__subtitle">По типам</h2>
+                <div class="stats__type-list">
+                    <div class="stats__type-item">
+                        <div class="stats__type-icon stats__type-icon--bug"></div>
+                        <div class="stats__type-info">
+                            <span class="stats__type-label">Ошибки</span>
+                            <span class="stats__type-value" data-stat="bugCount">{{bugCount}}</span>
+                        </div>
+                    </div>
+                    <div class="stats__type-item">
+                        <div class="stats__type-icon stats__type-icon--suggestion"></div>
+                        <div class="stats__type-info">
+                            <span class="stats__type-label">Предложения</span>
+                            <span class="stats__type-value" data-stat="suggestionCount">{{suggestionCount}}</span>
+                        </div>
+                    </div>
+                    <div class="stats__type-item">
+                        <div class="stats__type-icon stats__type-icon--complaint"></div>
+                        <div class="stats__type-info">
+                            <span class="stats__type-label">Жалобы</span>
+                            <span class="stats__type-value" data-stat="complaintCount">{{complaintCount}}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats__section stats__section--full">
+            <h2 class="stats__subtitle">Распределение по статусам</h2>
+            <div class="stats__progress-bars">
+                <div class="stats__progress-item">
+                    <div class="stats__progress-header">
+                        <span class="stats__progress-label">Открытые</span>
+                        <span class="stats__progress-percent" data-progress="openPercent">0%</span>
+                    </div>
+                    <div class="stats__progress-track">
+                        <div class="stats__progress-fill stats__progress-fill--open" data-progress-fill="open"
+                            style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="stats__progress-item">
+                    <div class="stats__progress-header">
+                        <span class="stats__progress-label">В работе</span>
+                        <span class="stats__progress-percent" data-progress="inProgressPercent">0%</span>
+                    </div>
+                    <div class="stats__progress-track">
+                        <div class="stats__progress-fill stats__progress-fill--progress" data-progress-fill="inProgress"
+                            style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="stats__progress-item">
+                    <div class="stats__progress-header">
+                        <span class="stats__progress-label">Ожидание клиента</span>
+                        <span class="stats__progress-percent" data-progress="waitingUserPercent">0%</span>
+                    </div>
+                    <div class="stats__progress-track">
+                        <div class="stats__progress-fill stats__progress-fill--waiting" data-progress-fill="waitingUser"
+                            style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="stats__progress-item">
+                    <div class="stats__progress-header">
+                        <span class="stats__progress-label">Закрытые</span>
+                        <span class="stats__progress-percent" data-progress="closedPercent">0%</span>
+                    </div>
+                    <div class="stats__progress-track">
+                        <div class="stats__progress-fill stats__progress-fill--closed" data-progress-fill="closed"
+                            style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats__actions">
+            <button class="stats__refresh-btn" data-action="refresh">
+                <img src="/icons/refresh.svg" class="icon" alt="refresh">
+                Обновить статистику
+            </button>
+        </div>
+    </div>
+</div>

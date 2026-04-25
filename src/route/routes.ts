@@ -38,6 +38,13 @@ export const routes: Route[] = [
 		layout: 'main',
 	},
 	{
+		path: '/stats',
+		component: 'stats/statsPage',
+		init: 'initStatsPage',
+		protected: true,
+		layout: 'main',
+	},
+	{
 		path: '/',
 		component: 'main/mainPage',
 		init: 'initMainPage',
@@ -51,11 +58,11 @@ export const routes: Route[] = [
 		layout: 'auth',
 	},
 	{
-        path: '/support-iframe.html',
-        component: 'iframe/supportIframe',
-        init: 'initSupportIframe',
-        layout: 'auth',
-    },
+		path: '/support-iframe.html',
+		component: 'iframe/supportIframe',
+		init: 'initSupportIframe',
+		layout: 'auth',
+	},
 ];
 
 /**
