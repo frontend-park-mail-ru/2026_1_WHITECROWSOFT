@@ -4,6 +4,7 @@ import { store } from '../../store.js';
 import type { Note, User } from '../../types.js';
 import { render } from '../../utils/utils.js';
 import { NotePopup } from '../popups/notePopup/notePopup.js';
+import { SupportPopup } from '../popups/supportPopup/supportPopup.js';
 import notesTemplateString from './noteItems.hbs?raw';
 import templateText from './sidebar.hbs?raw';
 import './sidebar.scss';
@@ -70,6 +71,18 @@ export class Sidebar {
 					});
 				}
 			});
+		};
+
+		const supportBtn = this.container.querySelector('[data-action="support"]') as HTMLButtonElement | null;
+		if (supportBtn) {
+			let supportPopup: SupportPopup | null = null;
+		
+			supportBtn.addEventListener('click', () => {
+				if (!supportPopup) {
+					supportPopup = new SupportPopup(supportBtn as HTMLElement);
+				}
+				supportPopup.toggle();
+    		});
 		}
 
 		this.container.addEventListener('sidebar:openPopup', (e: Event) => {

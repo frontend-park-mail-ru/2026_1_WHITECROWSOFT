@@ -1,0 +1,28 @@
+.note-items-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    
+    .note-items-title {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--text-secondary, #666);
+        padding: 0 10px;
+        letter-spacing: 0.5px;
+    }
+    
+    .note-items-container {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    
+    .emptyNotes {
+        padding: 20px;
+        text-align: center;
+        color: var(--text-secondary, #666);
+        font-size: 14px;
+    }
+}

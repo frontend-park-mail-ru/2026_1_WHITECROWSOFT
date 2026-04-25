@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поддержка</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #fff;
+            overflow-y: auto;
+            height: 100vh;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #333;
+            font-size: 14px;
+        }
+
+        select, input, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .ticket {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+            background: #fafafa;
+            transition: all 0.2s;
+        }
+
+        .ticket:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .ticket-subject {
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .ticket-category {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: #e9ecef;
+            font-weight: 500;
+        }
+
+        .ticket-status {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            display: inline-block;
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        .status-open { background: #d4edda; color: #155724; }
+        .status-in_progress { background: #fff3cd; color: #856404; }
+        .status-closed { background: #f8d7da; color: #721c24; }
+
+        .ticket-description {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .ticket-date {
+            font-size: 11px;
+            color: #999;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #f3f4f6 100%);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .category-stats {
+            margin-top: 24px;
+        }
+
+        .category-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .error {
+            color: #dc3545;
+            padding: 12px;
+            background: #f8d7da;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        h4 {
+            margin: 16px 0 12px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="app">
+        <div class="loading">Загрузка...</div>
+    </div>
+
+    <script>
+        class SupportStorage {
+            constructor(userId = 'current-user') {
+                this.userId = userId;
+                this.storageKey = `support_tickets_${userId}`;
+            }
+
+            getTickets() {
+                const tickets = localStorage.getItem(this.storageKey);
+                return tickets ? JSON.parse(tickets) : [];
+            }
+
+            saveTicket(ticket) {
+                const tickets = this.getTickets();
+                tickets.unshift(ticket);
+                localStorage.setItem(this.storageKey, JSON.stringify(tickets));
+                return ticket;
+            }
+
+            getAllTickets() {
+                return this.getTickets();
+            }
+
+            clear() {
+                localStorage.removeItem(this.storageKey);
+            }
+        }
+
+        const storage = new SupportStorage();
+
+        function generateId() {
+            return Date.now().toString() + Math.random().toString(36).substr(2, 6);
+        }
+
+        function getCurrentDate() {
+            return new Date().toISOString();
+        }
+
+        function createTicket(data) {
+            const ticket = {
+                id: generateId(),
+                userId: storage.userId,
+                category: data.category,
+                subject: data.subject,
+                description: data.description,
+                status: 'open',
+                createdAt: getCurrentDate(),
+                updatedAt: getCurrentDate()
+            };
+            
+            storage.saveTicket(ticket);
+            return ticket;
+        }
+
+        function getUserTickets() {
+            return storage.getTickets();
+        }
+
+        function getStats() {
+            const tickets = storage.getAllTickets();
+            
+            const stats = {
+                total: tickets.length,
+                open: tickets.filter(t => t.status === 'open').length,
+                in_progress: tickets.filter(t => t.status === 'in_progress').length,
+                closed: tickets.filter(t => t.status === 'closed').length,
+                byCategory: {
+                    bug: tickets.filter(t => t.category === 'bug').length,
+                    suggestion: tickets.filter(t => t.category === 'suggestion').length,
+                    complaint: tickets.filter(t => t.category === 'complaint').length
+                }
+            };
+            
+            return stats;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function loadNewForm() {
+            const app = document.getElementById('app');
+            app.innerHTML = `
+                <h3>✍️ Новое обращение</h3>
+                <form id="supportForm">
+                    <div class="form-group">
+                        <label>Категория</label>
+                        <select name="category" required>
+                            <option value="bug">🐛 Баг / Ошибка</option>
+                            <option value="suggestion">💡 Предложение / Идея</option>
+                            <option value="complaint">😞 Продуктовая жалоба</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Тема</label>
+                        <input name="subject" type="text" required placeholder="Кратко опишите проблему" maxlength="100" />
+                    </div>
+                    <div class="form-group">
+                        <label>Описание</label>
+                        <textarea name="description" rows="6" required placeholder="Подробное описание..." maxlength="1000"></textarea>
+                    </div>
+                    <button type="submit">📨 Отправить обращение</button>
+                </form>
+            `;
+
+            const form = document.getElementById('supportForm');
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
+                
+                try {
+                    const newTicket = createTicket(data);
+                    alert('✅ Обращение успешно создано и сохранено локально!');
+                    form.reset();
+                    
+                    window.parent.postMessage({ 
+                        type: 'support:ticketCreated', 
+                        data: newTicket 
+                    }, '*');
+                } catch (error) {
+                    alert('❌ Ошибка при сохранении: ' + error.message);
+                }
+            });
+        }
+
+        function loadMyTickets() {
+            const app = document.getElementById('app');
+            const tickets = getUserTickets();
+            
+            if (!tickets || tickets.length === 0) {
+                app.innerHTML = '<div class="empty-state">📭 У вас пока нет обращений</div>';
+                return;
+            }
+
+            const statusMap = {
+                'open': 'Открыто',
+                'in_progress': 'В работе',
+                'closed': 'Закрыто'
+            };
+
+            const categoryMap = {
+                'bug': '🐛 Баг',
+                'suggestion': '💡 Предложение',
+                'complaint': '😞 Жалоба'
+            };
+
+            let html = `<h3>📋 Мои обращения (${tickets.length})</h3>`;
+            
+            tickets.forEach(ticket => {
+                const statusClass = `status-${ticket.status}`;
+                const statusText = statusMap[ticket.status] || ticket.status;
+                const categoryText = categoryMap[ticket.category] || ticket.category;
+                const date = new Date(ticket.createdAt).toLocaleString('ru-RU');
+                
+                html += `
+                    <div class="ticket">
+                        <div class="ticket-header">
+                            <span class="ticket-subject">${escapeHtml(ticket.subject)}</span>
+                            <span class="ticket-category">${categoryText}</span>
+                        </div>
+                        <div class="ticket-description">${escapeHtml(ticket.description)}</div>
+                        <div>
+                            <span class="ticket-status ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="ticket-date">
+                            📅 ${date}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            app.innerHTML = html;
+        }
+
+        function loadStats() {
+            const app = document.getElementById('app');
+            const stats = getStats();
+            
+            const statusMap = {
+                'open': 'Открыто',
+                'in_progress': 'В работе',
+                'closed': 'Закрыто'
+            };
+
+            const categoryMap = {
+                'bug': '🐛 Баги',
+                'suggestion': '💡 Предложения',
+                'complaint': '😞 Жалобы'
+            };
+
+            const html = `
+                <h3>📊 Статистика обращений</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.total || 0}</div>
+                        <div class="stat-label">Всего обращений</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.open || 0}</div>
+                        <div class="stat-label">${statusMap.open}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.in_progress || 0}</div>
+                        <div class="stat-label">${statusMap.in_progress}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.closed || 0}</div>
+                        <div class="stat-label">${statusMap.closed}</div>
+                    </div>
+                </div>
+                
+                <div class="category-stats">
+                    <h4>По категориям</h4>
+                    ${Object.entries(stats.byCategory).map(([key, value]) => `
+                        <div class="category-item">
+                            <span>${categoryMap[key] || key}</span>
+                            <strong>${value}</strong>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            app.innerHTML = html;
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const view = urlParams.get('view') || 'new';
+
+        if (view === 'my') {
+            loadMyTickets();
+        } else if (view === 'stats') {
+            loadStats();
+        } else {
+            loadNewForm();
+        }
+
+        window.addEventListener('message', (event) => {
+            if (event.data?.type === 'support:switchTab') {
+                const { view } = event.data;
+                if (view === 'my') loadMyTickets();
+                else if (view === 'stats') loadStats();
+                else loadNewForm();
+            }
+        });
+    </script>
+</body>
+</html>

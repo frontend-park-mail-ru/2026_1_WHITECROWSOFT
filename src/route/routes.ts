@@ -50,6 +50,12 @@ export const routes: Route[] = [
 		init: 'initNotFoundPage',
 		layout: 'auth',
 	},
+	{
+        path: '/support-iframe.html',
+        component: 'iframe/supportIframe',
+        init: 'initSupportIframe',
+        layout: 'auth',
+    },
 ];
 
 /**
