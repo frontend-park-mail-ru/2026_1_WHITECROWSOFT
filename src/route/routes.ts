@@ -58,7 +58,7 @@ export const routes: Route[] = [
 		layout: 'auth',
 	},
 	{
-		path: '/support-iframe.html',
+		path: '/support/iframe',
 		component: 'iframe/supportIframe',
 		init: 'initSupportIframe',
 		layout: 'auth',

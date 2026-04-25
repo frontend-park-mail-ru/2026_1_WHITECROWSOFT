@@ -36,6 +36,7 @@ const ASSETS_TO_CACHE = [
 	'/icons/text_link.svg',
 	'/icons/text_underscore.svg',
 	'/icons/trash.svg',
+	'/support-iframe.html',
 	'/icons/validation.svg',
 	'/icons/visibility-off.svg',
 	'/icons/visibility.svg',
@@ -135,6 +136,15 @@ function networkFirst(request) {
 self.addEventListener('fetch', (event) => {
 	const request = event.request;
 	const url = new URL(request.url);
+
+	// ✅ Для iframe используем network-first стратегию
+	if (
+		url.pathname.startsWith('/support/iframe') ||
+		url.pathname === '/support-iframe.html'
+	) {
+		event.respondWith(networkFirst(request));
+		return;
+	}
 
 	if (
 		url.pathname.startsWith('/api/') ||

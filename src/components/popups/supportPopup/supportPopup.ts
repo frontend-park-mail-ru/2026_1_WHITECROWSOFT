@@ -78,7 +78,7 @@ export class SupportPopup {
 	private switchTab(tabName: TabName): void {
 		this.currentTab = tabName;
 		if (!this.iframe || !this.iframe.contentWindow) return;
-		this.iframe.src = `/support/iframe?view=${tabName}`;
+		this.iframe.src = `/support-iframe.html?view=${this.currentTab}`;
 		this.iframe.contentWindow.postMessage(
 			{
 				type: 'support:switchTab',
