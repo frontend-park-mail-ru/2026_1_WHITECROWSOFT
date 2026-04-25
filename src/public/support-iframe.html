@@ -4,7 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Поддержка</title>
+    <link rel="stylesheet" href="/assets/style/main.scss" />
     <style>
+    :root{ 
+        --text: #062659;
+    	--background: #fbf8f4;
+    	--oceanic: #325a9b;
+    	--pacific: #6482b1;
+    	--cornflower: #417dde;
+    	--faint-a: #adb4c1;
+    	--faint-b: #706e7f;
+    	--highlight: rgba(91, 116, 157, 0.15);
+    	--danger-red: #a12427;
+    	--coral-red: #d72d2d;
+    	--clown-red: #f11e23;
+        
+    	--font-main: 'Inter', Helvetica, sans-serif;
+    	--size-base: 16px;
+    	--size-label: 14px;
+    	--size-small: 12px;
+        }
         * {
             margin: 0;
             padding: 0;
@@ -12,8 +31,8 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #fff;
+            font-family: var(--font-main);
+            background: var(--background, #fff);
             overflow-y: auto;
             height: 100vh;
         }
@@ -26,14 +45,14 @@
             font-size: 2rem;
             font-weight: 800;
             margin-bottom: 24px;
-            color: var(--text-primary, #333);
+            color: var(--text, #333);
         }
 
         .support-subtitle {
             font-weight: 600;
             font-size: 20px;
             margin-bottom: 16px;
-            color: var(--text-primary, #333);
+            color: var(--text, #333);
         }
 
         .form-group {
@@ -44,14 +63,14 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 500;
-            color: var(--text-secondary, #666);
+            color: var(--text, #666);
             font-size: 14px;
         }
 
         select, input, textarea {
             width: 100%;
             padding: 10px 12px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--faint-a, #ddd);
             border-radius: 8px;
             font-size: 14px;
             font-family: inherit;
@@ -65,7 +84,7 @@
 
         button {
             background: var(--oceanic, #667eea);
-            color: white;
+            color: var(--background, white);
             border: none;
             padding: 10px 20px;
             border-radius: 8px;
@@ -305,7 +324,6 @@
             const app = document.getElementById('app');
             
             app.innerHTML = `
-                <h1 class="support-title">Новое обращение</h1>
                 <form id="supportForm">
                     <div class="form-group">
                         <label>Категория</label>
@@ -377,7 +395,7 @@
                     3: 'Жалоба'
                 };
 
-                let html = '<h1 class="support-title">Мои обращения (' + tickets.length + ')</h1>';
+                let html = '';
                 
                 for (var i = 0; i < tickets.length; i++) {
                     var ticket = tickets[i];

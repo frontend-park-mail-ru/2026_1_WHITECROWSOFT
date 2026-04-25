@@ -1,4 +1,5 @@
 import Handlebars from 'handlebars';
+import { router } from '../../../route/router';
 import { createElement } from '../../../utils/utils';
 import templateText from './supportPopup.hbs?raw';
 import './supportPopup.scss';
@@ -45,6 +46,9 @@ export class SupportPopup {
 
 		const closeBtn = this.element.querySelector('[data-action="close"]');
 		closeBtn?.addEventListener('click', () => this.close());
+
+		const statsBtn = this.element.querySelector('[data-action="stats"]');
+		statsBtn?.addEventListener('click', () => router.push('/stats'));
 
 		const inputs = this.element.querySelectorAll<HTMLInputElement>(
 			'.supportPopup__tabs input',

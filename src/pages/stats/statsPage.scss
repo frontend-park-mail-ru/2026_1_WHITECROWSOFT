@@ -1,3 +1,18 @@
+.note {
+    flex: revert !important;
+    display: revert !important;
+    flex-direction: revert !important;
+    align-items: revert !important;
+    padding: revert !important;
+    height: revert !important;
+    
+    overflow-y: revert !important;
+    background-color: revert !important;
+
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
+}
+
 .stats {
     flex: 1;
     display: flex;
@@ -44,10 +59,8 @@
     }
 
     &__section {
-        background: var(--card-bg);
         border-radius: 12px;
         padding: 20px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 
         &--full {
             grid-column: 1 / -1;
@@ -129,7 +142,7 @@
 
     &__status-label {
         font-size: 14px;
-        padding-left: 12px;
+        padding-left: 16px;
         position: relative;
 
         &::before {

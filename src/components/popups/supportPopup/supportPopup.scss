@@ -4,12 +4,12 @@
 		bottom: 20px;
 		right: 20px;
 
-		width: 400px;
-		height: 500px;
+		width: 500px;
+		height: 650px;
 		z-index: 10000;
 
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-
+		border: 1px solid var(--faint-a);
 		border-radius: 10px;
 
 		overflow: hidden;
@@ -31,8 +31,7 @@
 		justify-content: space-between;
 		align-items: center;
 		padding: 12px 16px;
-		background: #f5f5f5;
-		border-bottom: 1px solid #ddd;
+		background: var(--background, #f5f5f5);
 	}
 	&__close {
 		background: none;
@@ -42,7 +41,7 @@
 	}
 	&__content {
 		flex: 1;
-		overflow: auto;
+		overflow: hidden;
 	}
 	&__iframe {
 		width: 100%;
@@ -103,20 +102,23 @@
 		transition: color 0.3s;
 
 		&:hover {
-			color: #000;
+			color: var(--text);
 		}
 	}
 
 	&__stats {
 		background: none !important;
 		border: none;
-		padding: 0 !important;
 
 		font-family: inherit;
 		text-decoration: underline;
 		cursor: pointer;
 
 		color: var(--faint-b);
-		padding-left: 6px 16px;
+		padding: 6px 16px;
+		font-size: 16px;
+		&:hover {
+			color: var(--text);
+		}
 	}
 }
