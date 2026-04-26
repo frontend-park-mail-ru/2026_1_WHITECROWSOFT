@@ -1,9 +1,9 @@
 import Handlebars from 'handlebars';
 import authLayoutTemplate from './authLayout.hbs?raw';
-import { Sidebar } from './components/sidebar/sidebar.js';
+import Sidebar from './components/sidebar/sidebar.js';
 import layoutTemplate from './layout.hbs?raw';
 import { store } from './store.js';
-import type { Note, User } from './types.js';
+import type { User } from './types.js';
 
 type PageModule = (
 	container: HTMLElement,
@@ -13,18 +13,12 @@ type PageModule = (
 export class Layout {
 	private sidebar: Sidebar | null = null;
 	private mainContainer: HTMLElement | null = null;
+	private sidebarContainer: HTMLElement | null = null;
 	private _unsubscribeNotes: (() => void) | null = null;
 	private _unsubscribeActiveNoteId: (() => void) | null = null;
 	private _unsubscribeUser: (() => void) | null = null;
 	private _isAuthMode: boolean = false;
-	private _isSidebarInitialized: boolean = false;
 
-	constructor() {}
-
-	/**
-	 * Инициализирует лейаут
-	 * @param isAuthMode - режим авторизации (без сайдбара)
-	 */
 	async init(isAuthMode: boolean = false): Promise<void> {
 		this._isAuthMode = isAuthMode;
 
@@ -32,29 +26,21 @@ export class Layout {
 			this._renderAuth();
 		} else {
 			this._render();
-			this.sidebar = new Sidebar('sidebarContainer');
-			await this.sidebar.init();
-			this._isSidebarInitialized = true;
-			this._subscribeToStore();
+			await this._initSidebar();
 		}
 
 		this.mainContainer = document.getElementById('mainContainer');
 	}
 
-	/**
-	 * Рендерит основной шаблон лейаута с сайдбаром
-	 */
 	private _render(): void {
 		const app = document.querySelector('#app');
 		if (!app) return;
 		const template = Handlebars.compile(layoutTemplate);
 		app.innerHTML = template({});
+		this.sidebarContainer = document.getElementById('sidebarContainer');
 		this.mainContainer = document.getElementById('mainContainer');
 	}
 
-	/**
-	 * Рендерит упрощенный шаблон лейаута без сайдбара
-	 */
 	private _renderAuth(): void {
 		const app = document.querySelector('#app');
 		if (!app) return;
@@ -63,9 +49,13 @@ export class Layout {
 		this.mainContainer = document.getElementById('mainContainer');
 	}
 
-	/**
-	 * Уничтожает лейаут и очищает подписки
-	 */
+	private async _initSidebar(): Promise<void> {
+		if (!this.sidebarContainer) return;
+		this.sidebar = new Sidebar();
+		this.sidebar.renderTo(this.sidebarContainer);
+		this._subscribeToStore();
+	}
+
 	destroy(): void {
 		this._unsubscribeNotes?.();
 		this._unsubscribeActiveNoteId?.();
@@ -77,31 +67,32 @@ export class Layout {
 
 		this.sidebar = null;
 		this.mainContainer = null;
-		this._isSidebarInitialized = false;
+		this.sidebarContainer = null;
+		this._isAuthMode = false;
 	}
 
-	/**
-	 * Подписывается на изменения в хранилище
-	 */
 	private _subscribeToStore(): void {
 		this._unsubscribeNotes?.();
 		this._unsubscribeActiveNoteId?.();
 		this._unsubscribeUser?.();
 
-		this._unsubscribeNotes = store.subscribe('notes', (notes: Note[]) => {
-			if (this.sidebar && typeof this.sidebar.updateNotes === 'function') {
-				this.sidebar.updateNotes(notes);
+		this._unsubscribeNotes = store.subscribe('notes', () => {
+			if (
+				this.sidebar &&
+				typeof this.sidebar.updateNoteComponents === 'function'
+			) {
+				this.sidebar.updateNoteComponents();
 			}
 		});
 
-		this._unsubscribeActiveNoteId = store.subscribe(
-			'activeNoteId',
-			(noteId: string | number | null) => {
-				if (this.sidebar && typeof this.sidebar.setActiveNote === 'function') {
-					this.sidebar.setActiveNote(noteId);
-				}
-			},
-		);
+		this._unsubscribeActiveNoteId = store.subscribe('activeNoteId', () => {
+			if (
+				this.sidebar &&
+				typeof this.sidebar.updateNoteComponents === 'function'
+			) {
+				this.sidebar.updateNoteComponents();
+			}
+		});
 
 		this._unsubscribeUser = store.subscribe('user', (user: User | null) => {
 			if (this.sidebar && typeof this.sidebar.updateUser === 'function') {
@@ -110,14 +101,10 @@ export class Layout {
 		});
 	}
 
-	/**
-	 * Устанавливает страницу в основной контейнер
-	 * @param pageModule - функция инициализации страницы
-	 * @param pageData - данные для страницы
-	 */
 	async setPage(pageModule: PageModule, pageData: unknown = {}): Promise<void> {
 		try {
 			if (!this.mainContainer) return;
+
 			if (this._isAuthMode) {
 				const sidebarContainer = document.getElementById('sidebarContainer');
 				if (sidebarContainer) {
@@ -151,9 +138,6 @@ export class Layout {
 		}
 	}
 
-	/**
-	 * Возвращает экземпляр сайдбара
-	 */
 	getSidebar(): Sidebar | null {
 		return this.sidebar;
 	}

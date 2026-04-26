@@ -29,25 +29,10 @@
 
 	<hr class="sidebar__barrier" />
 
-	<div class="sidebar__notesList">
-		{{#each notes}}
-			<div class="sidebar__noteItem {{#if (eq this.ID ../activeNoteId)}}sidebar__noteItem--active{{/if}}" data-note-id="{{this.ID}}">
-				<img src="/icons/document.svg" class="icon" />
-				<div class="sidebar__noteItemTitle">{{this.title}}</div>
-				<div class="sidebar__noteItemActions">
-					<button class="sidebar__noteActionBtn addSubnoteBtn" data-action="addSubnote" data-note-id="{{this.ID}}">
-						<img src="/icons/add.svg" class="icon" />
-					</button>
-					<button class="sidebar__noteActionBtn settingsBtn" data-action="settings" data-note-id="{{this.ID}}">
-						<img src="/icons/more.svg" class="icon" />
-					</button>
-				</div>
-			</div>
-		{{else}}
-			<div class="emptyNotes">
-				<p>У вас пока нет заметок</p>
-			</div>
-		{{/each}}
+	<div class="sidebar__sections">
+		<div class="sidebar__section" data-section="recent-notes"></div>
+		<div class="sidebar__section" data-section="personal-notes"></div>
+		<div class="sidebar__section" data-section="shared-notes"></div>
 	</div>
 
     <button class="sidebar__btn newNoteButton" data-action="newNote">

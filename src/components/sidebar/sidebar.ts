@@ -1,185 +1,235 @@
-import Handlebars from 'handlebars';
+import { router } from '../../route/router.js';
 import { noteService } from '../../services/noteService.js';
 import { store } from '../../store.js';
 import type { Note, User } from '../../types.js';
-import { render } from '../../utils/utils.js';
-import { NotePopup } from '../popups/notePopup/notePopup.js';
-import notesTemplateString from './noteItems.hbs?raw';
-import templateText from './sidebar.hbs?raw';
+import { startInlineEdit } from '../../utils/inlineEdit.js';
+import Component from '../component.js';
+import NotePopup from '../popups/notePopup/notePopup.js';
+import NoteItems from './noteItems/noteItems.js';
+import templateString from './sidebar.hbs?raw';
 import './sidebar.scss';
-import {
-	bindNavigationEvents,
-	startInlineEdit,
-	updateActiveNote,
-} from './sidebarEvents.js';
 
-interface SidebarState {
-	activeNoteId: string | number | null;
-	notes: Note[];
-	user: User | null;
-}
+export default class Sidebar extends Component {
+	protected templateString = templateString;
+	private recentNotesComponent: NoteItems | null = null;
+	private personalNotesComponent: NoteItems | null = null;
+	private sharedNotesComponent: NoteItems | null = null;
+	private currentPopup: NotePopup | null = null;
+	private unsubscribeNotes: (() => void) | null = null;
+	private unsubscribeActiveNoteId: (() => void) | null = null;
+	private unsubscribeUser: (() => void) | null = null;
 
-export class Sidebar {
-	private container: HTMLElement | null;
-	private template: HandlebarsTemplateDelegate | null;
-	private currentPopup: NotePopup | null;
-	private state: SidebarState;
-	private unsubscribeNotes: (() => void) | null;
-	private unsubscribeActiveNoteId: (() => void) | null;
-	private unsubscribeUser: (() => void) | null;
-
-	constructor(containerSelector: string) {
-		this.container = document.getElementById(containerSelector);
-		this.template = null;
-		this.currentPopup = null;
-		this.state = {
-			activeNoteId: store.getActiveNoteId(),
-			notes: store.getNotes(),
-			user: store.getUser(),
-		};
-		this.unsubscribeNotes = null;
-		this.unsubscribeActiveNoteId = null;
-		this.unsubscribeUser = null;
-	}
-
-	async init(): Promise<void> {
-		if (!this.container) return;
-
-		this.template = Handlebars.compile(templateText);
-		render(this.container, this.template(this.state));
-		this._bindEvents();
-	}
-
-	private _bindEvents(): void {
-		if (!this.container) return;
-
-		bindNavigationEvents(this.container);
-
-		const addBlockBtn = this.container.querySelector(
-			'#addSubnoteBtn',
-		) as HTMLButtonElement | null;
-		if (addBlockBtn) {
-			addBlockBtn.addEventListener('click', async () => {
-				const activeNoteId = store.getActiveNoteId();
-				if (activeNoteId) {
-					await noteService.createBlock(activeNoteId, {
-						note_id: activeNoteId,
-						block_type_id: 1,
-						position: store.getActiveBlocks().length,
-						content: '',
-					});
-				}
-			});
-		}
-
-		this.container.addEventListener('sidebar:openPopup', (e: Event) => {
-			const customEvent = e as CustomEvent<{
-				noteId: string | number;
-				anchor: HTMLElement;
-			}>;
-			const { noteId, anchor } = customEvent.detail;
-			this._openNotePopup(noteId, anchor);
-		});
-
-		this.container.addEventListener('sidebar:noteChanged', () => {
-			this.currentPopup?.close();
-		});
-
-		this.unsubscribeNotes = store.subscribe('notes', (notes: Note[]) => {
-			this.updateNotes(notes);
-		});
-
-		this.unsubscribeActiveNoteId = store.subscribe(
-			'activeNoteId',
-			(noteId: string | number | null) => {
-				this.setActiveNote(noteId);
+	protected getTemplateData() {
+		const user = store.getUser();
+		return {
+			user: {
+				username: user?.username || 'Пользователь',
 			},
+			searchQuery: '',
+		};
+	}
+
+	onRender(): void {
+		this.renderSections();
+		this.bindNavigationEvents();
+		this.subscribeToStore();
+		this.updateNoteComponents();
+	}
+
+	private renderSections(): void {
+		const allNotes = store.getNotes();
+		this.recentNotesComponent = this.renderSection(
+			'recent-notes',
+			allNotes.slice(0, 5),
+			'Недавние заметки',
+			'Нет недавних заметок',
 		);
-
-		this.unsubscribeUser = store.subscribe('user', (user: User | null) => {
-			this.updateUser(user);
-		});
-
-		document.addEventListener('sidebar:startInlineEdit', (e: Event) => {
-			const customEvent = e as CustomEvent<{ noteId: string | number }>;
-			const { noteId } = customEvent.detail;
-			this._startInlineEdit(noteId);
-		});
-	}
-
-	private _openNotePopup(
-		noteId: string | number,
-		anchorElement: HTMLElement,
-	): void {
-		this.currentPopup?.close();
-		this.currentPopup = new NotePopup(noteId, anchorElement);
-		this.currentPopup.open();
-
-		this.container?.dispatchEvent(
-			new CustomEvent('sidebar:popupOpened', {
-				detail: {
-					noteId,
-					popupElement: this.currentPopup.getElement(),
-				},
-			}),
+		this.personalNotesComponent = this.renderSection(
+			'personal-notes',
+			allNotes,
+			'Личные заметки',
+			'Нет личных заметок',
+		);
+		this.sharedNotesComponent = this.renderSection(
+			'shared-notes',
+			[],
+			'Общие заметки',
+			'Нет общих заметок',
 		);
 	}
 
-	setActiveNote(noteId: string | number | null): void {
-		this.state.activeNoteId = noteId;
-		if (this.container) {
-			updateActiveNote(this.container, noteId);
-			const addBlockBtn = this.container.querySelector(
-				'#addSubnoteBtn',
-			) as HTMLButtonElement | null;
-			if (addBlockBtn) {
-				addBlockBtn.disabled = !noteId;
-			}
+	private renderSection(
+		sectionName: string,
+		notes: Note[],
+		title: string,
+		emptyMessage: string,
+	): NoteItems {
+		const container = this.domElement?.querySelector(
+			`[data-section="${sectionName}"]`,
+		);
+		if (!container) {
+			throw new Error(`Container ${sectionName} not found`);
 		}
-		this.container?.dispatchEvent(new CustomEvent('sidebar:noteChanged'));
+		const notesCopy = notes.map((note) => ({ ...note }));
+		const component = new NoteItems({
+			notes: notesCopy,
+			activeNoteId: store.getActiveNoteId(),
+			title,
+			emptyMessage,
+			onNoteClick: this.handleNoteClick,
+			onAddSubnote: this.handleAddSubnote,
+			onSettingsClick: this.handleSettingsClick,
+			onTitleDoubleClick: this.handleTitleDoubleClick,
+		});
+		component.renderTo(container as HTMLElement);
+		return component;
 	}
 
-	updateNotes(notes: Note[]): void {
-		this.state.notes = notes;
-		const notesList = this.container?.querySelector('.sidebar__notesList');
-		if (notesList) {
-			const notesTemplate = Handlebars.compile(notesTemplateString);
-			notesList.innerHTML = notesTemplate(this.state);
-		}
+	public updateNoteComponents(): void {
+		const allNotes = store.getNotes();
+		const activeNote = store.getActiveNoteId();
+		this.recentNotesComponent?.syncNotes(
+			allNotes.slice(0, 5).map((n) => ({ ...n })),
+			activeNote,
+		);
+		this.personalNotesComponent?.syncNotes(
+			allNotes.map((n) => ({ ...n })),
+			activeNote,
+		);
+		this.sharedNotesComponent?.syncNotes([], activeNote);
 	}
 
-	updateUser(user: User | null): void {
-		this.state.user = user;
-		const usernameSpan = document.getElementById('profile-username');
+	public updateUser(user: User | null): void {
+		const usernameSpan = this.domElement?.querySelector('#profile-username');
 		if (usernameSpan && user) {
 			usernameSpan.textContent = user.username || 'Пользователь';
 		}
 	}
 
-	private _startInlineEdit(noteId: string | number): void {
-		if (!this.container) return;
+	private bindNavigationEvents(): void {
+		if (!this.domElement) return;
+		const profileBtn = this.domElement.querySelector('[data-action="profile"]');
+		const homeBtn = this.domElement.querySelector('[data-action="home"]');
+		const newNoteBtn = this.domElement.querySelector('[data-action="newNote"]');
+		profileBtn?.addEventListener('click', (e) => {
+			e.preventDefault();
+			router.push('/profile');
+		});
+		homeBtn?.addEventListener('click', (e) => {
+			e.preventDefault();
+			router.push('/');
+		});
+		newNoteBtn?.addEventListener('click', async (e) => {
+			e.preventDefault();
+			const btn = e.currentTarget as HTMLElement;
+			if (!btn.dataset.pending) {
+				btn.dataset.pending = 'true';
+				await noteService.createNote({ title: 'Новая заметка' });
+				delete btn.dataset.pending;
+			}
+		});
+	}
 
-		const noteItem = this.container.querySelector(
-			`.sidebar__noteItem[data-note-id="${noteId}"]`,
-		) as HTMLElement | null;
-		if (noteItem) {
-			const noteItemTitle = noteItem.querySelector(
-				'.sidebar__noteItemTitle',
-			) as HTMLElement | null;
-			if (noteItemTitle) {
-				startInlineEdit(noteItemTitle, noteId);
+	private subscribeToStore(): void {
+		this.unsubscribeNotes = store.subscribe('notes', () => {
+			this.updateNoteComponents();
+		});
+		this.unsubscribeActiveNoteId = store.subscribe(
+			'activeNoteId',
+			(noteId: string | number | null) => {
+				this.recentNotesComponent?.updateActiveNote(noteId);
+				this.personalNotesComponent?.updateActiveNote(noteId);
+				this.sharedNotesComponent?.updateActiveNote(noteId);
+			},
+		);
+		this.unsubscribeUser = store.subscribe('user', (user: User | null) => {
+			const usernameSpan = this.domElement?.querySelector('#profile-username');
+			if (usernameSpan && user) {
+				usernameSpan.textContent = user.username || 'Пользователь';
+			}
+		});
+	}
+
+	private handleNoteClick = (noteId: string | number): void => {
+		store.setActiveNoteId(noteId);
+		router.push('/');
+	};
+
+	private handleAddSubnote = async (noteId: string | number): Promise<void> => {
+		const activeNoteId = store.getActiveNoteId();
+		if (activeNoteId) {
+			await noteService.createBlock(activeNoteId, {
+				note_id: noteId,
+				block_type_id: 1,
+				position: store.getActiveBlocks().length,
+				content: '',
+			});
+		}
+	};
+
+	private handleSettingsClick = (
+		noteId: string | number,
+		anchor: HTMLElement,
+	): void => {
+		let currentSection: 'recent-notes' | 'personal-notes' | 'shared-notes' =
+			'personal-notes';
+		const sectionContainer = anchor.closest('.sidebar__section');
+		if (sectionContainer) {
+			const sectionName = sectionContainer.getAttribute('data-section');
+			if (
+				sectionName === 'recent-notes' ||
+				sectionName === 'personal-notes' ||
+				sectionName === 'shared-notes'
+			) {
+				currentSection = sectionName;
 			}
 		}
-	}
 
-	closePopup(): void {
 		this.currentPopup?.close();
-	}
+		this.currentPopup = new NotePopup({
+			noteId,
+			anchorElement: anchor,
+			onRename: () => {
+				let titleElement: HTMLElement | null = null;
+				switch (currentSection) {
+					case 'recent-notes':
+						titleElement =
+							this.recentNotesComponent?.getNoteTitleElementById?.(noteId) ||
+							null;
+						break;
+					case 'personal-notes':
+						titleElement =
+							this.personalNotesComponent?.getNoteTitleElementById?.(noteId) ||
+							null;
+						break;
+					case 'shared-notes':
+						titleElement =
+							this.sharedNotesComponent?.getNoteTitleElementById?.(noteId) ||
+							null;
+						break;
+				}
+				if (titleElement) {
+					startInlineEdit(titleElement, noteId);
+				}
+			},
+		});
+		this.currentPopup.renderTo(document.body);
+	};
+
+	private handleTitleDoubleClick = (
+		noteId: string | number,
+		element: HTMLElement,
+	): void => {
+		startInlineEdit(element, noteId);
+	};
 
 	destroy(): void {
-		this.currentPopup?.close();
 		this.unsubscribeNotes?.();
 		this.unsubscribeActiveNoteId?.();
 		this.unsubscribeUser?.();
+		this.currentPopup?.close();
+		this.recentNotesComponent?.destroy();
+		this.personalNotesComponent?.destroy();
+		this.sharedNotesComponent?.destroy();
 	}
 }

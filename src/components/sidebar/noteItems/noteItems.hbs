@@ -1,0 +1,16 @@
+<div class="note-items-section">
+    {{#if title}}
+        <div class="note-items-title">{{title}}</div>
+    {{/if}}
+    <div class="note-items-container" data-notes-container="true">
+        {{#if hasNotes}}
+            {{#each notes}}
+                <div data-note-container="{{this.ID}}"></div>
+            {{/each}}
+        {{else}}
+            <div class="emptyNotes">
+                <p>{{emptyMessage}}</p>
+            </div>
+        {{/if}}
+    </div>
+</div>

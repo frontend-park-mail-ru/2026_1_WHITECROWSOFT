@@ -1,128 +1,175 @@
-import Handlebars from 'handlebars';
 import '../../../assets/style/genericPopup.scss';
 import { noteService } from '../../../services/noteService.js';
-import { createElement, getElementPosition } from '../../../utils/utils.js';
-import templateText from './notePopup.hbs?raw';
+import { store } from '../../../store.js';
+import { getElementPosition } from '../../../utils/utils.js';
+import Component from '../../component.js';
+import templateString from './notePopup.hbs?raw';
 
-export class NotePopup {
+interface NotePopupOptions {
+	noteId: string | number;
+	anchorElement: HTMLElement;
+	onRename: () => void;
+}
+
+export default class NotePopup extends Component {
+	protected templateString = templateString;
 	private noteId: string | number;
 	private anchorElement: HTMLElement;
-	private element: HTMLElement | null;
-	private _onDocumentClick: ((e: MouseEvent) => void) | null;
-	private _onEscape: ((e: KeyboardEvent) => void) | null;
+	private onRename: () => void;
 
-	constructor(noteId: string | number, anchorElement: HTMLElement) {
-		this.noteId = noteId;
-		this.anchorElement = anchorElement;
-		this.element = null;
-		this._onDocumentClick = null;
-		this._onEscape = null;
+	private boundHandlers: {
+		onDocumentClick?: (e: MouseEvent) => void;
+		onEscape?: (e: KeyboardEvent) => void;
+		onDelete?: () => void;
+		onRename?: () => void;
+		onPin?: () => void;
+	} = {};
+
+	constructor(options: NotePopupOptions) {
+		super();
+		this.noteId = options.noteId;
+		this.anchorElement = options.anchorElement;
+		this.onRename = options.onRename;
 	}
 
-	open(): void {
-		this.close();
+	protected getTemplateData() {
+		return {
+			noteId: this.noteId,
+		};
+	}
 
-		const html = Handlebars.compile(templateText)({ noteId: this.noteId });
-		this.element = createElement('div', 'popup__wrapper');
-		this.element.innerHTML = html;
+	renderTo(container: HTMLElement | null): void {
+		if (!container) return;
+		const temp = document.createElement('div');
+		temp.innerHTML = this.render();
+		const popupElement = temp.firstChild as HTMLElement;
+		if (popupElement) {
+			this.domElement = popupElement;
+			container.appendChild(popupElement);
+			this.onRender();
+		}
+	}
 
-		this._position();
-		document.body.appendChild(this.element);
-
-		this._bindGlobalCloseHandlers();
-		this._bindPopupEvents();
-
-		this.element.dispatchEvent(
+	onRender(): void {
+		this.position();
+		this.bindGlobalCloseHandlers();
+		this.bindPopupEvents();
+		this.domElement?.dispatchEvent(
 			new CustomEvent('popup:opened', {
 				detail: { noteId: this.noteId },
 			}),
 		);
 	}
 
-	close(): void {
-		if (this.element) {
-			this._unbindGlobalCloseHandlers();
-			this.element.dispatchEvent(new CustomEvent('popup:closing'));
-			this.element.remove();
-			this.element = null;
-		}
-	}
-
-	private _position(): void {
-		if (!this.anchorElement || !this.element) return;
-
+	private position(): void {
+		if (!this.anchorElement || !this.domElement) return;
 		const rect = getElementPosition(this.anchorElement);
-		this.element.style.top = `${rect.bottom + window.scrollY + 5}px`;
-		this.element.style.left = `${rect.left + window.scrollX}px`;
+		this.domElement.style.top = `${rect.bottom + window.scrollY + 5}px`;
+		this.domElement.style.left = `${rect.left + window.scrollX}px`;
+		this.domElement.style.zIndex = `20`;
 	}
 
-	private _bindGlobalCloseHandlers(): void {
-		this._onDocumentClick = (e: MouseEvent) => {
-			if (!this.element?.contains(e.target as Node)) {
+	private bindGlobalCloseHandlers(): void {
+		this.boundHandlers.onDocumentClick = (e: MouseEvent) => {
+			if (!this.domElement?.contains(e.target as Node)) {
 				this.close();
 			}
 		};
-		this._onEscape = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') this.close();
+		this.boundHandlers.onEscape = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') {
+				this.close();
+			}
 		};
-
-		document.addEventListener('click', this._onDocumentClick);
-		document.addEventListener('keydown', this._onEscape);
+		document.addEventListener('click', this.boundHandlers.onDocumentClick);
+		document.addEventListener('keydown', this.boundHandlers.onEscape);
 	}
 
-	private _unbindGlobalCloseHandlers(): void {
-		if (this._onDocumentClick) {
-			document.removeEventListener('click', this._onDocumentClick);
+	private unbindGlobalCloseHandlers(): void {
+		if (this.boundHandlers.onDocumentClick) {
+			document.removeEventListener('click', this.boundHandlers.onDocumentClick);
 		}
-		if (this._onEscape) {
-			document.removeEventListener('keydown', this._onEscape);
+		if (this.boundHandlers.onEscape) {
+			document.removeEventListener('keydown', this.boundHandlers.onEscape);
 		}
-		this._onDocumentClick = null;
-		this._onEscape = null;
 	}
 
-	private _bindPopupEvents(): void {
-		if (!this.element) return;
-
-		const deleteBtn = this.element.querySelector('[data-action="delete"]');
+	private bindPopupEvents(): void {
+		const deleteBtn = this.domElement?.querySelector('[data-action="delete"]');
+		const renameBtn = this.domElement?.querySelector('[data-action="rename"]');
+		const pinBtn = this.domElement?.querySelector('[data-action="pin"]');
 		if (deleteBtn) {
-			deleteBtn.addEventListener('click', async () => {
-				try {
-					await noteService.deleteNote(this.noteId);
-					this.close();
-				} catch (error) {
-					console.error('Error deleting note:', error);
-					alert('Ошибка при удалении заметки');
-				}
-			});
+			this.boundHandlers.onDelete = async () => {
+				await this.handleDelete();
+			};
+			deleteBtn.addEventListener('click', this.boundHandlers.onDelete);
 		}
-
-		const renameBtn = this.element.querySelector('[data-action="rename"]');
 		if (renameBtn) {
-			renameBtn.addEventListener('click', () => {
-				this._startInlineEdit();
-				this.close();
-			});
+			this.boundHandlers.onRename = () => {
+				this.handleRename();
+			};
+			renameBtn.addEventListener('click', this.boundHandlers.onRename);
 		}
-
-		const pinBtn = this.element.querySelector('[data-action="pin"]');
 		if (pinBtn) {
-			pinBtn.addEventListener('click', () => {
-				console.log('Pin note:', this.noteId);
-				this.close();
-			});
+			this.boundHandlers.onPin = () => {
+				this.handlePin();
+			};
+			pinBtn.addEventListener('click', this.boundHandlers.onPin);
 		}
+	}
+
+	private unbindPopupEvents(): void {
+		const deleteBtn = this.domElement?.querySelector('[data-action="delete"]');
+		const renameBtn = this.domElement?.querySelector('[data-action="rename"]');
+		const pinBtn = this.domElement?.querySelector('[data-action="pin"]');
+		if (deleteBtn && this.boundHandlers.onDelete) {
+			deleteBtn.removeEventListener('click', this.boundHandlers.onDelete);
+		}
+		if (renameBtn && this.boundHandlers.onRename) {
+			renameBtn.removeEventListener('click', this.boundHandlers.onRename);
+		}
+		if (pinBtn && this.boundHandlers.onPin) {
+			pinBtn.removeEventListener('click', this.boundHandlers.onPin);
+		}
+	}
+
+	private async handleDelete(): Promise<void> {
+		try {
+			await noteService.deleteNote(this.noteId);
+			const currentNotes = store.getNotes();
+			const updatedNotes = currentNotes.filter((n) => n.ID !== this.noteId);
+			store.setNotes(updatedNotes);
+			if (store.getActiveNoteId() === this.noteId) {
+				store.setActiveNoteId(null);
+			}
+			this.close();
+		} catch (error) {
+			console.error('Error deleting note:', error);
+		}
+	}
+
+	private handleRename(): void {
+		this.onRename();
+		this.close();
+	}
+
+	private async handlePin(): Promise<void> {
+		console.log('PIN');
+	}
+
+	close(): void {
+		if (!this.domElement) return;
+		this.unbindGlobalCloseHandlers();
+		this.unbindPopupEvents();
+		this.domElement.dispatchEvent(new CustomEvent('popup:closing'));
+		this.domElement.remove();
+		this.domElement = null;
 	}
 
 	getElement(): HTMLElement | null {
-		return this.element;
+		return this.domElement;
 	}
 
-	private _startInlineEdit(): void {
-		document.dispatchEvent(
-			new CustomEvent('sidebar:startInlineEdit', {
-				detail: { noteId: this.noteId },
-			}),
-		);
+	destroy(): void {
+		this.close();
 	}
 }
