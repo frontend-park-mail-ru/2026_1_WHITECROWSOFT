@@ -1,6 +1,7 @@
 .formattingPopup {
 	display: none;
 	position: fixed;
+	flex-direction: column;
 	z-index: 1000;
 	background: var(--background);
 	border: 1px solid var(--border);

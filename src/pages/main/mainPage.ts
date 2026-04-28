@@ -1,485 +1,21 @@
 import Handlebars from 'handlebars';
-import { AttachPopup } from '../../components/popups/attachPopup/attachPopup.js';
-import { FormatPopup } from '../../components/popups/formatPopup/formatPopup.js';
+import NoteBody from '../../components/note/noteBody/noteBody.js';
+import NoteHeader from '../../components/note/noteHeader/noteHeader.js';
+import AttachPopup from '../../components/popups/attachPopup/attachPopup.js';
 import { db } from '../../db.js';
-import { attachmentService } from '../../services/attachmentService.js';
 import { noteService } from '../../services/noteService.js';
 import { store } from '../../store.js';
 import type { ActiveNote, Block } from '../../types.js';
-import { rebuildBlockFromRanges } from '../../utils/formattingUtils.js';
 import { handleAuthError } from '../../utils/handleAuthError.js';
 import { registerHelpers } from '../../utils/utils.js';
 import templateText from './mainPage.hbs?raw';
 import './mainPage.scss';
 
-let draggedBlockWrapper: HTMLElement | null = null;
-let draggedBlockId: string | null = null;
-let formattingPopup: FormatPopup | null = null;
-let isDraggingSelection = false;
-let selectionTimeout: number | null = null;
 let currentContainer: HTMLElement | null = null;
 let unsubscribeFunctions: Array<() => void> = [];
-const domEventListeners: Map<
-	EventTarget,
-	Map<string, EventListener[]>
-> = new Map();
 let attachPopupInstance: AttachPopup | null = null;
-
-async function saveAllBlocksContent(): Promise<void> {
-	const noteBody = document.querySelector('.note__body') as HTMLElement | null;
-	if (!noteBody) return;
-
-	const blocks = noteBody.querySelectorAll('.note__block');
-	const savePromises: Promise<Block | void>[] = [];
-
-	for (const blockEl of blocks) {
-		const htmlBlock = blockEl as HTMLElement;
-
-		if (htmlBlock.classList.contains('note__imageBlock')) {
-			continue;
-		}
-
-		const blockId = htmlBlock.dataset.blockId;
-		const activeNoteId = store.getActiveNoteId();
-
-		if (activeNoteId && blockId) {
-			const newContent = htmlBlock.innerHTML;
-			const oldBlock = store
-				.getActiveBlocks()
-				.find((b) => String(b.id) === blockId);
-
-			if (oldBlock && oldBlock.content !== newContent) {
-				savePromises.push(
-					noteService
-						.updateBlockContent(activeNoteId, blockId, newContent)
-						.catch((error) => {
-							console.error('Failed to save block on unload:', error);
-							return undefined;
-						}),
-				);
-			}
-		}
-	}
-
-	if (savePromises.length > 0) {
-		await Promise.all(savePromises);
-	}
-}
-
-async function saveBlockContent(blockEl: HTMLElement): Promise<void> {
-	const blockId = blockEl.dataset.blockId;
-	const activeNoteId = store.getActiveNoteId();
-	if (!activeNoteId || !blockId) return;
-
-	if (blockEl.classList.contains('note__imageBlock')) {
-		return;
-	}
-
-	if (blockEl.contentEditable !== 'true') {
-		return;
-	}
-
-	const newContent = blockEl.innerHTML;
-	const oldBlock = store
-		.getActiveBlocks()
-		.find((b) => String(b.id) === blockId);
-
-	if (oldBlock && oldBlock.content !== newContent) {
-		try {
-			await noteService.updateBlockContent(activeNoteId, blockId, newContent);
-			const blocks = store.getActiveBlocks();
-			const updatedBlocks = blocks.map((b) =>
-				String(b.id) === blockId ? { ...b, content: newContent } : b,
-			);
-			store.setActiveBlocksSilently(updatedBlocks);
-		} catch (error) {
-			if (handleAuthError(error)) return;
-			console.error('Failed to save block content:', error);
-		}
-	}
-}
-
-async function deleteBlock(blockId: string): Promise<void> {
-	const activeNoteId = store.getActiveNoteId();
-	if (!activeNoteId) return;
-
-	const blocks = store.getActiveBlocks();
-	const block = blocks.find((b) => String(b.id) === blockId);
-
-	if (block && block.block_type_id === 2 && block.content) {
-		try {
-			await attachmentService.deleteAttachment(activeNoteId, blockId);
-		} catch (error) {
-			console.error('Failed to delete attachment:', error);
-		}
-	}
-
-	if (blocks.length > 1) {
-		await noteService.deleteBlock(activeNoteId, blockId);
-		const updatedBlocks = blocks.filter((b) => String(b.id) !== blockId);
-		store.setActiveBlocksSilently(updatedBlocks);
-	}
-}
-
-async function saveTitleEdit(
-	input: HTMLInputElement,
-	originalTitle: string,
-): Promise<void> {
-	const newTitle = input.value.trim();
-	const activeNoteId = store.getActiveNoteId();
-
-	if (!newTitle) {
-		input.value = originalTitle;
-		return;
-	}
-
-	if (activeNoteId && newTitle !== originalTitle) {
-		try {
-			await noteService.updateNote(activeNoteId, { title: newTitle });
-			const activeNote = store.getActiveNote();
-			if (activeNote) {
-				store.setActiveNote({
-					...activeNote,
-					title: newTitle,
-					breadcrumb: newTitle,
-				});
-			}
-		} catch (error) {
-			console.error('Error renaming note:', error);
-			input.value = originalTitle;
-		}
-	}
-}
-
-export async function createBlockWrapperDOM(
-	block: Block,
-): Promise<HTMLElement> {
-	const wrapper = document.createElement('div');
-	wrapper.className = 'note__block-wrapper';
-	wrapper.dataset.blockId = String(block.id);
-	wrapper.setAttribute('tabindex', '-1');
-
-	let blockEl: HTMLElement;
-
-	if (block.block_type_id === 2) {
-		blockEl = document.createElement('div');
-		blockEl.className = 'note__block note__imageBlock';
-		blockEl.dataset.blockId = String(block.id);
-		blockEl.setAttribute('tabindex', '0');
-		blockEl.style.cursor = 'pointer';
-		blockEl.style.outline = 'none';
-		blockEl.contentEditable = 'false';
-
-		const updateImage = async () => {
-			if (
-				block.content &&
-				block.content.trim() !== '' &&
-				block.content !== '{}'
-			) {
-				try {
-					const imageData = JSON.parse(block.content) as {
-						attachmentId: string | number;
-					};
-					const attachmentId = imageData.attachmentId;
-					const noteId = block.note_id || store.getActiveNoteId();
-					if (noteId && attachmentId) {
-						const imageUrl = await attachmentService.getImageUrl(
-							attachmentId,
-							noteId,
-							block.id,
-						);
-						if (imageUrl) {
-							const img = document.createElement('img');
-							img.src = imageUrl;
-							img.style.display = 'block';
-							img.style.maxWidth = '100%';
-							img.style.pointerEvents = 'none';
-							blockEl.innerHTML = '';
-							blockEl.appendChild(img);
-							return;
-						}
-					}
-				} catch (e) {
-					console.warn('Failed to parse image content', e);
-				}
-			}
-			const placeholder = document.createElement('div');
-			placeholder.textContent = '⏳ Загрузка изображения...';
-			placeholder.style.cssText = 'color:#999;font-size:12px;padding:8px';
-			blockEl.innerHTML = '';
-			blockEl.appendChild(placeholder);
-		};
-
-		await updateImage();
-
-		blockEl.addEventListener('focus', () => {
-			wrapper.classList.add('note__block-wrapper--focused');
-			const actions = wrapper.querySelector(
-				'.note__block-actions',
-			) as HTMLElement;
-			if (actions) {
-				actions.style.opacity = '1';
-				actions.style.visibility = 'visible';
-			}
-		});
-
-		blockEl.addEventListener('blur', () => {
-			wrapper.classList.remove('note__block-wrapper--focused');
-			const actions = wrapper.querySelector(
-				'.note__block-actions',
-			) as HTMLElement;
-			if (actions) {
-				actions.style.opacity = '0';
-				actions.style.visibility = 'hidden';
-			}
-		});
-
-		blockEl.addEventListener('click', (e) => {
-			e.stopPropagation();
-			blockEl.focus();
-		});
-	} else {
-		blockEl = document.createElement('div');
-		blockEl.className = 'note__block';
-		blockEl.dataset.blockId = String(block.id);
-		blockEl.contentEditable = 'true';
-		blockEl.innerHTML = block.content || '';
-
-		blockEl.addEventListener('blur', async () => {
-			await saveBlockContent(blockEl);
-		});
-	}
-
-	const actions = document.createElement('div');
-	actions.className = 'note__block-actions';
-	actions.innerHTML = `
-    <button class="note__block-add-btn" data-action="add" title="Добавить новый блок">
-      <img src="/icons/block_add.svg" class="icon" />
-    </button>
-    <button class="note__block-drag-btn" data-action="drag" draggable="true" title="Перетащить блок">
-      <img src="/icons/block_drag.svg" class="icon" />
-    </button>
-  `;
-
-	wrapper.appendChild(blockEl);
-	wrapper.appendChild(actions);
-
-	if (block.block_type_id !== 2) {
-		const ranges = block.formatting?.ranges || [];
-		if (ranges.length > 0) {
-			rebuildBlockFromRanges(blockEl, ranges);
-		}
-	}
-
-	return wrapper;
-}
-
-export async function insertBlockInDOM(
-	block: Block,
-	afterBlockId?: string | null,
-): Promise<HTMLElement | null> {
-	const noteBody = document.querySelector('.note__body') as HTMLElement | null;
-	if (!noteBody) return null;
-
-	const existingWrapper = noteBody.querySelector(
-		`.note__block-wrapper[data-block-id="${String(block.id)}"]`,
-	);
-	if (existingWrapper) return null;
-
-	const wrapper = await createBlockWrapperDOM(block);
-
-	if (afterBlockId) {
-		const afterWrapper = noteBody.querySelector(
-			`.note__block-wrapper[data-block-id="${afterBlockId}"]`,
-		);
-		if (afterWrapper && afterWrapper.nextSibling) {
-			noteBody.insertBefore(wrapper, afterWrapper.nextSibling);
-		} else if (afterWrapper) {
-			noteBody.appendChild(wrapper);
-		} else {
-			noteBody.appendChild(wrapper);
-		}
-	} else {
-		noteBody.appendChild(wrapper);
-	}
-
-	wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-	const blockEl = wrapper.querySelector('.note__block') as HTMLElement;
-	if (blockEl && block.block_type_id !== 2) {
-		blockEl.focus();
-	}
-
-	return wrapper;
-}
-
-export function removeBlockFromDOM(blockId: string): void {
-	const noteBody = document.querySelector('.note__body') as HTMLElement | null;
-	if (!noteBody) return;
-
-	const wrapper = noteBody.querySelector(
-		`.note__block-wrapper[data-block-id="${blockId}"]`,
-	);
-	if (wrapper) {
-		wrapper.remove();
-	}
-}
-
-function _getCaretParts(
-	blockEl: HTMLElement,
-): { before: string; after: string } | null {
-	const selection = window.getSelection();
-	if (!selection || selection.rangeCount === 0) return null;
-
-	const range = selection.getRangeAt(0);
-	range.collapse(true);
-
-	const marker = document.createElement('span');
-	marker.id = '__split_marker__';
-	range.insertNode(marker);
-
-	const fullHTML = blockEl.innerHTML;
-
-	marker.remove();
-
-	const MARKER = '<span id="__split_marker__"></span>';
-	const splitIndex = fullHTML.indexOf(MARKER);
-	if (splitIndex === -1) return null;
-
-	return {
-		before: fullHTML.slice(0, splitIndex),
-		after: fullHTML.slice(splitIndex + MARKER.length),
-	};
-}
-
-function _isCaretAtStart(blockEl: HTMLElement): boolean {
-	const selection = window.getSelection();
-	if (!selection || selection.rangeCount === 0) return false;
-	if (!selection.isCollapsed) return false;
-
-	const range = selection.getRangeAt(0);
-	const beforeRange = document.createRange();
-	beforeRange.setStart(blockEl, 0);
-	beforeRange.setEnd(range.startContainer, range.startOffset);
-	return beforeRange.toString().length === 0;
-}
-
-function _placeCursorAtStart(el: HTMLElement): void {
-	const selection = window.getSelection();
-	if (!selection) return;
-	const range = document.createRange();
-	range.setStart(el, 0);
-	range.collapse(true);
-	selection.removeAllRanges();
-	selection.addRange(range);
-}
-
-function _setCursorAtTextOffset(el: HTMLElement, offset: number): void {
-	const selection = window.getSelection();
-	if (!selection) return;
-
-	const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-	let remaining = offset;
-	let node: Text | null;
-
-	while ((node = walker.nextNode() as Text | null)) {
-		if (remaining <= (node as Text).length) {
-			const range = document.createRange();
-			range.setStart(node, remaining);
-			range.collapse(true);
-			selection.removeAllRanges();
-			selection.addRange(range);
-			return;
-		}
-		remaining -= (node as Text).length;
-	}
-
-	// fallback: place cursor at end
-	const range = document.createRange();
-	range.selectNodeContents(el);
-	range.collapse(false);
-	selection.removeAllRanges();
-	selection.addRange(range);
-}
-
-async function _fullRenderBlocks(blocks: Block[]): Promise<void> {
-	const noteBody = document.querySelector('.note__body') as HTMLElement | null;
-	if (!noteBody) return;
-
-	noteBody.innerHTML = '';
-
-	if (blocks.length === 0) {
-		const activeNoteId = store.getActiveNoteId();
-		if (!activeNoteId) return;
-
-		// Автоматически создаём первый блок
-		try {
-			const newBlock = await noteService.createBlock(activeNoteId, {
-				note_id: activeNoteId,
-				block_type_id: 1,
-				position: 0,
-				content: '',
-			});
-
-			if (newBlock) {
-				// Обновляем blocks в store
-				const updatedBlocks = [newBlock];
-				store.setActiveBlocksSilently(updatedBlocks);
-
-				// Рендерим блок
-				const wrapper = await createBlockWrapperDOM(newBlock);
-				noteBody.appendChild(wrapper);
-
-				// Фокусируемся на блоке для начала ввода
-				const blockEl = wrapper.querySelector('.note__block') as HTMLElement;
-				if (blockEl && newBlock.block_type_id !== 2) {
-					blockEl.focus();
-				}
-			}
-		} catch (error) {
-			console.error('Failed to create first block:', error);
-
-			// Если не удалось создать блок, показываем кнопку как fallback
-			const emptyState = document.createElement('div');
-			emptyState.className = 'note__empty-state';
-			emptyState.innerHTML = `
-        <div class="note__empty-state-content">
-          <p>Не удалось создать блок</p>
-          <button class="note__empty-state-btn" data-action="create-first-block">Попробовать снова</button>
-        </div>
-      `;
-
-			const createBtn = emptyState.querySelector(
-				'[data-action="create-first-block"]',
-			);
-			if (createBtn) {
-				createBtn.addEventListener('click', async () => {
-					const activeNoteId = store.getActiveNoteId();
-					if (activeNoteId) {
-						const newBlock = await noteService.createBlock(activeNoteId, {
-							note_id: activeNoteId,
-							block_type_id: 1,
-							position: 0,
-							content: '',
-						});
-						if (newBlock) {
-							store.setActiveBlocks([newBlock]);
-						}
-					}
-				});
-			}
-
-			noteBody.appendChild(emptyState);
-		}
-		return;
-	}
-
-	// Рендерим существующие блоки
-	for (const block of blocks) {
-		const wrapper = await createBlockWrapperDOM(block);
-		noteBody.appendChild(wrapper);
-	}
-}
+let noteHeader: NoteHeader | null = null;
+let noteBody: NoteBody | null = null;
 
 export async function initMainPage(container: HTMLElement): Promise<void> {
 	await cleanupMainPage();
@@ -488,7 +24,6 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 	const template = Handlebars.compile(templateText);
 	let notes = store.getNotes();
 	let activeNote = store.getActiveNote();
-
 	if (notes.length === 0) {
 		try {
 			await noteService.getNotes();
@@ -498,7 +33,6 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 			console.error('Failed to load notes:', error);
 		}
 	}
-
 	const savedNoteId = await db.settingsGet<string | number>('activeNoteId');
 	if (savedNoteId && !activeNote) {
 		try {
@@ -509,7 +43,6 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 			console.error('Failed to load saved note:', error);
 		}
 	}
-
 	if (!activeNote && notes[0]?.ID) {
 		try {
 			await noteService.getNote(notes[0].ID);
@@ -519,86 +52,43 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 			console.error('Failed to load note:', error);
 		}
 	}
-
-	const state = store.getState();
-	const html = template(state);
+	const html = template({});
 	container.innerHTML = html;
-
-	const emptyState = container.querySelector(
-		'.emptyState',
-	) as HTMLElement | null;
-	const notePath = container.querySelector(
-		'.note__breadcrumb',
-	) as HTMLElement | null;
-	const noteContent = container.querySelector(
-		'.note__content',
-	) as HTMLElement | null;
-	const titleEl = container.querySelector(
-		'.note__title',
-	) as HTMLInputElement | null;
-	const breadcrumbEl = container.querySelector(
-		'.note__breadcrumbItem--current',
-	) as HTMLElement | null;
-
-	if (titleEl) {
-		let savedTitle = titleEl.value;
-
-		titleEl.addEventListener('focus', () => {
-			savedTitle = titleEl.value;
-		});
-
-		titleEl.addEventListener('blur', () => {
-			saveTitleEdit(titleEl, savedTitle);
-		});
-
-		titleEl.addEventListener('keydown', (e: KeyboardEvent) => {
-			if (e.key === 'Enter') {
-				e.preventDefault();
-				titleEl.blur();
-			} else if (e.key === 'Escape') {
-				titleEl.value = savedTitle;
-				titleEl.blur();
-			}
-		});
+	const emptyState = container.querySelector('.empty-state') as HTMLElement;
+	const noteContainer = container.querySelector(
+		'.note-container',
+	) as HTMLElement;
+	const headerContainer = container.querySelector('.note__header-container');
+	const bodyContainer = container.querySelector('.note__body-container');
+	if (headerContainer) {
+		noteHeader = new NoteHeader();
+		noteHeader.renderTo(headerContainer as HTMLElement);
 	}
-
+	if (bodyContainer) {
+		noteBody = new NoteBody((blocks: Block[]) => {
+			store.setActiveBlocksSilently(blocks);
+		});
+		noteBody.renderTo(bodyContainer as HTMLElement);
+		noteBody.getElement()?.addEventListener('addBlock', ((e: CustomEvent) => {
+			handleAddBlock(e.detail.afterBlockId);
+		}) as EventListener);
+	}
 	function setVisibility(hasNote: boolean): void {
-		if (!emptyState || !notePath || !noteContent) return;
+		if (!emptyState || !noteContainer) return;
 		emptyState.style.display = hasNote ? 'none' : 'flex';
-		notePath.style.display = hasNote ? 'flex' : 'none';
-		noteContent.style.display = hasNote ? 'flex' : 'none';
+		noteContainer.style.display = hasNote ? 'block' : 'none';
 	}
-
-	const unsubActiveNote = store.subscribe(
-		'activeNote',
-		(activeNoteData: ActiveNote | null) => {
-			const currentTitleEl = document.querySelector(
-				'.note__title',
-			) as HTMLInputElement | null;
-			if (currentTitleEl) {
-				currentTitleEl.value = activeNoteData?.title || '';
-			}
-			if (breadcrumbEl)
-				breadcrumbEl.textContent = activeNoteData?.breadcrumb || '';
-			setVisibility(!!activeNoteData);
-		},
-	);
-	unsubscribeFunctions.push(unsubActiveNote);
-
-	const unsubActiveBlocks = store.subscribe(
-		'activeBlocks',
-		async (blocks: Block[]) => {
-			await _fullRenderBlocks(blocks);
-		},
-	);
-	unsubscribeFunctions.push(unsubActiveBlocks);
-
 	const unsubActiveNoteId = store.subscribe(
 		'activeNoteId',
 		async (noteId: string | number | null) => {
 			if (noteId && noteId !== store.getActiveNote()?.ID) {
 				try {
 					await noteService.getNote(noteId);
+					const activeNoteData = store.getActiveNote();
+					noteHeader?.updateNote(activeNoteData);
+					const blocks = store.getActiveBlocks();
+					await noteBody?.updateBlocks(blocks);
+					setVisibility(!!activeNoteData);
 				} catch (error) {
 					if (handleAuthError(error)) return;
 					console.error('Failed to load note:', error);
@@ -607,285 +97,61 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 		},
 	);
 	unsubscribeFunctions.push(unsubActiveNoteId);
-
+	const unsubActiveNote = store.subscribe(
+		'activeNote',
+		(activeNoteData: ActiveNote | null) => {
+			noteHeader?.updateNote(activeNoteData);
+			setVisibility(!!activeNoteData);
+		},
+	);
+	unsubscribeFunctions.push(unsubActiveNote);
+	const unsubActiveBlocks = store.subscribe(
+		'activeBlocks',
+		async (blocks: Block[]) => {
+			noteBody?.updateBlocks(blocks);
+		},
+	);
+	unsubscribeFunctions.push(unsubActiveBlocks);
 	setVisibility(!!store.getActiveNote());
-	_updateActiveNoteInDOM(store.getActiveNote());
-
-	await _fullRenderBlocks(store.getActiveBlocks());
-
 	window.addEventListener('beforeunload', async () => {
-		await saveAllBlocksContent();
+		await noteBody?.saveAllBlocks();
 	});
-
 	document.addEventListener('visibilitychange', () => {
 		if (document.visibilityState === 'hidden') {
-			saveAllBlocksContent();
+			noteBody?.saveAllBlocks();
 		}
 	});
-
-	const noteBody = container.querySelector('.note__body') as HTMLElement | null;
-	if (noteBody) {
-		noteBody.addEventListener('contextmenu', (e) => e.preventDefault());
-
-		noteBody.addEventListener('click', (e) => {
-			const target = e.target as HTMLElement;
-			const addBtn = target.closest(
-				'[data-action="add"]',
-			) as HTMLElement | null;
-			if (addBtn) {
-				e.stopPropagation();
-				const wrapper = addBtn.closest(
-					'.note__block-wrapper',
-				) as HTMLElement | null;
-				if (wrapper) _handleAddBlock(wrapper.dataset.blockId!);
-				return;
-			}
-
-			if (target.closest('.formattingPopup')) return;
-			const selection = window.getSelection();
-			if (selection?.isCollapsed && formattingPopup) {
-				formattingPopup.close();
-				formattingPopup = null;
-			}
-		});
-
-		noteBody.addEventListener('mousedown', (e) => {
-			if ((e.target as HTMLElement).closest('.formattingPopup')) return;
-			if (formattingPopup) {
-				formattingPopup.close();
-				formattingPopup = null;
-			}
-			isDraggingSelection = true;
-		});
-
-		noteBody.addEventListener('mouseup', () => {
-			if (!isDraggingSelection) return;
-			isDraggingSelection = false;
-			if (selectionTimeout) clearTimeout(selectionTimeout);
-			selectionTimeout = window.setTimeout(() => {
-				const selection = window.getSelection();
-				if (selection && !selection.isCollapsed && selection.rangeCount > 0) {
-					const range = selection.getRangeAt(0);
-					if (noteBody.contains(range.commonAncestorContainer)) {
-						if (formattingPopup) formattingPopup.close();
-						formattingPopup = new FormatPopup(range.cloneRange(), noteBody);
-						formattingPopup.open();
-					}
-				}
-			}, 10);
-		});
-
-		noteBody.addEventListener('scroll', () => {
-			if (formattingPopup) {
-				formattingPopup.close();
-				formattingPopup = null;
-			}
-		});
-
-		noteBody.addEventListener('dragstart', (e) => {
-			const dragEvent = e as DragEvent;
-			const dragBtn = (dragEvent.target as HTMLElement).closest(
-				'[data-action="drag"]',
-			) as HTMLElement | null;
-			if (!dragBtn) {
-				dragEvent.preventDefault();
-				return;
-			}
-
-			const wrapper = dragBtn.closest('.note__block-wrapper') as HTMLElement;
-			draggedBlockWrapper = wrapper;
-			draggedBlockId = wrapper.dataset.blockId || null;
-
-			wrapper.classList.add('note__block-wrapper--dragging');
-			if (dragEvent.dataTransfer) {
-				dragEvent.dataTransfer.effectAllowed = 'move';
-				dragEvent.dataTransfer.setData('text/plain', draggedBlockId || '');
-			}
-		});
-
-		noteBody.addEventListener('dragover', (e) => {
-			const dragEvent = e as DragEvent;
-			dragEvent.preventDefault();
-			if (!draggedBlockWrapper || !dragEvent.dataTransfer) return;
-
-			const afterElement = _getDragAfterWrapperElement(
-				noteBody,
-				dragEvent.clientY,
-			);
-			if (afterElement) {
-				noteBody.insertBefore(draggedBlockWrapper, afterElement);
-			} else {
-				noteBody.appendChild(draggedBlockWrapper);
-			}
-		});
-
-		noteBody.addEventListener('drop', async (e) => {
-			const dragEvent = e as DragEvent;
-			dragEvent.preventDefault();
-			dragEvent.stopPropagation();
-			if (!draggedBlockId) return;
-
-			const blocks = Array.from(
-				noteBody.querySelectorAll('.note__block-wrapper'),
-			) as HTMLElement[];
-			const newIndex = blocks.indexOf(draggedBlockWrapper!);
-			const activeNoteId = store.getActiveNoteId();
-
-			if (activeNoteId && newIndex !== -1) {
-				try {
-					await noteService.moveBlock(activeNoteId, draggedBlockId, newIndex);
-					const updatedBlocks = store
-						.getActiveBlocks()
-						.map((b, idx) => ({ ...b, position: idx }));
-					store.setActiveBlocksSilently(updatedBlocks);
-				} catch (error) {
-					if (!handleAuthError(error))
-						console.error('Error moving block:', error);
-				}
-			}
-		});
-
-		noteBody.addEventListener('dragend', () => {
-			if (draggedBlockWrapper) {
-				draggedBlockWrapper.classList.remove('note__block-wrapper--dragging');
-			}
-			draggedBlockWrapper = null;
-			draggedBlockId = null;
-		});
-
-		noteBody.addEventListener('keydown', async (e: KeyboardEvent) => {
-			const target = e.target as HTMLElement;
-			const blockEl = target.closest('.note__block') as HTMLElement;
-
-			if (!blockEl) return;
-
-			const isDelete = e.key === 'Delete';
-			const isBackspace = e.key === 'Backspace';
-			const isEnter = e.key === 'Enter';
-
-			const wrapper = blockEl.closest('.note__block-wrapper') as HTMLElement;
-			if (!wrapper) return;
-
-			const blockId = wrapper.dataset.blockId;
-			if (!blockId) return;
-
-			const isTextBlock = blockEl.contentEditable === 'true';
-			const isImageBlock = blockEl.classList.contains('note__imageBlock');
-
-			// Split
-			if (isEnter && !e.shiftKey && isTextBlock) {
-				e.preventDefault();
-				const activeNoteId = store.getActiveNoteId();
-				if (!activeNoteId) return;
-
-				const parts = _getCaretParts(blockEl);
-				if (!parts) return;
-
-				blockEl.innerHTML = parts.before;
-				await saveBlockContent(blockEl);
-
-				const createdBlock = await noteService.createBlockAfter(
-					activeNoteId,
-					{ note_id: activeNoteId, block_type_id: 1, content: '' },
-					blockId,
-				);
-				const newBlock = await noteService.updateBlockContent(
-					activeNoteId,
-					createdBlock.id,
-					parts.after,
-				);
-
-				await insertBlockInDOM({ ...newBlock, content: parts.after }, blockId);
-
-				const newBlockEl = document.querySelector(
-					`.note__block-wrapper[data-block-id="${newBlock.id}"] .note__block`,
-				) as HTMLElement | null;
-				if (newBlockEl) {
-					newBlockEl.focus();
-					_placeCursorAtStart(newBlockEl);
-				}
-				return;
-			}
-
-			if (!isDelete && !isBackspace) return;
-
-			const isEmpty = isTextBlock && blockEl.innerText.trim() === '';
-
-			// Join
-			if (isBackspace && isTextBlock && !isEmpty && _isCaretAtStart(blockEl)) {
-				e.preventDefault();
-				const activeNoteId = store.getActiveNoteId();
-				if (!activeNoteId) return;
-
-				const allWrappers = Array.from(
-					noteBody.querySelectorAll('.note__block-wrapper'),
-				);
-				const currentIndex = allWrappers.indexOf(wrapper);
-				if (currentIndex <= 0) return;
-
-				const prevWrapper = allWrappers[currentIndex - 1] as HTMLElement;
-				const prevBlockEl = prevWrapper.querySelector(
-					'.note__block',
-				) as HTMLElement | null;
-				const prevBlockId = prevWrapper.dataset.blockId;
-
-				if (
-					!prevBlockEl ||
-					prevBlockEl.contentEditable !== 'true' ||
-					!prevBlockId
-				)
-					return;
-
-				const joinOffset = prevBlockEl.innerText.length;
-				prevBlockEl.innerHTML = prevBlockEl.innerHTML + blockEl.innerHTML;
-				await saveBlockContent(prevBlockEl);
-				await deleteBlock(blockId);
-				removeBlockFromDOM(blockId);
-				prevBlockEl.focus();
-				_setCursorAtTextOffset(prevBlockEl, joinOffset);
-				return;
-			}
-
-			const isLastChar =
-				isBackspace && isTextBlock && blockEl.innerText.length === 0;
-
-			if (isImageBlock || isEmpty || isLastChar) {
-				e.preventDefault();
-				const blocks = store.getActiveBlocks();
-				if (blocks.length > 1) {
-					await deleteBlock(blockId);
-					removeBlockFromDOM(blockId);
-				}
-			}
-		});
-	}
-
-	const globalKeydownHandler = (e: Event) => {
-		const keyboardEvent = e as KeyboardEvent;
-		if (keyboardEvent.key === 'Escape' && formattingPopup) {
-			formattingPopup.close();
-			formattingPopup = null;
-		}
-	};
-	document.addEventListener('keydown', globalKeydownHandler);
 }
 
-async function _handleAddBlock(afterBlockId: string): Promise<void> {
+async function handleAddBlock(afterBlockId: string): Promise<void> {
 	const activeNoteId = store.getActiveNoteId();
 	if (!activeNoteId) return;
-
 	if (attachPopupInstance) {
 		attachPopupInstance.close();
 		attachPopupInstance = null;
 	}
-
 	const btn = document.querySelector(
 		`.note__block-wrapper[data-block-id="${afterBlockId}"] .note__block-add-btn`,
 	) as HTMLElement | null;
 	if (btn) {
-		attachPopupInstance = new AttachPopup(btn, afterBlockId);
+		attachPopupInstance = new AttachPopup({
+			anchorElement: btn,
+			afterBlockId,
+			onBlockCreated: async (block: Block) => {
+				const currentBlocks = store.getActiveBlocks();
+				await noteBody?.updateBlocks(currentBlocks);
+				setTimeout(() => {
+					const newWrapper = document.querySelector(
+						`.note__block-wrapper[data-block-id="${block.id}"]`,
+					) as HTMLElement;
+					const blockEl = newWrapper?.querySelector(
+						'.note__block',
+					) as HTMLElement;
+					blockEl?.focus();
+				}, 100);
+			},
+		});
 		attachPopupInstance.open();
-
 		const unsub = store.subscribe('activeNoteId', () => {
 			if (attachPopupInstance) {
 				attachPopupInstance.close();
@@ -899,70 +165,15 @@ async function _handleAddBlock(afterBlockId: string): Promise<void> {
 export async function cleanupMainPage(): Promise<void> {
 	unsubscribeFunctions.forEach((fn) => typeof fn === 'function' && fn());
 	unsubscribeFunctions = [];
-	for (const [element, events] of domEventListeners.entries()) {
-		if (element && 'removeEventListener' in element) {
-			for (const [event, handlers] of events.entries()) {
-				handlers.forEach((h) => element.removeEventListener(event, h));
-			}
-		}
-	}
-	domEventListeners.clear();
-	if (formattingPopup) {
-		formattingPopup.close();
-		formattingPopup = null;
-	}
+	noteBody?.cleanup();
+	noteBody = null;
+	noteHeader = null;
 	if (attachPopupInstance) {
 		attachPopupInstance.close();
 		attachPopupInstance = null;
 	}
-	if (selectionTimeout) {
-		clearTimeout(selectionTimeout);
-		selectionTimeout = null;
-	}
-	isDraggingSelection = false;
 	if (currentContainer) {
 		currentContainer.innerHTML = '';
 		currentContainer = null;
 	}
-}
-
-function _updateActiveNoteInDOM(activeNote: ActiveNote | null): void {
-	const titleEl = document.querySelector(
-		'.note__title',
-	) as HTMLInputElement | null;
-	const breadcrumbEl = document.querySelector(
-		'.note__breadcrumbItem--current',
-	) as HTMLElement | null;
-	if (!activeNote) {
-		if (titleEl) titleEl.value = '';
-		if (breadcrumbEl) breadcrumbEl.textContent = '';
-		return;
-	}
-	if (titleEl) titleEl.value = activeNote.title;
-	if (breadcrumbEl) breadcrumbEl.textContent = activeNote.breadcrumb;
-}
-
-function _getDragAfterWrapperElement(
-	container: HTMLElement,
-	y: number,
-): HTMLElement | undefined {
-	const wrappers = [
-		...container.querySelectorAll(
-			'.note__block-wrapper:not(.note__block-wrapper--dragging)',
-		),
-	] as HTMLElement[];
-	return (
-		wrappers.reduce<{ offset: number; element: HTMLElement | null }>(
-			(closest, child) => {
-				const rect = child.getBoundingClientRect();
-				if (rect.height === 0 || rect.width === 0 || !child.offsetParent)
-					return closest;
-				const offset = y - rect.top - rect.height / 2;
-				return offset < 0 && offset > closest.offset
-					? { offset, element: child }
-					: closest;
-			},
-			{ offset: Number.NEGATIVE_INFINITY, element: null },
-		).element || undefined
-	);
 }

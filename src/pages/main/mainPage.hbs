@@ -1,27 +1,12 @@
-<div class="emptyState">
-    <p>У Вас пока нет заметок.</p>
-</div>
-
-<div class="note__breadcrumb">
-    <span class="note__breadcrumbItem">Библиотека</span>
-    <span class="note__breadcrumbItem note__breadcrumbItem--current"></span>
-</div>
-
-<article class="note__content">
-    <input class="note__title note__title--input" type="text" placeholder="Название заметки" />
-    <div class="note__body">
-        {{#each activeBlocks}}
-        <div class="note__block-wrapper" data-block-id="{{id}}">
-            <div class="note__block" contenteditable="true" data-block-id="{{id}}">{{{content}}}</div>
-            <div class="note__block-actions">
-                <button class="note__block-add-btn" data-action="add" title="Добавить новый блок">
-                    <img src="/icons/block_add.svg" class="icon" />
-                </button>
-                <button class="note__block-drag-btn" data-action="drag" draggable="true" title="Перетащить блок">
-                    <img src="/icons/block_drag.svg" class="icon" />
-                </button>
-            </div>
+<div class="main-page">
+    <div class="empty-state" style="display: none;">
+        <div class="empty-state__content">
+            <p>Нет активной заметки</p>
         </div>
-        {{/each}}
     </div>
-</article>
+    
+    <div class="note-container" style="display: none;">
+        <div class="note__header-container"></div>
+        <div class="note__body-container"></div>
+    </div>
+</div>

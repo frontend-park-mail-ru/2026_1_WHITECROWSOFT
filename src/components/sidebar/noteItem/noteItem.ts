@@ -13,7 +13,6 @@ interface NoteItemOptions {
 
 export default class NoteItem extends Component {
 	protected templateString = templateString;
-	private element: HTMLElement | null = null;
 	private contentZone: HTMLElement | null = null;
 	private titleElement: HTMLElement | null = null;
 	private addSubnoteBtn: HTMLElement | null = null;
@@ -47,8 +46,6 @@ export default class NoteItem extends Component {
 	}
 
 	private cacheElements(): void {
-		this.element =
-			this.domElement?.querySelector('[data-name="noteItem"]') || null;
 		this.titleElement =
 			this.domElement?.querySelector('[data-name="noteItemTitle"]') || null;
 		this.contentZone = this.titleElement;
@@ -134,8 +131,8 @@ export default class NoteItem extends Component {
 	}
 
 	setActive(isActive: boolean): void {
-		if (this.element) {
-			this.element.classList.toggle('sidebar__noteItem--active', isActive);
+		if (this.domElement) {
+			this.domElement.classList.toggle('sidebar__noteItem--active', isActive);
 		}
 	}
 
@@ -151,7 +148,7 @@ export default class NoteItem extends Component {
 	}
 
 	getNoteElement(): HTMLElement | null {
-		return this.element;
+		return this.domElement;
 	}
 
 	getTitle(): string {
@@ -164,7 +161,6 @@ export default class NoteItem extends Component {
 
 	destroy(): void {
 		this.detachEvents();
-		this.element = null;
 		this.contentZone = null;
 		this.titleElement = null;
 		this.addSubnoteBtn = null;

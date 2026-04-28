@@ -18,21 +18,27 @@ export default abstract class Component {
 
 	renderTo(container: HTMLElement | null): void {
 		if (!container) return;
-		this.domElement = document.createElement('div');
-		this.domElement.innerHTML = this.render();
+		const temp = document.createElement('div');
+		temp.innerHTML = this.render();
+		while (temp.firstChild) {
+			const child = temp.firstChild;
+			container.appendChild(child);
+			if (!this.domElement) {
+				this.domElement = child as HTMLElement;
+			}
+		}
 
-		container.appendChild(this.domElement);
+		this.onRender();
+	}
+
+	update(): void {
+		if (!this.domElement) return;
+		const newHtml = this.render();
+		this.domElement.innerHTML = newHtml;
 		this.onRender();
 	}
 
 	protected onRender(): void {}
-
-	update(): void {
-		if (!this.domElement) return;
-		const newContent = this.render();
-		this.domElement.innerHTML = newContent;
-		this.onRender();
-	}
 
 	protected escapeHtml(str: string): string {
 		const div = document.createElement('div');

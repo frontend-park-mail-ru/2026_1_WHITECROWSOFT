@@ -2,8 +2,6 @@ import Handlebars from 'handlebars';
 import authLayoutTemplate from './authLayout.hbs?raw';
 import Sidebar from './components/sidebar/sidebar.js';
 import layoutTemplate from './layout.hbs?raw';
-import { store } from './store.js';
-import type { User } from './types.js';
 
 type PageModule = (
 	container: HTMLElement,
@@ -53,7 +51,6 @@ export class Layout {
 		if (!this.sidebarContainer) return;
 		this.sidebar = new Sidebar();
 		this.sidebar.renderTo(this.sidebarContainer);
-		this._subscribeToStore();
 	}
 
 	destroy(): void {
@@ -69,36 +66,6 @@ export class Layout {
 		this.mainContainer = null;
 		this.sidebarContainer = null;
 		this._isAuthMode = false;
-	}
-
-	private _subscribeToStore(): void {
-		this._unsubscribeNotes?.();
-		this._unsubscribeActiveNoteId?.();
-		this._unsubscribeUser?.();
-
-		this._unsubscribeNotes = store.subscribe('notes', () => {
-			if (
-				this.sidebar &&
-				typeof this.sidebar.updateNoteComponents === 'function'
-			) {
-				this.sidebar.updateNoteComponents();
-			}
-		});
-
-		this._unsubscribeActiveNoteId = store.subscribe('activeNoteId', () => {
-			if (
-				this.sidebar &&
-				typeof this.sidebar.updateNoteComponents === 'function'
-			) {
-				this.sidebar.updateNoteComponents();
-			}
-		});
-
-		this._unsubscribeUser = store.subscribe('user', (user: User | null) => {
-			if (this.sidebar && typeof this.sidebar.updateUser === 'function') {
-				this.sidebar.updateUser(user);
-			}
-		});
 	}
 
 	async setPage(pageModule: PageModule, pageData: unknown = {}): Promise<void> {

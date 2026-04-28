@@ -1,13 +1,17 @@
-import Handlebars from 'handlebars';
 import { noteService } from '../../../services/noteService.js';
 import { store } from '../../../store.js';
 import {
 	applyFormattingToRanges,
+	detectFormattingInSelection,
+	getBlockFromRange,
 	getSelectionPositionsInElement,
+	restoreSelectionByPositions,
 	updateFormattingInRange,
 } from '../../../utils/formattingUtils.js';
-import { createElement } from '../../../utils/utils.js';
-import templateText from './formatPopup.hbs?raw';
+import { positionPopup } from '../../../utils/positionPopup.js';
+import { isSelectionValid } from '../../../utils/selectionUtils.js';
+import Component from '../../component.js';
+import templateString from './formatPopup.hbs?raw';
 import './formatPopup.scss';
 
 interface FormattingState {
@@ -24,56 +28,68 @@ interface SelectionData {
 	blockId: string | number;
 }
 
-export class FormatPopup {
-	private selectionData: SelectionData | null;
-	private editor: HTMLElement;
-	private element: HTMLElement | null;
-	private _onDocumentClick: ((e: MouseEvent) => void) | null;
-	private _onEscape: ((e: KeyboardEvent) => void) | null;
-	private _onWindowResize: (() => void) | null;
-	private _onScroll: (() => void) | null;
-	private currentFormatting: FormattingState | null;
-	private _checkSelectionInterval: number | null;
-	private rangeForPosition: Range | null;
+interface FormatPopupOptions {
+	range: Range;
+	editorElement: HTMLElement;
+}
 
-	constructor(range: Range, editorElement: HTMLElement) {
-		this.rangeForPosition = range.cloneRange();
-		this.editor = editorElement;
-		this.element = null;
-		this._onDocumentClick = null;
-		this._onEscape = null;
-		this._onWindowResize = null;
-		this._onScroll = null;
-		this.currentFormatting = null;
-		this._checkSelectionInterval = null;
-		this.selectionData = null;
+export default class FormatPopup extends Component {
+	protected templateString = templateString;
+
+	private range: Range;
+	private editor: HTMLElement;
+	private selectionData: SelectionData | null = null;
+	private currentFormatting: FormattingState | null = null;
+	private checkSelectionInterval: number | null = null;
+
+	private boundHandlers: {
+		onDocumentClick?: (e: MouseEvent) => void;
+		onEscape?: (e: KeyboardEvent) => void;
+		onWindowResize?: () => void;
+		onScroll?: () => void;
+		onPopupClick?: (e: MouseEvent) => void;
+	} = {};
+
+	constructor(options: FormatPopupOptions) {
+		super();
+		this.range = options.range.cloneRange();
+		this.editor = options.editorElement;
+	}
+
+	protected getTemplateData() {
+		const fmt = this.currentFormatting || {
+			bold: false,
+			italic: false,
+			underline: false,
+		};
+		return {
+			font: 'Inter',
+			fontSize: '14',
+			isBold: fmt.bold,
+			isItalic: fmt.italic,
+			isUnderline: fmt.underline,
+			isStrike: false,
+		};
 	}
 
 	open(): void {
 		this.close();
-		if (!this.rangeForPosition) return;
-
-		const blockEl = this._getBlockFromRange(this.rangeForPosition);
+		if (!this.range) return;
+		const blockEl = getBlockFromRange(this.range);
 		if (!blockEl?.dataset.blockId) {
 			this.close();
 			return;
 		}
-
 		const noteId = store.getActiveNoteId();
 		if (!noteId) {
 			this.close();
 			return;
 		}
-
-		const { start, end } = getSelectionPositionsInElement(
-			blockEl,
-			this.rangeForPosition,
-		);
+		const { start, end } = getSelectionPositionsInElement(blockEl, this.range);
 		if (start >= end) {
 			this.close();
 			return;
 		}
-
 		this.selectionData = {
 			blockEl,
 			start,
@@ -81,94 +97,36 @@ export class FormatPopup {
 			noteId,
 			blockId: blockEl.dataset.blockId,
 		};
+		this.currentFormatting = detectFormattingInSelection(blockEl, start, end);
+		this.renderTo(document.body);
+		this.startSelectionCheck();
+	}
 
-		this._detectCurrentFormatting();
-
-		const html = Handlebars.compile(templateText)({
-			font: 'Inter',
-			fontSize: '14',
-			isBold: false,
-			isItalic: false,
-			isUnderline: false,
-			isStrike: false,
-		});
-
-		this.element = createElement('div', 'formattingPopup');
-		this.element.innerHTML = html;
-		document.body.appendChild(this.element);
-		this._position();
-		this._bindGlobalCloseHandlers();
-		this._bindPopupEvents();
-		requestAnimationFrame(() => {
-			this.element?.classList.add('formattingPopup--visible');
-		});
-
-		this.element.addEventListener('mousedown', (e: MouseEvent) =>
-			e.stopPropagation(),
-		);
-		this.element.addEventListener('click', (e: MouseEvent) =>
-			e.stopPropagation(),
-		);
-
-		this._checkSelectionInterval = window.setInterval(() => {
-			if (!this._isSelectionValid()) {
-				this.close();
-			}
-		}, 500);
+	onRender(): void {
+		console.log(this.domElement);
+		if (this.range && this.domElement) {
+			console.log('position');
+			positionPopup(this.range, this.domElement);
+		}
+		this.bindGlobalCloseHandlers();
+		this.bindPopupEvents();
 	}
 
 	close(): void {
-		if (this._checkSelectionInterval) {
-			clearInterval(this._checkSelectionInterval);
-			this._checkSelectionInterval = null;
-		}
-		if (this.element) {
-			this._unbindGlobalCloseHandlers();
-			this.element.remove();
-			this.element = null;
+		this.stopSelectionCheck();
+		if (this.domElement) {
+			this.unbindGlobalCloseHandlers();
+			this.unbindPopupEvents();
+			this.domElement.remove();
+			this.domElement = null;
 		}
 		this.selectionData = null;
+		this.currentFormatting = null;
 	}
 
-	private _position(): void {
-		if (!this.rangeForPosition || !this.element) return;
-
-		this.element.style.visibility = 'hidden';
-		this.element.style.display = 'flex';
-		this.element.style.position = 'fixed';
-
-		void this.element.offsetHeight;
-
-		const rect = this.rangeForPosition.getBoundingClientRect();
-		const popupRect = this.element.getBoundingClientRect();
-
-		let top = rect.top - popupRect.height - 15;
-		let left = rect.left + rect.width / 2 - popupRect.width / 2;
-
-		if (top < 10) {
-			top = rect.bottom + 15;
-		}
-
-		if (top + popupRect.height > window.innerHeight - 10) {
-			top = rect.top - popupRect.height - 15;
-			if (top < 10) {
-				top = 10;
-			}
-		}
-
-		left = Math.max(
-			10,
-			Math.min(left, window.innerWidth - popupRect.width - 10),
-		);
-
-		this.element.style.top = `${top}px`;
-		this.element.style.left = `${left}px`;
-		this.element.style.visibility = 'visible';
-	}
-
-	private _bindGlobalCloseHandlers(): void {
-		this._onDocumentClick = (e: MouseEvent) => {
-			if (this.element?.contains(e.target as Node)) return;
+	private bindGlobalCloseHandlers(): void {
+		this.boundHandlers.onDocumentClick = (e: MouseEvent) => {
+			if (this.domElement?.contains(e.target as Node)) return;
 			if (this.editor?.contains(e.target as Node)) {
 				const selection = window.getSelection();
 				if (selection && !selection.isCollapsed) {
@@ -177,218 +135,128 @@ export class FormatPopup {
 			}
 			this.close();
 		};
-
-		this._onEscape = (e: KeyboardEvent) => {
+		this.boundHandlers.onEscape = (e: KeyboardEvent) => {
 			if (e.key === 'Escape') this.close();
 		};
-
-		this._onWindowResize = () => this._position();
-		this._onScroll = () => this._position();
-
-		document.addEventListener('click', this._onDocumentClick, true);
-		document.addEventListener('keydown', this._onEscape);
-		window.addEventListener('resize', this._onWindowResize);
-		window.addEventListener('scroll', this._onScroll, true);
+		this.boundHandlers.onWindowResize = () => {
+			if (this.range && this.domElement) {
+				positionPopup(this.range, this.domElement);
+			}
+		};
+		this.boundHandlers.onScroll = () => {
+			if (this.range && this.domElement) {
+				positionPopup(this.range, this.domElement);
+			}
+		};
+		document.addEventListener(
+			'click',
+			this.boundHandlers.onDocumentClick,
+			true,
+		);
+		document.addEventListener('keydown', this.boundHandlers.onEscape);
+		window.addEventListener('resize', this.boundHandlers.onWindowResize);
+		window.addEventListener('scroll', this.boundHandlers.onScroll, true);
 	}
 
-	private _unbindGlobalCloseHandlers(): void {
-		if (this._onDocumentClick) {
-			document.removeEventListener('click', this._onDocumentClick, true);
+	private unbindGlobalCloseHandlers(): void {
+		if (this.boundHandlers.onDocumentClick) {
+			document.removeEventListener(
+				'click',
+				this.boundHandlers.onDocumentClick,
+				true,
+			);
 		}
-		if (this._onEscape) {
-			document.removeEventListener('keydown', this._onEscape);
+		if (this.boundHandlers.onEscape) {
+			document.removeEventListener('keydown', this.boundHandlers.onEscape);
 		}
-		if (this._onWindowResize) {
-			window.removeEventListener('resize', this._onWindowResize);
+		if (this.boundHandlers.onWindowResize) {
+			window.removeEventListener('resize', this.boundHandlers.onWindowResize);
 		}
-		if (this._onScroll) {
-			window.removeEventListener('scroll', this._onScroll, true);
+		if (this.boundHandlers.onScroll) {
+			window.removeEventListener('scroll', this.boundHandlers.onScroll, true);
 		}
-		this._onDocumentClick = null;
-		this._onEscape = null;
-		this._onWindowResize = null;
-		this._onScroll = null;
 	}
 
-	private _bindPopupEvents(): void {
-		if (!this.element) return;
-
-		this.element.addEventListener('click', (e: MouseEvent) => {
+	private bindPopupEvents(): void {
+		if (!this.domElement) return;
+		this.boundHandlers.onPopupClick = (e: MouseEvent) => {
 			const target = e.target as HTMLElement;
 			const btn = target.closest('button[data-action]') as HTMLElement | null;
 			if (!btn) return;
 			e.preventDefault();
 			e.stopPropagation();
 			const action = btn.dataset.action;
-			if (action) {
-				this._handleAction(action);
-			}
-		});
-	}
-
-	private _getBlockFromRange(range: Range): HTMLElement | null {
-		if (!range) return null;
-
-		let container = range.commonAncestorContainer;
-		if (container.nodeType === Node.TEXT_NODE) {
-			container = container.parentElement as HTMLElement;
-		}
-
-		let block = (container as HTMLElement).closest?.('.note__block');
-		if (block) return block as HTMLElement;
-
-		container = range.startContainer;
-		if (container.nodeType === Node.TEXT_NODE) {
-			container = container.parentElement as HTMLElement;
-		}
-		block = (container as HTMLElement).closest?.('.note__block');
-		if (block) return block as HTMLElement;
-
-		container = range.endContainer;
-		if (container.nodeType === Node.TEXT_NODE) {
-			container = container.parentElement as HTMLElement;
-		}
-		block = (container as HTMLElement).closest?.('.note__block');
-		if (block) return block as HTMLElement;
-
-		return null;
-	}
-
-	private _detectCurrentFormatting(): void {
-		if (!this.selectionData) return;
-
-		const { blockEl, start, end } = this.selectionData;
-
-		let hasBold = false;
-		let hasItalic = false;
-		let hasUnderline = false;
-
-		const spans = blockEl.querySelectorAll('.formatted-range');
-		for (const span of spans) {
-			const htmlSpan = span as HTMLElement;
-			const spanStart = this._getSpanStartPosition(blockEl, htmlSpan);
-			const spanEnd = spanStart + (htmlSpan.textContent?.length || 0);
-
-			if (spanEnd > start && spanStart < end) {
-				const styles = window.getComputedStyle(htmlSpan);
-				const fontWeight = styles.fontWeight;
-				hasBold =
-					hasBold || fontWeight === 'bold' || parseInt(fontWeight, 10) >= 700;
-				hasItalic = hasItalic || styles.fontStyle === 'italic';
-				hasUnderline =
-					hasUnderline || styles.textDecoration.includes('underline');
-			}
-		}
-
-		this.currentFormatting = {
-			bold: hasBold,
-			italic: hasItalic,
-			underline: hasUnderline,
+			this.handleFormattingAction(action);
 		};
-
-		this._updateActiveStates(this.currentFormatting);
+		this.domElement.addEventListener('click', this.boundHandlers.onPopupClick);
+		this.domElement.addEventListener('mousedown', (e) => e.stopPropagation());
 	}
 
-	private _getSpanStartPosition(
-		blockEl: HTMLElement,
-		span: HTMLElement,
-	): number {
-		let startPos = 0;
-		let currentPos = 0;
-		const walker = document.createTreeWalker(
-			blockEl,
-			NodeFilter.SHOW_TEXT,
-			null,
-		);
-		let node: Node | null;
-
-		while ((node = walker.nextNode())) {
-			const nodeText = node.textContent || '';
-			if (span.contains(node)) {
-				startPos = currentPos;
-				break;
-			}
-			currentPos += nodeText.length;
+	private unbindPopupEvents(): void {
+		if (this.domElement && this.boundHandlers.onPopupClick) {
+			this.domElement.removeEventListener(
+				'click',
+				this.boundHandlers.onPopupClick,
+			);
 		}
-
-		return startPos;
 	}
 
-	private async _handleAction(action: string): Promise<void> {
-		if (!this.selectionData) {
-			this.close();
-			return;
-		}
-
-		const { blockEl, start, end, noteId, blockId } = this.selectionData;
-
-		const currentFmt = this.currentFormatting || {
-			bold: false,
-			italic: false,
-			underline: false,
-		};
-
-		let newFmt: FormattingState;
+	private async handleFormattingAction(
+		action: string | undefined,
+	): Promise<void> {
+		if (!this.selectionData || !this.currentFormatting) return;
+		let newValue: boolean;
 		switch (action) {
 			case 'bold':
-				newFmt = { ...currentFmt, bold: !currentFmt.bold };
+				newValue = !this.currentFormatting.bold;
+				await this.applyFormatting('bold', newValue);
+				this.currentFormatting.bold = newValue;
 				break;
 			case 'italic':
-				newFmt = { ...currentFmt, italic: !currentFmt.italic };
+				newValue = !this.currentFormatting.italic;
+				await this.applyFormatting('italic', newValue);
+				this.currentFormatting.italic = newValue;
 				break;
 			case 'underline':
-				newFmt = { ...currentFmt, underline: !currentFmt.underline };
+				newValue = !this.currentFormatting.underline;
+				await this.applyFormatting('underline', newValue);
+				this.currentFormatting.underline = newValue;
 				break;
 			default:
 				return;
 		}
+		this.updateActiveStates();
+	}
 
-		// Сохраняем текущий HTML для сравнения
+	private async applyFormatting(action: string, value: boolean): Promise<void> {
+		if (!this.selectionData) return;
+		const { blockEl, start, end, noteId, blockId } = this.selectionData;
 		const oldContent = blockEl.innerHTML;
-
-		// Применяем форматирование к DOM напрямую
-		this._applyFormattingToDOM(
-			blockEl,
-			start,
-			end,
-			action,
-			newFmt[action as keyof FormattingState],
-		);
-
-		this.currentFormatting = newFmt;
-		this._updateActiveStates(newFmt);
-
+		updateFormattingInRange(blockEl, start, end, action, value);
 		const newContent = blockEl.innerHTML;
 
-		// Если контент изменился, сохраняем на сервер
 		if (oldContent !== newContent) {
 			try {
-				// Обновляем контент блока на сервере
 				await noteService.updateBlockContent(noteId, blockId, newContent);
-
-				// Обновляем store без перерисовки
 				const blocks = store.getActiveBlocks();
 				const updatedBlocks = blocks.map((b) =>
 					String(b.id) === String(blockId) ? { ...b, content: newContent } : b,
 				);
 				store.setActiveBlocksSilently(updatedBlocks);
 			} catch (error) {
-				console.warn('[Popup] Failed to save content:', error);
+				console.warn('[FormatPopup] Failed to save content:', error);
 			}
 		}
 
-		// Сохраняем форматирование в отдельном endpoint
 		try {
 			const formattingPayload: {
 				bold?: boolean;
 				italic?: boolean;
 				underline?: boolean;
 			} = {};
-			if (action === 'bold') formattingPayload.bold = newFmt.bold;
-			if (action === 'italic') formattingPayload.italic = newFmt.italic;
-			if (action === 'underline')
-				formattingPayload.underline = newFmt.underline;
-
+			if (action === 'bold') formattingPayload.bold = value;
+			if (action === 'italic') formattingPayload.italic = value;
+			if (action === 'underline') formattingPayload.underline = value;
 			await noteService.saveBlockFormatting(
 				noteId,
 				blockId,
@@ -396,8 +264,6 @@ export class FormatPopup {
 				end,
 				formattingPayload,
 			);
-
-			// Обновляем ranges в store без перерисовки
 			const blocks = store.getActiveBlocks();
 			const updatedBlocks = blocks.map((b) => {
 				if (String(b.id) === String(blockId)) {
@@ -405,9 +271,9 @@ export class FormatPopup {
 					const newRange = {
 						start_pos: start,
 						end_pos: end,
-						bold: action === 'bold' ? newFmt.bold : null,
-						italic: action === 'italic' ? newFmt.italic : null,
-						underline: action === 'underline' ? newFmt.underline : null,
+						bold: action === 'bold' ? value : null,
+						italic: action === 'italic' ? value : null,
+						underline: action === 'underline' ? value : null,
 					};
 					const newRanges = applyFormattingToRanges(existingRanges, newRange);
 					return { ...b, formatting: { ranges: newRanges } };
@@ -416,117 +282,49 @@ export class FormatPopup {
 			});
 			store.setActiveBlocksSilently(updatedBlocks);
 		} catch (error) {
-			console.warn('[Popup] Save formatting failed:', error);
+			console.warn('[FormatPopup] Save formatting failed:', error);
 		}
-
-		// Восстанавливаем выделение
-		this._restoreSelectionByPositions(blockEl, start, end);
+		restoreSelectionByPositions(blockEl, start, end);
 		blockEl.focus();
 	}
 
-	private _restoreSelectionByPositions(
-		element: HTMLElement,
-		start: number,
-		end: number,
-	): void {
-		const selection = window.getSelection();
-		if (!selection) return;
-		selection.removeAllRanges();
-
-		const currentElement = document.querySelector(
-			`.note__block[data-block-id="${element.dataset.blockId}"]`,
-		) as HTMLElement;
-		if (!currentElement) return;
-
-		const walker = document.createTreeWalker(
-			currentElement,
-			NodeFilter.SHOW_TEXT,
-			null,
-		);
-		let currentNode: Text | null = walker.nextNode() as Text | null;
-		let currentPos = 0;
-		let startNode: Text | null = null;
-		let startOffset = 0;
-		let endNode: Text | null = null;
-		let endOffset = 0;
-
-		while (currentNode) {
-			const nodeLength = currentNode.textContent?.length || 0;
-			const nodeStart = currentPos;
-			const nodeEnd = currentPos + nodeLength;
-
-			if (nodeStart <= start && nodeEnd >= start) {
-				startNode = currentNode;
-				startOffset = start - nodeStart;
-			}
-
-			if (nodeStart <= end && nodeEnd >= end) {
-				endNode = currentNode;
-				endOffset = end - nodeStart;
-				break;
-			}
-
-			currentPos = nodeEnd;
-			currentNode = walker.nextNode() as Text | null;
-		}
-
-		if (startNode && endNode) {
-			try {
-				const newRange = document.createRange();
-				newRange.setStart(startNode, startOffset);
-				newRange.setEnd(endNode, endOffset);
-				selection.addRange(newRange);
-			} catch (e) {
-				console.log('[FormatPopup] Error creating range:', e);
-			}
-		}
-	}
-
-	private _applyFormattingToDOM(
-		element: HTMLElement,
-		start: number,
-		end: number,
-		action: string,
-		value: boolean,
-	): void {
-		updateFormattingInRange(element, start, end, action, value);
-	}
-
-	private _updateActiveStates(formatting: FormattingState | null): void {
-		if (!this.element) return;
-		const boldBtn = this.element.querySelector('[data-action="bold"]');
-		const italicBtn = this.element.querySelector('[data-action="italic"]');
-		const underlineBtn = this.element.querySelector(
+	private updateActiveStates(): void {
+		if (!this.domElement || !this.currentFormatting) return;
+		const boldBtn = this.domElement.querySelector('[data-action="bold"]');
+		const italicBtn = this.domElement.querySelector('[data-action="italic"]');
+		const underlineBtn = this.domElement.querySelector(
 			'[data-action="underline"]',
 		);
-
-		if (boldBtn)
-			boldBtn.classList.toggle(
-				'formattingPopup__button--active',
-				Boolean(formatting?.bold),
-			);
-		if (italicBtn)
-			italicBtn.classList.toggle(
-				'formattingPopup__button--active',
-				Boolean(formatting?.italic),
-			);
-		if (underlineBtn)
-			underlineBtn.classList.toggle(
-				'formattingPopup__button--active',
-				Boolean(formatting?.underline),
-			);
+		boldBtn?.classList.toggle(
+			'formattingPopup__button--active',
+			this.currentFormatting.bold,
+		);
+		italicBtn?.classList.toggle(
+			'formattingPopup__button--active',
+			this.currentFormatting.italic,
+		);
+		underlineBtn?.classList.toggle(
+			'formattingPopup__button--active',
+			this.currentFormatting.underline,
+		);
 	}
 
-	private _isSelectionValid(): boolean {
-		const selection = window.getSelection();
-		if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
-			return false;
+	private startSelectionCheck(): void {
+		this.checkSelectionInterval = window.setInterval(() => {
+			if (!isSelectionValid(this.editor)) {
+				this.close();
+			}
+		}, 500);
+	}
+
+	private stopSelectionCheck(): void {
+		if (this.checkSelectionInterval) {
+			clearInterval(this.checkSelectionInterval);
+			this.checkSelectionInterval = null;
 		}
-		const currentRange = selection.getRangeAt(0);
-		return this.editor?.contains(currentRange.commonAncestorContainer) || false;
 	}
 
-	getElement(): HTMLElement | null {
-		return this.element;
+	destroy(): void {
+		this.close();
 	}
 }

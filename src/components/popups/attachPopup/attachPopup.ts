@@ -1,101 +1,124 @@
-import { Block } from '@/types';
-import Handlebars from 'handlebars';
-import '../../../assets/style/genericPopup.scss';
-import { insertBlockInDOM } from '../../../pages/main/mainPage.js';
 import { attachmentService } from '../../../services/attachmentService.js';
 import { noteService } from '../../../services/noteService.js';
 import { store } from '../../../store.js';
-import { createElement } from '../../../utils/utils.js';
-import templateText from './attachPopup.hbs?raw';
+import { Block } from '../../../types.js';
+import { getElementPosition } from '../../../utils/utils.js';
+import Component from '../../component.js';
+import templateString from './attachPopup.hbs?raw';
 
-export class AttachPopup {
+interface AttachPopupOptions {
+	anchorElement: HTMLElement;
+	afterBlockId: string | null;
+	onBlockCreated?: (block: Block) => void;
+}
+
+export default class AttachPopup extends Component {
+	protected templateString = templateString;
+
 	private anchorElement: HTMLElement;
-	private element: HTMLElement | null;
-	private _onDocumentClick: ((e: MouseEvent) => void) | null;
-	private _onEscape: ((e: KeyboardEvent) => void) | null;
-	private fileInput: HTMLInputElement | null;
 	private afterBlockId: string | null;
+	private fileInput: HTMLInputElement | null = null;
+	private onBlockCreated?: (block: Block) => void;
 
-	constructor(anchorElement: HTMLElement, afterBlockId: string | null = null) {
-		this.anchorElement = anchorElement;
-		this.element = null;
-		this._onDocumentClick = null;
-		this._onEscape = null;
-		this.fileInput = null;
-		this.afterBlockId = afterBlockId;
+	private boundHandlers: {
+		onDocumentClick?: (e: MouseEvent) => void;
+		onEscape?: (e: KeyboardEvent) => void;
+		onTextClick?: () => void;
+		onPictureClick?: () => void;
+		onTableClick?: () => void;
+		onFileChange?: (e: Event) => void;
+	} = {};
+
+	constructor(options: AttachPopupOptions) {
+		super();
+		this.anchorElement = options.anchorElement;
+		this.afterBlockId = options.afterBlockId;
+		this.onBlockCreated = options.onBlockCreated;
+	}
+
+	protected getTemplateData() {
+		return {};
+	}
+
+	renderTo(container: HTMLElement | null): void {
+		if (!container) return;
+		const temp = document.createElement('div');
+		temp.innerHTML = this.render();
+		const popupElement = temp.firstChild as HTMLElement;
+		if (popupElement) {
+			this.domElement = popupElement;
+			container.appendChild(popupElement);
+			this.onRender();
+		}
 	}
 
 	open(): void {
 		this.close();
-
-		const html = Handlebars.compile(templateText)({});
-		this.element = createElement('div', 'popup__wrapper');
-		this.element.innerHTML = html;
-
 		this.fileInput = document.createElement('input');
 		this.fileInput.type = 'file';
 		this.fileInput.accept = 'image/*';
 		this.fileInput.style.display = 'none';
-		this.element.appendChild(this.fileInput);
-
-		this._position();
-		document.body.appendChild(this.element);
-
-		this._bindGlobalCloseHandlers();
-		this._bindPopupEvents();
-
-		this.element.dispatchEvent(new CustomEvent('popup:opened'));
+		this.renderTo(document.body);
 	}
 
-	close(): void {
-		if (this.element) {
-			this._unbindGlobalCloseHandlers();
-			this.element.dispatchEvent(new CustomEvent('popup:closing'));
-			this.element.remove();
-			this.element = null;
-			this.fileInput = null;
+	onRender(): void {
+		if (this.fileInput && this.domElement) {
+			this.domElement.appendChild(this.fileInput);
 		}
+		this.position();
+		this.bindGlobalCloseHandlers();
+		this.bindPopupEvents();
+		this.domElement?.dispatchEvent(
+			new CustomEvent('popup:opened', {
+				detail: { afterBlockId: this.afterBlockId },
+			}),
+		);
 	}
 
-	private _position(): void {
-		if (!this.anchorElement || !this.element) return;
-		const rect = this.anchorElement.getBoundingClientRect();
-		const popupRect = this.element.getBoundingClientRect();
+	private position(): void {
+		if (!this.anchorElement || !this.domElement) return;
+		const rect = getElementPosition(this.anchorElement);
+		const popupRect = this.domElement.getBoundingClientRect();
 		const top = rect.bottom + window.scrollY + 5;
 		let left = rect.left + window.scrollX;
 		if (left + popupRect.width > window.innerWidth) {
 			left = window.innerWidth - popupRect.width - 10;
 		}
-		this.element.style.top = `${top}px`;
-		this.element.style.left = `${left}px`;
+		this.domElement.style.top = `${top}px`;
+		this.domElement.style.left = `${left}px`;
+		this.domElement.style.zIndex = '30';
+		this.domElement.style.position = 'fixed';
 	}
 
-	private _bindGlobalCloseHandlers(): void {
-		this._onDocumentClick = (e: MouseEvent) => {
-			if (!this.element?.contains(e.target as Node)) this.close();
+	private bindGlobalCloseHandlers(): void {
+		this.boundHandlers.onDocumentClick = (e: MouseEvent) => {
+			if (!this.domElement?.contains(e.target as Node)) {
+				this.close();
+			}
 		};
-		this._onEscape = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') this.close();
+		this.boundHandlers.onEscape = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') {
+				this.close();
+			}
 		};
-		document.addEventListener('click', this._onDocumentClick);
-		document.addEventListener('keydown', this._onEscape);
+		document.addEventListener('click', this.boundHandlers.onDocumentClick);
+		document.addEventListener('keydown', this.boundHandlers.onEscape);
 	}
 
-	private _unbindGlobalCloseHandlers(): void {
-		if (this._onDocumentClick)
-			document.removeEventListener('click', this._onDocumentClick);
-		if (this._onEscape) document.removeEventListener('keydown', this._onEscape);
-		this._onDocumentClick = null;
-		this._onEscape = null;
+	private unbindGlobalCloseHandlers(): void {
+		if (this.boundHandlers.onDocumentClick) {
+			document.removeEventListener('click', this.boundHandlers.onDocumentClick);
+		}
+		if (this.boundHandlers.onEscape) {
+			document.removeEventListener('keydown', this.boundHandlers.onEscape);
+		}
 	}
 
-	private async _createAndInsertBlock(
+	private async createAndInsertBlock(
 		blockPromise: Promise<Block>,
-	): Promise<void> {
+	): Promise<Block | null> {
 		const block = await blockPromise;
 		if (block) {
-			await insertBlockInDOM(block, this.afterBlockId);
-
 			const currentBlocks = store.getActiveBlocks();
 			const exists = currentBlocks.some((b) => b.id === block.id);
 			if (!exists) {
@@ -103,15 +126,19 @@ export class AttachPopup {
 				updatedBlocks.sort((a, b) => a.position - b.position);
 				store.setActiveBlocksSilently(updatedBlocks);
 			}
+			this.onBlockCreated?.(block);
+			return block;
 		}
+		return null;
 	}
 
-	private _bindPopupEvents(): void {
-		if (!this.element) return;
-
-		const textBtn = this.element.querySelector('[data-action="text"]');
+	private bindPopupEvents(): void {
+		if (!this.domElement) return;
+		const textBtn = this.domElement.querySelector('[data-action="text"]');
+		const pictureBtn = this.domElement.querySelector('[data-action="picture"]');
+		const tableBtn = this.domElement.querySelector('[data-action="table"]');
 		if (textBtn) {
-			textBtn.addEventListener('click', async () => {
+			this.boundHandlers.onTextClick = async () => {
 				const activeNoteId = store.getActiveNoteId();
 				if (activeNoteId) {
 					const blockPromise = noteService.createBlockAfter(
@@ -123,70 +150,115 @@ export class AttachPopup {
 						},
 						this.afterBlockId,
 					);
-					await this._createAndInsertBlock(blockPromise);
+					await this.createAndInsertBlock(blockPromise);
 				}
 				this.close();
-			});
+			};
+			textBtn.addEventListener('click', this.boundHandlers.onTextClick);
 		}
 
-		const pictureBtn = this.element.querySelector('[data-action="picture"]');
 		if (pictureBtn) {
-			pictureBtn.addEventListener('click', () => {
-				if (this.fileInput) this.fileInput.click();
-			});
+			this.boundHandlers.onPictureClick = () => {
+				if (this.fileInput) {
+					this.fileInput.click();
+				}
+			};
+			pictureBtn.addEventListener('click', this.boundHandlers.onPictureClick);
 		}
 
-		const tableBtn = this.element.querySelector('[data-action="table"]');
 		if (tableBtn) {
-			tableBtn.addEventListener('click', () => {
+			this.boundHandlers.onTableClick = () => {
 				console.log('Add table block');
 				this.close();
-			});
+			};
+			tableBtn.addEventListener('click', this.boundHandlers.onTableClick);
 		}
 
 		if (this.fileInput) {
-			this.fileInput.addEventListener('change', async (e: Event) => {
+			this.boundHandlers.onFileChange = async (e: Event) => {
 				const target = e.target as HTMLInputElement;
 				const file = target.files?.[0];
 				if (!file) return;
-
 				const activeNoteId = store.getActiveNoteId();
 				if (!activeNoteId) {
-					alert('Нет активной заметки');
 					this.close();
 					return;
 				}
-
 				if (file.size > 10 * 1024 * 1024) {
-					alert('Файл слишком большой. Максимальный размер 10MB');
+					console.warn('File too large');
 					this.close();
 					return;
 				}
 				if (!file.type.startsWith('image/')) {
-					alert('Пожалуйста, выберите изображение');
+					console.warn('Not an image');
 					this.close();
 					return;
 				}
-
 				try {
 					const blockPromise = attachmentService.createImageBlock(
 						activeNoteId,
 						file,
 						this.afterBlockId,
 					);
-					await this._createAndInsertBlock(blockPromise);
+					await this.createAndInsertBlock(blockPromise);
 				} catch (error) {
 					console.error('[AttachPopup] Error:', error);
-					alert('Ошибка при загрузке изображения');
 				}
-
-				if (this.fileInput) this.fileInput.value = '';
+				if (this.fileInput) {
+					this.fileInput.value = '';
+				}
 				this.close();
-			});
+			};
+			this.fileInput.addEventListener(
+				'change',
+				this.boundHandlers.onFileChange,
+			);
+		}
+	}
+
+	private unbindPopupEvents(): void {
+		if (!this.domElement) return;
+		const textBtn = this.domElement.querySelector('[data-action="text"]');
+		const pictureBtn = this.domElement.querySelector('[data-action="picture"]');
+		const tableBtn = this.domElement.querySelector('[data-action="table"]');
+		if (textBtn && this.boundHandlers.onTextClick) {
+			textBtn.removeEventListener('click', this.boundHandlers.onTextClick);
+		}
+		if (pictureBtn && this.boundHandlers.onPictureClick) {
+			pictureBtn.removeEventListener(
+				'click',
+				this.boundHandlers.onPictureClick,
+			);
+		}
+		if (tableBtn && this.boundHandlers.onTableClick) {
+			tableBtn.removeEventListener('click', this.boundHandlers.onTableClick);
+		}
+		if (this.fileInput && this.boundHandlers.onFileChange) {
+			this.fileInput.removeEventListener(
+				'change',
+				this.boundHandlers.onFileChange,
+			);
+		}
+	}
+
+	close(): void {
+		if (!this.domElement) return;
+		this.unbindGlobalCloseHandlers();
+		this.unbindPopupEvents();
+		this.domElement.dispatchEvent(new CustomEvent('popup:closing'));
+		this.domElement.remove();
+		this.domElement = null;
+		if (this.fileInput) {
+			this.fileInput.remove();
+			this.fileInput = null;
 		}
 	}
 
 	getElement(): HTMLElement | null {
-		return this.element;
+		return this.domElement;
+	}
+
+	destroy(): void {
+		this.close();
 	}
 }
