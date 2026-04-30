@@ -1,122 +1,25 @@
-<div class="settings__overwrapper">
-<div class="settings">
-    <div class="settings__block">
-        <h1 class="settings__title">Профиль</h1>
-        <span class="settings__description">Вы можете загрузить фотографию или изменить имя пользователя</span>
+<div class="profile">
+    <div class="profile__header">
+        <h1 class="profile__title">Профиль</h1>
+        <p class="profile__description">Вы можете загрузить фотографию или изменить имя пользователя</p>
     </div>
-
-    <div class="settings__wrapper settings__wrapper--wide">
-        <div class="settings">
-            <div class="settings__block">
-                <h2 class="settings__subtitle">Аккаунт</h2>
-                <form id="usernameForm" class="settings__form settings__withError" novalidate>
-                    <div class="form__input">
-                    	<label for="username" class="input__label">Имя пользователя</label>
-                    	<div class="input__wrapper">
-                    		<input type="text" name="username" value="{{user.username}}" placeholder="Введите новое имя" autocomplete="username" required="" class="input ">
-                            {{> components/partials/forms/button
-                                type="submit"
-                                text="Изменить"
-                                variant="primary"
-                                className="settings__button"
-                            }}
-                    	</div>
-                    	<span class="form__error" data-field-error="username" style="visibility: hidden" role="alert"></span>
-                    </div>
-                </form>
+    <div class="profile__content">
+        <div class="profile__main">
+            <div data-username-form></div>
+            <div class="profile__security">
+                <h2 class="profile__subtitle">Безопасность</h2>
+                <p class="profile__description">Добавьте почту, чтобы восстановить через нее пароль в случае, если Вы его потеряете или забудете.</p>
+                <div data-email-form></div>
+                <div data-password-form></div>
             </div>
-
-            <div class="settings__block">
-                <h2 class="settings__subtitle">Безопасность</h2>
-                <span class="settings__description settings__description--medium">Добавьте почту, чтобы восстановить через нее пароль в случае, если Вы его потеряете или забудете.</span>
-
-     			<form id="emailForm" class="settings__form" novalidate>
-                    {{> components/partials/forms/input
-                        name="email"
-                        label="Email"
-                        type="email"
-                        value=user.email
-                        placeholder="Ваша почта"
-                        autocomplete="email"
-                        witherror="true"
-                        disabled="true"
-                    }}
-
-                    {{> components/partials/forms/inactiveButton
-                        type="submit"
-                        text="Сохранить"
-                        variant="primary"
-                        className="settings__button"
-                    }}
-                </form>
-
-     			<form id="passwordForm" class="settings__form" novalidate>
-                    {{> components/partials/forms/input
-                        name="newPassword"
-                        label="Ваш пароль"
-                        type="password"
-                        placeholder="*************"
-                        autocomplete="new-password"
-                        witherror="true"
-                        disabled="true"
-                    }}
-
-                    {{> components/partials/forms/inactiveButton
-                        type="submit"
-                        text="Изменить"
-                        variant="primary"
-                        className="settings__button"
-                    }}
-                </form>
+            <div class="profile__actions">
+                <button type="button" class="profile__button profile__button--danger logoutButton">Выйти</button>
+                <button type="button" class="profile__button profile__button--danger-outline" data-action="deleteAccount">Удалить аккаунт</button>
             </div>
         </div>
-        <div class="settings__block">
-            <h2 class="settings__subtitle">Фотография</h2>
-                <img
-                    src="{{#if user.avatar}}{{user.avatar}}{{else}}/icons/avatarBig.svg{{/if}}"
-                    alt="Avatar"
-                    class="settings__avatar"
-                    data-avatar-image
-                >
-
-            <form id="avatarForm" class="settingsForm" enctype="multipart/form-data">
-                <div class="file-input-wrapper">
-                    <input
-                        type="file"
-                        name="avatar"
-                        id="avatar-file-input"
-                        accept=".png,.jpg,.jpeg,.webp"
-                        style="display: none;"
-                    >
-                    <button type="button" class="settings__button" id="avatar-trigger">
-                        Загрузить
-                    </button>
-                </div>
-                <div data-field-error class="error-message"></div>
-            </form>
-            <span class="settings__description settings__description--small">
-                Размер фотографии не должен превышать 5МБ.
-                Допустимые расширения: .png, .jpg, .webp.
-                Соотношение сторон: 1:1.
-            </span>
+        <div class="profile__sidebar">
+            <h2 class="profile__subtitle">Фотография</h2>
+            <div data-avatar-container></div>
         </div>
     </div>
-    <div class="settings__wrapper">
-	{{> components/partials/forms/button
-            type="button"
-            text="Выйти"
-            variant="danger"
-            className="settings__button settings__button--danger logoutButton"
-            data-action="logout"
-        }}
-
-        {{> components/partials/forms/inactiveButton
-            type="button"
-            text="Удалить аккаунт"
-            variant="danger"
-            className="settings__button settings__button--dangerAlt"
-            data-action="deleteAccount"
-        }}
-    </div>
-</div>
 </div>

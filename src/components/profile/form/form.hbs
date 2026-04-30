@@ -1,0 +1,20 @@
+<form class="profile-form" id="{{formId}}" novalidate>
+    <div class="profile-form__field">
+        <label for="{{fields.0.name}}" class="profile-form__label">{{fields.0.label}}</label>
+        <div class="profile-form__controls">
+            <input type="{{fields.0.type}}" 
+                   name="{{fields.0.name}}" 
+                   id="{{fields.0.name}}"
+                   value="{{fields.0.value}}" 
+                   placeholder="{{fields.0.placeholder}}"
+                   autocomplete="{{fields.0.autocomplete}}"
+                   {{#if fields.0.required}}required{{/if}}
+                   {{#if fields.0.disabled}}disabled{{/if}}
+                   class="profile-form__input {{#if fields.0.disabled}}profile-form__input--disabled{{/if}}">
+            <button type="submit" class="profile-form__submit" {{#if fields.0.disabled}}disabled{{/if}}>
+                {{buttonText}}
+            </button>
+        </div>
+        <span class="profile-form__error" data-field-error></span>
+    </div>
+</form>

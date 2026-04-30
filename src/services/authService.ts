@@ -169,6 +169,7 @@ export const authService = {
 				...(result as Partial<User>),
 				id: currentUser.id,
 			};
+			console.log(updatedUser);
 			await db.settingsSet('user', updatedUser);
 			store.setUser(updatedUser);
 		}
@@ -194,6 +195,19 @@ export const authService = {
 			console.log(store.getUser());
 		}
 		return result;
+	},
+
+	async deleteAvatar(): Promise<void> {
+		await client.delete('/profile/avatar');
+		const currentUser = store.getUser();
+		if (currentUser) {
+			const updatedUser: User = {
+				...currentUser,
+				avatar: null,
+			};
+			await db.settingsSet('user', updatedUser);
+			store.setUser(updatedUser);
+		}
 	},
 
 	async changePassword(data?: {
