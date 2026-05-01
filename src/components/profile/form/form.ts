@@ -1,7 +1,6 @@
 import { handleAuthError } from '../../../utils/handleAuthError.js';
 import Component from '../../component.js';
 import templateString from './form.hbs?raw';
-import './form.scss';
 
 interface FormField {
 	name: string;
