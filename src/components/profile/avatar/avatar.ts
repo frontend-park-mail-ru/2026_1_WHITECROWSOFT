@@ -3,6 +3,7 @@ import { store } from '../../../store.js';
 import type { User } from '../../../types.js';
 import Component from '../../component.js';
 import templateString from './avatar.hbs?raw';
+import './avatar.scss';
 
 interface ProfileAvatarOptions {
 	user: User | null;

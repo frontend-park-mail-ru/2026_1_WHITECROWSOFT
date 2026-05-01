@@ -1,54 +1,48 @@
-.settings {
+.profile {
 	display: flex;
 	gap: 28px;
 	flex-direction: column;
 
+	&__content {
+		display: flex;
+		flex-direction: row;
+		gap: 120px;
+	}
+	&__main {
+		display: flex;
+		flex-direction: column;
+		gap: 40px;
+		max-width: 480px;
+	}
 	&__block {
 		display: flex;
 		flex-direction: column;
 		gap: 8px;
-	}
-	&__wrapper {
-		display: flex;
-		flex-direction: row;
-		gap: 20px;
-		&--wide {
-			gap: 120px;
-		}
-	}
-	&__form {
-		display: flex;
-		flex-direction: row;
-		gap: 20px;
-		align-items: end;
-		.form__input {
-			height: auto;
-			max-width: 250px;
-			.input__error {
-				display: none;
-			}
-		}
-	}
-	/* THIS TOO SHALL PASS */
-	&__withError {
-		.input__wrapper {
-			display: flex;
+		&--horizontal {
 			flex-direction: row;
 			gap: 20px;
-			align-items: end;
 		}
-		.form__input {
-			width: 100%;
-			max-width: 100%;
-			.form__error {
-				max-width: 400px;
-				text-align: inherit;
-				padding-left: 15px;
-			}
-			input {
-				max-width: 250px;
-			}
+	}
+
+	&__description {
+		color: var(--faint-b);
+		font-size: 14px;
+		&--small {
+			font-size: 12px;
+			max-width: 285px;
 		}
+	}
+
+	&__title {
+		font-size: 2rem;
+		font-weight: 800;
+		width: 100%;
+		text-align: left;
+	}
+	&__subtitle {
+		font-weight: 800;
+		text-align: left;
+		font-size: 20px;
 	}
 
 	&__button {
@@ -72,6 +66,18 @@
 			background-color: var(--highlight);
 		}
 
+		&--subtle {
+			border: 2px solid var(--faint-b);
+			color: var(--faint-b);
+			&:hover {
+				border: 2px solid var(--faint-b);
+				color: var(--faint-b);
+			}
+			&:active {
+				background-color: #a4a7ac60;
+				color: var(--faint-b);
+			}
+		}
 		&--dangerAlt {
 			max-width: 180px; /* bad bad bad */
 			border: 2px solid var(--danger-red);
@@ -102,46 +108,5 @@
 				background-color: var(--clown-red);
 			}
 		}
-	}
-
-	&__title {
-		font-size: 2rem;
-		font-weight: 800;
-		width: 100%;
-		text-align: left;
-	}
-	&__subtitle {
-		font-weight: 800;
-		text-align: left;
-		font-size: 20px;
-	}
-
-	&__description {
-		color: var(--faint-b);
-		font-size: 14px;
-		&--medium {
-			max-width: 400px;
-		}
-		&--small {
-			font-size: 12px;
-			max-width: 285px;
-		}
-	}
-
-	&__avatar {
-		border-radius: 50%;
-		width: 115px;
-		height: 115px;
-		border: 2px solid var(--faint-a);
-		overflow: hidden;
-	}
-
-	/*
-	This is not a place of honour.
-	Nothing sacred is here.
-	Nothing of value is here.
-	*/
-	&__overwrapper {
-		padding-left: 60px;
 	}
 }
