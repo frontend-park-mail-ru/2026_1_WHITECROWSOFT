@@ -24,7 +24,7 @@ interface RecentNote {
 class Database {
 	private db: IDBDatabase | null = null;
 	private readonly DB_NAME = 'Noterian';
-	private readonly DB_VERSION = 11;
+	private readonly DB_VERSION = 12;
 
 	async open(): Promise<IDBDatabase> {
 		return new Promise((resolve, reject) => {

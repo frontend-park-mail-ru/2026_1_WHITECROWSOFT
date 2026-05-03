@@ -13,6 +13,7 @@ export interface Note {
 	blocks?: Block[];
 	parent_id?: string | number | null;
 	isLocal?: boolean;
+	is_public?: boolean;
 	breadcrumb?: string;
 }
 
@@ -155,7 +156,7 @@ export type WebSocketMessageType =
  */
 export interface WebSocketMessage {
 	type: WebSocketMessageType; // Тип сообщения
-	isLocal?: boolean; // Флаг локального сообщения (не отправлять на сервер)
+	is_local?: boolean; // Флаг локального сообщения (не отправлять на сервер)
 	userId?: string; // ID пользователя-отправителя
 	userName?: string; // Имя пользователя-отправителя
 	noteId?: string; // ID заметки
@@ -197,12 +198,8 @@ export interface ApplyFormattingMsg {
 }
 
 export interface CreateBlockMsg {
-	blockTypeId: number;
+	block_type_id: number;
 	position: number;
-}
-
-export interface DeleteBlockMsg {
-	blockId: string;
 }
 
 export interface MoveBlockMsg {
@@ -244,6 +241,7 @@ export interface NoteApiResponse {
 	title: string;
 	updated_at?: string;
 	parent_id?: string | number | null;
+	is_public?: boolean;
 }
 
 export interface BlockApiResponse {

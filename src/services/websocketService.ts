@@ -27,45 +27,44 @@ export class WebSocketService {
 			try {
 				const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 				const wsUrl = `${protocol}//${window.location.host}/ws/notes/${noteId}`;
+				
+				console.log('[WebSocket] Connecting to:', wsUrl);
 
 				this.ws = new WebSocket(wsUrl);
 
-				// Обработчик успешного подключения
 				this.ws.onopen = () => {
+					console.log('[WebSocket] Connected successfully to note:', noteId);
 					this.reconnectAttempts = 0;
 					this.setupHeartbeat();
-					console.log('[WebSocket] Connected');
 					resolve();
 				};
 
-				// Обработчик входящих сообщений
 				this.ws.onmessage = (event) => {
+					console.log('[WebSocket] Message received');
 					try {
 						const message: WebSocketMessage = JSON.parse(event.data);
-						this.notifyHandlers(message); // Рассылаем всем обработчикам
+						this.notifyHandlers(message);
 					} catch (error) {
 						console.error('[WebSocket] Failed to parse message:', error);
 					}
 				};
 
-				// Обработчик ошибок подключения
 				this.ws.onerror = (error) => {
-					console.error('[WebSocket] Error:', error);
-					reject(error);
+					console.error('[WebSocket] Connection error');
+					reject(new Error('WebSocket connection failed'));
 				};
 
-				// Обработчик закрытия соединения
-				this.ws.onclose = () => {
-					this.clearHeartbeat(); // Останавливаем heartbeat
-					console.log('[WebSocket] Disconnected');
-					this.attemptReconnect(noteId); // Пытаемся переподключиться
+				this.ws.onclose = (event) => {
+					console.log('[WebSocket] Disconnected, code:', event.code);
+					this.clearHeartbeat();
+					this.attemptReconnect(noteId);
 				};
 			} catch (error) {
+				console.error('[WebSocket] Connection error:', error);
 				reject(error);
 			}
 		});
 	}
-
 	/**
 	 * Отключается от WebSocket
 	 */
@@ -89,7 +88,7 @@ export class WebSocketService {
 		const fullMessage: WebSocketMessage = {
 			...message,
 			timestamp: Date.now(),
-			isLocal: true, // Помечаем как локальное сообщение
+			is_local: true, // Помечаем как локальное сообщение
 		};
 
 		try {

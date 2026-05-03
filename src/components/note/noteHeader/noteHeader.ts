@@ -1,6 +1,6 @@
 import { noteService } from '../../../services/noteService.js';
 import { store } from '../../../store.js';
-import type { ActiveNote } from '../../../types.js';
+import type { ActiveNote, Note } from '../../../types.js';
 import { collabManager } from '../../../utils/collaborativeManager.js';
 import Component from '../../component.js';
 import templateString from './noteHeader.hbs?raw';
@@ -67,8 +67,11 @@ export default class NoteHeader extends Component {
 						breadcrumb: newTitle,
 					});
 				}
-
-				collabManager.sendUpdateNoteTitle(newTitle);
+				const note = store.getNotes().find((n: Note) => n.ID === activeNoteId);
+				const isPublic = (note as any)?.is_public === true;
+				if (isPublic) {
+					collabManager.sendUpdateNoteTitle(newTitle);
+				}
 			} catch (error) {
 				console.error('Error renaming note:', error);
 				input.value = this.savedTitle;

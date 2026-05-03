@@ -10,6 +10,7 @@ import type {
 } from '../types.js';
 import { handleAuthError } from '../utils/handleAuthError';
 import { queueService } from './requestQueueService.js';
+import { collabManager } from '../utils/collaborativeManager.js';
 
 interface GetNoteResponse {
 	note: {
@@ -17,6 +18,7 @@ interface GetNoteResponse {
 		title: string;
 		updated_at: string;
 		parent_id?: string | number | null;
+		is_public?: boolean;
 	};
 	blocks: Block[];
 }
@@ -64,6 +66,7 @@ export const noteService = {
 					icon: null,
 					parent_id: note.parent_id || null,
 					updatedAt: note.updated_at || Date.now(),
+					is_public: note.is_public || false,
 				}));
 				await db.notesClear();
 				for (const note of notes) {
@@ -97,6 +100,7 @@ export const noteService = {
 					parent_id: serverNote.parent_id || null,
 					blocks: serverBlocks,
 					updatedAt: serverNote.updated_at,
+					is_public: (serverNote as any).is_public || false,
 				});
 				for (const block of serverBlocks) {
 					if (block.formatting && block.formatting.ranges) {
@@ -152,10 +156,10 @@ export const noteService = {
 				note: {
 					id: cachedNote.ID,
 					title: cachedNote.title,
-					updated_at:
-						typeof cachedNote.updatedAt === 'string'
-							? cachedNote.updatedAt
-							: new Date(cachedNote.updatedAt).toISOString(),
+					updated_at: typeof cachedNote.updatedAt === 'string'
+						? cachedNote.updatedAt
+						: new Date(cachedNote.updatedAt).toISOString(),
+					is_public: cachedNote.is_public || false,
 				},
 				blocks: blocksWithFormatting,
 			};
@@ -346,6 +350,7 @@ export const noteService = {
 		const isLocal = this._isLocalNote(noteID);
 		const oldNote = store.getNotes().find((n) => n.ID === noteID);
 		const oldTitle = oldNote?.title || '';
+		
 		if (isOnline && !isLocal) {
 			try {
 				const result = await client.put<NoteApiResponse>(
@@ -360,6 +365,7 @@ export const noteService = {
 					updatedAt: result.updated_at || Date.now(),
 					parent_id: result.parent_id ?? currentNote?.parent_id ?? null,
 					blocks: currentNote?.blocks || [],
+					is_public: (result as any).is_public ?? currentNote?.is_public ?? false,
 				};
 				await db.notesPut(note);
 				const currentNotes = store.getNotes();
@@ -407,6 +413,7 @@ export const noteService = {
 				...data,
 				updatedAt: Date.now(),
 				parent_id: currentNotes[noteIndex].parent_id ?? null,
+				is_public: currentNotes[noteIndex].is_public ?? false,
 			};
 			await db.notesPut(updatedNote);
 			const updatedNotes = [...currentNotes];
@@ -527,6 +534,8 @@ export const noteService = {
 		noteID: string | number,
 		blockData: CreateBlockData,
 	): Promise<Block> {
+		const note = store.getNotes().find(n => n.ID === noteID);
+   		const isPublic = (note as any)?.is_public === true;
 		const isOnline = store.getOnline();
 		const localBlock: Block = {
 			...blockData,
@@ -534,6 +543,7 @@ export const noteService = {
 			isLocal: true,
 			formatting: { ranges: [] },
 		};
+		
 
 		if (isOnline) {
 			try {
@@ -737,10 +747,22 @@ export const noteService = {
 		noteID: string | number,
 		blockID: string | number,
 	): Promise<void> {
+		const note = store.getNotes().find(n => n.ID === noteID);
+    	const isPublic = (note as any)?.is_public === true;
 		const isOnline = store.getOnline();
 		const isLocal = String(blockID).startsWith('local-');
 
-		if (isOnline && !isLocal) {
+		if (isPublic && !isLocal) {
+			collabManager.sendDeleteBlock(String(blockID));
+			const currentBlocks = store.getActiveBlocks();
+			const updatedBlocks = currentBlocks.filter((b) => b.id !== blockID);
+			updatedBlocks.forEach((block, idx) => {
+				block.position = idx;
+			});
+			store.setActiveBlocks(updatedBlocks);
+			await this._updateCachedBlocksWithPosition(noteID, { id: blockID } as Block, 'delete');
+			return;
+		}if (isOnline && !isLocal) {
 			try {
 				await client.delete(`/notes/${noteID}/blocks/${blockID}`);
 			} catch (error) {

@@ -23,6 +23,7 @@ export default class NotePopup extends Component {
 		onDelete?: () => void;
 		onRename?: () => void;
 		onRenameComplete?: () => void;
+		onShare?: () => void;
 		onPin?: () => void;
 	} = {};
 
@@ -99,6 +100,7 @@ export default class NotePopup extends Component {
 		const deleteBtn = this.domElement?.querySelector('[data-action="delete"]');
 		const renameBtn = this.domElement?.querySelector('[data-action="rename"]');
 		const pinBtn = this.domElement?.querySelector('[data-action="pin"]');
+		const shareBtn = this.domElement?.querySelector('[data-action="share"]');
 
 		if (deleteBtn) {
 			this.boundHandlers.onDelete = async () => {
@@ -119,6 +121,17 @@ export default class NotePopup extends Component {
 				this.handlePin();
 			};
 			pinBtn.addEventListener('click', this.boundHandlers.onPin);
+		}
+
+		if (shareBtn) {
+			this.boundHandlers.onShare = () => {
+				const result = noteService.updateNote(this.noteId, {
+					is_public: true,
+					title: this.titleElement?.textContent,
+				});
+				console.log(result);
+			};
+			shareBtn.addEventListener('click', this.boundHandlers.onShare)
 		}
 	}
 

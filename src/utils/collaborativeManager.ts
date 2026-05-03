@@ -6,7 +6,6 @@ import type {
 	CollaborativeUser,
 	CreateBlockMsg,
 	CursorPosition,
-	DeleteBlockMsg,
 	DeleteCharMsg,
 	InsertCharMsg,
 	MoveBlockMsg,
@@ -349,7 +348,7 @@ export class CollaborativeManager {
 	 * Данные обновляются в store и визуально рендерятся в UI
 	 */
 	private handleCursorMove(message: WebSocketMessage): void {
-		if (!message.userId || !message.userName || message.isLocal) return;
+		if (!message.userId || !message.userName || message.is_local) return;
 
 		const msg = message.msg as CursorPosition;
 		const user: CollaborativeUser = {
@@ -376,15 +375,18 @@ export class CollaborativeManager {
 	 * Синхронизирует содержимое блока в store
 	 */
 	private handleInsertChar(message: WebSocketMessage): void {
-		if (message.isLocal) return;
-
+		// if (message.isLocal) return;
 		const msg = message.msg as InsertCharMsg;
 		const blocks = store.getActiveBlocks();
 		const blockIndex = blocks.findIndex((b) => b.id === msg.blockId);
 
-		if (blockIndex === -1) return;
+		if (blockIndex === -1) {
+			console.warn('[CollaborativeManager] handleInsertChar: block not found', { blockId: msg.blockId, availableIds: blocks.map(b => b.id) });
+			return;
+		}
 
 		const block = blocks[blockIndex];
+		const position = msg.position ?? 0;
 		const newContent =
 			block.content.slice(0, msg.position) +
 			msg.char +
@@ -393,12 +395,23 @@ export class CollaborativeManager {
 		block.content = newContent;
 		store.setActiveBlocks([...blocks]);
 
+		console.log('[CollaborativeManager] Dispatching collaborativeBlockUpdate:', {
+			blockId: msg.blockId,
+			userId: message.userId,
+			isLocal: message.is_local,
+			position,
+			newContent
+		});
+
 		window.dispatchEvent(
 			new CustomEvent('collaborativeBlockUpdate', {
 				detail: {
 					blockId: msg.blockId,
 					content: newContent,
+					position: position,
+					char: msg.char,
 					userId: message.userId,
+					isInsert: true,
 				},
 			}),
 		);
@@ -409,15 +422,24 @@ export class CollaborativeManager {
 	 * Обновляет содержимое блока и уведомляет UI
 	 */
 	private handleDeleteChar(message: WebSocketMessage): void {
-		if (message.isLocal) return;
+		// if (message.isLocal) return;
 
 		const msg = message.msg as DeleteCharMsg;
 		const blocks = store.getActiveBlocks();
 		const blockIndex = blocks.findIndex((b) => b.id === msg.blockId);
 
-		if (blockIndex === -1) return;
+		if (blockIndex === -1) {
+			console.warn('[CollaborativeManager] handleDeleteChar: block not found', { blockId: msg.blockId });
+			return;
+		}
 
 		const block = blocks[blockIndex];
+		const position = msg.position ?? 0;
+		if (position < 0 || position >= block.content.length) {
+			console.warn('[CollaborativeManager] handleDeleteChar: position out of bounds', { position, contentLength: block.content.length });
+			return;
+		}
+		
 		const newContent =
 			block.content.slice(0, msg.position) +
 			block.content.slice(msg.position + 1);
@@ -425,12 +447,21 @@ export class CollaborativeManager {
 		block.content = newContent;
 		store.setActiveBlocks([...blocks]);
 
+		console.log('[CollaborativeManager] Dispatching collaborativeBlockUpdate (delete):', {
+			blockId: msg.blockId,
+			userId: message.userId,
+			position,
+			newContent
+		});
+
 		window.dispatchEvent(
 			new CustomEvent('collaborativeBlockUpdate', {
 				detail: {
 					blockId: msg.blockId,
 					content: newContent,
+					position: position,
 					userId: message.userId,
+					isInsert: false,
 				},
 			}),
 		);
@@ -441,7 +472,7 @@ export class CollaborativeManager {
 	 * Добавляет или обновляет форматирование в блоке
 	 */
 	private handleApplyFormatting(message: WebSocketMessage): void {
-		if (message.isLocal) return;
+		// if (message.is_local) return;
 
 		const msg = message.msg as ApplyFormattingMsg;
 		const blocks = store.getActiveBlocks();
@@ -490,26 +521,37 @@ export class CollaborativeManager {
 	 * Вставляет блок в нужную позицию и синхронизирует позиции
 	 */
 	private handleCreateBlock(message: WebSocketMessage): void {
-		if (message.isLocal) return;
-
-		const msg = message.msg as CreateBlockMsg & { id: string };
+		// if (message.is_local) return;
+    
+		const msg = message.msg as CreateBlockMsg & { id: string; content?: string };
 		const blocks = store.getActiveBlocks();
-
+		
 		const newBlock: Block = {
 			id: msg.id,
-			block_type_id: msg.blockTypeId,
-			content: '',
+			block_type_id: msg.block_type_id,
+			content: msg.content || '',
 			position: msg.position,
 			formatting: { ranges: [] },
 		};
-
+		
 		blocks.splice(msg.position, 0, newBlock);
-
-		blocks.forEach((b, i) => {
-			b.position = i;
-		});
-
+		blocks.forEach((b, i) => { b.position = i; });
 		store.setActiveBlocks([...blocks]);
+		
+		const activeNoteId = store.getActiveNoteId();
+		if (activeNoteId) {
+			const currentNotes = store.getNotes();
+			const noteIndex = currentNotes.findIndex(n => n.ID === activeNoteId);
+			if (noteIndex !== -1) {
+				const updatedNote = {
+					...currentNotes[noteIndex],
+					blocks: blocks
+				};
+				const updatedNotes = [...currentNotes];
+				updatedNotes[noteIndex] = updatedNote;
+				store.setNotes(updatedNotes);
+			}
+		}
 
 		window.dispatchEvent(
 			new CustomEvent('collaborativeBlockCreate', {
@@ -517,7 +559,7 @@ export class CollaborativeManager {
 					block: newBlock,
 					userId: message.userId,
 				},
-			}),
+			})
 		);
 	}
 
@@ -526,11 +568,10 @@ export class CollaborativeManager {
 	 * Удаляет блок из store и пересчитывает позиции
 	 */
 	private handleDeleteBlock(message: WebSocketMessage): void {
-		if (message.isLocal) return;
+		// if (message.is_local) return;
 
-		const msg = message.msg as DeleteBlockMsg;
 		const blocks = store.getActiveBlocks();
-		const blockIndex = blocks.findIndex((b) => b.id === msg.blockId);
+		const blockIndex = blocks.findIndex((b) => b.id === message.msg);
 
 		if (blockIndex === -1) return;
 
@@ -542,10 +583,25 @@ export class CollaborativeManager {
 
 		store.setActiveBlocks([...blocks]);
 
+		const activeNoteId = store.getActiveNoteId();
+		if (activeNoteId) {
+			const currentNotes = store.getNotes();
+			const noteIndex = currentNotes.findIndex(n => n.ID === activeNoteId);
+			if (noteIndex !== -1) {
+				const updatedNote = {
+					...currentNotes[noteIndex],
+					blocks: blocks
+				};
+				const updatedNotes = [...currentNotes];
+				updatedNotes[noteIndex] = updatedNote;
+				store.setNotes(updatedNotes);
+			}
+		}
+
 		window.dispatchEvent(
 			new CustomEvent('collaborativeBlockDelete', {
 				detail: {
-					blockId: msg.blockId,
+					blockId: message.msg,
 					userId: message.userId,
 				},
 			}),
@@ -557,7 +613,7 @@ export class CollaborativeManager {
 	 * Меняет порядок блоков и обновляет состояния
 	 */
 	private handleMoveBlock(message: WebSocketMessage): void {
-		if (message.isLocal) return;
+		// if (message.is_local) return;
 
 		const msg = message.msg as MoveBlockMsg;
 		const blocks = store.getActiveBlocks();
@@ -590,7 +646,7 @@ export class CollaborativeManager {
 	 * Обновляет локальную активную заметку и нотифицирует UI
 	 */
 	private handleUpdateNoteTitle(message: WebSocketMessage): void {
-		if (message.isLocal) return;
+		// if (message.is_local) return;
 
 		const msg = message.msg as { title: string };
 		const activeNote = store.getActiveNote();

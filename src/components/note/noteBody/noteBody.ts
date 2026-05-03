@@ -20,7 +20,9 @@ export default class NoteBody extends Component {
 	private needsRender = false;
 	private unsubscribeActiveBlocks: (() => void) | null = null;
 	private unsubscribePendingFocus: (() => void) | null = null;
-
+	private unsubscribeCollaborativeCreate: (() => void) | null = null;
+	private unsubscribeCollaborativeDelete: (() => void) | null = null;
+	
 	constructor() {
 		super();
 	}
@@ -39,6 +41,8 @@ export default class NoteBody extends Component {
 	async onRender(): Promise<void> {
 		this.subscribeToStore();
 		this.subscribeToPendingFocus();
+		this.subscribeToCollaborativeCreate();
+		this.subscribeToCollaborativeDelete();
 		await this.renderBlocks();
 		this.bindEvents();
 	}
@@ -58,6 +62,57 @@ export default class NoteBody extends Component {
 				}
 			},
 		);
+	}
+
+	private subscribeToCollaborativeCreate(): void {
+		const handleBlockCreate = ((e: CustomEvent) => {
+			const { block, userId } = e.detail;
+			const currentUserId = store.getUser()?.id;
+			console.log('[NoteBody] Received collaborativeBlockCreate:', {
+				blockId: block.id,
+				userId,
+				currentUserId,
+				isOwnEvent: userId === currentUserId
+			});
+			if (userId === currentUserId) {
+				console.log('[NoteBody] Skipping own block creation');
+				return;
+			}
+			console.log('[NoteBody] Rendering newly created block:', block);
+			this.renderBlocks();
+		}) as EventListener;
+		window.addEventListener('collaborativeBlockCreate', handleBlockCreate);
+		this.unsubscribeCollaborativeCreate = () => {
+			window.removeEventListener('collaborativeBlockCreate', handleBlockCreate);
+		};
+	}
+
+	private subscribeToCollaborativeDelete(): void {
+		const handleBlockDelete = ((e: CustomEvent) => {
+			const { blockId, userId } = e.detail;
+			const currentUserId = store.getUser()?.id;
+			console.log('[NoteBody] Received collaborativeBlockDelete:', {
+				blockId,
+				userId,
+				currentUserId,
+				isOwnEvent: userId === currentUserId
+			});
+			if (userId === currentUserId) {
+				console.log('[NoteBody] Skipping own block deletion');
+				return;
+			}
+			const blocks = store.getActiveBlocks();
+			const updatedBlocks = blocks.filter(b => String(b.id) !== blockId);
+			updatedBlocks.forEach((block, idx) => {
+				block.position = idx;
+			});
+			console.log('[NoteBody] Updating blocks after deletion, removed blockId:', blockId);
+			store.setActiveBlocks(updatedBlocks);
+		}) as EventListener;
+		window.addEventListener('collaborativeBlockDelete', handleBlockDelete);
+		this.unsubscribeCollaborativeDelete = () => {
+			window.removeEventListener('collaborativeBlockDelete', handleBlockDelete);
+		};
 	}
 
 	private applyPendingFocus(
@@ -581,5 +636,7 @@ export default class NoteBody extends Component {
 		this.isDraggingSelection = false;
 		this.unsubscribeActiveBlocks?.();
 		this.unsubscribePendingFocus?.();
+		this.unsubscribeCollaborativeCreate?.();
+		this.unsubscribeCollaborativeDelete?.();
 	}
 }

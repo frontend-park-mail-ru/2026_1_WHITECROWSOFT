@@ -5,7 +5,7 @@ import AttachPopup from '../../components/popups/attachPopup/attachPopup.js';
 import { db } from '../../db.js';
 import { noteService } from '../../services/noteService.js';
 import { store } from '../../store.js';
-import type { ActiveNote } from '../../types.js';
+import type { ActiveNote, Note } from '../../types.js';
 import { CollaborativeCursorsRenderer } from '../../utils/collaborativeCursorsRenderer.js';
 import { collabManager } from '../../utils/collaborativeManager.js';
 import { handleAuthError } from '../../utils/handleAuthError.js';
@@ -84,7 +84,15 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 
 		const noteBodyElement = noteBody.getElement();
 		if (noteBodyElement) {
-			cursorsRenderer = new CollaborativeCursorsRenderer(noteBodyElement);
+			const activeNoteId = store.getActiveNoteId();
+			const note = store.getNotes().find((n) => n.ID === activeNoteId);
+			const isPublic = (note as any)?.is_public === true;
+			if (isPublic) {
+				cursorsRenderer = new CollaborativeCursorsRenderer(noteBodyElement);
+			} else {
+				cursorsRenderer?.cleanup();
+            	cursorsRenderer = null;
+			}
 		}
 	}
 
@@ -99,16 +107,24 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 		async (noteId: string | number | null) => {
 			if (noteId && noteId !== store.getActiveNote()?.ID) {
 				try {
+					await noteService.getNote(noteId);
 					const activeNoteData = store.getActiveNote();
 					setVisibility(!!activeNoteData);
 					if (activeNoteData) {
-						try {
-							await collabManager.startCollab(String(noteId));
-						} catch (error) {
-							console.warn(
-								'[MainPage] Failed to start collaborative editing:',
-								error,
-							);
+						const note = store.getNotes().find((n: Note) => n.ID === noteId);
+                        const isPublic = (note as any)?.is_public === true;
+						console.log('Active note changed. Public:', isPublic);
+						if (isPublic) {
+							try {
+								await collabManager.startCollab(String(noteId));
+							} catch (error) {
+								console.warn(
+									'[MainPage] Failed to start collaborative editing:',
+									error,
+								);
+							}
+						} else {
+							collabManager.stopCollab();
 						}
 					}
 				} catch (error) {

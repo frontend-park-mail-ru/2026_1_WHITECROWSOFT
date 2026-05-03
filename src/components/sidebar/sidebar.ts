@@ -6,6 +6,7 @@ import { store } from '../../store.js';
 import type { User } from '../../types.js';
 import Component from '../component.js';
 import NotePopup from '../popups/notePopup/notePopup.js';
+import PublicNotePopup from '../popups/publicPopup/publicPopup.js';
 import NoteSection from './noteSection/noteSection.js';
 import templateString from './sidebar.hbs?raw';
 import './sidebar.scss';
@@ -17,6 +18,7 @@ export default class Sidebar extends Component {
 	private personalSection: NoteSection | null = null;
 	private sharedSection: NoteSection | null = null;
 	private currentPopup: NotePopup | null = null;
+	private currentPublicPopup: PublicNotePopup | null = null;
 	private expandedState: Map<string | number, boolean> = new Map();
 	private unsubscribeNotes: (() => void) | null = null;
 	private unsubscribeRecentNotes: (() => void) | null = null;
@@ -111,6 +113,8 @@ export default class Sidebar extends Component {
 		const profileBtn = this.domElement.querySelector('[data-action="profile"]');
 		const homeBtn = this.domElement.querySelector('[data-action="home"]');
 		const newNoteBtn = this.domElement.querySelector('[data-action="newNote"]');
+		const publicNoteBtn = this.domElement.querySelector('[data-action="publicNotes"]');
+
 		profileBtn?.addEventListener('click', (e) => {
 			e.preventDefault();
 			router.push('/profile');
@@ -131,7 +135,37 @@ export default class Sidebar extends Component {
 				delete btn.dataset.pending;
 			}
 		});
+		publicNoteBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.openPublicNotePopup(e.currentTarget as HTMLElement);
+        });
 	}
+
+	 private openPublicNotePopup(anchor: HTMLElement): void {
+        this.currentPublicPopup?.close();
+        this.currentPublicPopup = new PublicNotePopup({
+            anchorElement: anchor,
+            onOpenNote: async (noteId: string) => {
+                await this.openPublicNote(noteId);
+            }
+        });
+        this.currentPublicPopup.open();
+    }
+
+    private async openPublicNote(noteId: string): Promise<void> {
+        try {
+            await noteService.getNote(noteId);
+            store.setActiveNoteId(noteId);
+            const note = store.getNotes().find(n => n.ID === noteId);
+            if (note) {
+                await store.addToRecentNotes(noteId, note.title);
+            }
+            router.push('/');
+        } catch (error) {
+            console.error('Failed to open public note:', error);
+            alert('Не удалось открыть заметку. Проверьте ID и наличие доступа.');
+        }
+    }
 
 	private subscribeToStore(): void {
 		this.unsubscribeNotes = store.subscribe('notes', () => {
