@@ -1,0 +1,11 @@
+<div class="note-tree">
+    {{#if hasNotes}}
+        <div class="note-tree__container" data-tree-container>
+            {{#each notes}}
+                <div data-tree-node="{{id}}"></div>
+            {{/each}}
+        </div>
+    {{else}}
+        <div class="note-tree__empty">Нет заметок</div>
+    {{/if}}
+</div>

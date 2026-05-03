@@ -16,6 +16,7 @@ interface GetNoteResponse {
 		id: string | number;
 		title: string;
 		updated_at: string;
+		parent_id?: string | number | null;
 	};
 	blocks: Block[];
 }
@@ -23,6 +24,7 @@ interface GetNoteResponse {
 interface CreateNoteData {
 	title: string;
 	content?: string;
+	parent_id: number | string | null;
 }
 
 interface CreateBlockData {
@@ -56,21 +58,19 @@ export const noteService = {
 					total?: number;
 				}>('/notes');
 				const notesArray = response.notes || [];
-
 				const notes: Note[] = notesArray.map((note) => ({
 					ID: note.id,
 					title: note.title,
 					icon: null,
+					parent_id: note.parent_id || null,
 					updatedAt: note.updated_at || Date.now(),
 				}));
-
 				await db.notesClear();
 				for (const note of notes) {
 					if (note.ID) {
 						await db.notesPut(note);
 					}
 				}
-
 				store.setNotes(notes);
 				return notes;
 			} catch (error) {
@@ -78,7 +78,6 @@ export const noteService = {
 				handleAuthError(error);
 			}
 		}
-
 		const cachedNotes = await db.notesGetAll();
 		store.setNotes(cachedNotes);
 		return cachedNotes;
@@ -91,15 +90,14 @@ export const noteService = {
 				const data = await client.get<GetNoteResponse>(`/notes/${noteID}`);
 				const serverNote = data.note;
 				const serverBlocks = data.blocks || [];
-
 				await db.notesPut({
 					ID: serverNote.id,
 					title: serverNote.title,
 					icon: null,
+					parent_id: serverNote.parent_id || null,
 					blocks: serverBlocks,
 					updatedAt: serverNote.updated_at,
 				});
-
 				for (const block of serverBlocks) {
 					if (block.formatting && block.formatting.ranges) {
 						await db.formattingPut({
@@ -111,19 +109,17 @@ export const noteService = {
 						});
 					}
 				}
-
 				const activeNote = {
 					ID: serverNote.id,
 					title: serverNote.title,
 					breadcrumb: serverNote.title,
 					text: serverBlocks.map((b: Block) => b.content).join('\n\n') ?? '',
 				};
-
 				store.setActiveNote(activeNote);
 				store.setActiveNoteId(noteID);
 				store.setActiveBlocks(serverBlocks);
 				await db.settingsSet('activeNoteId', noteID);
-
+				await store.addToRecentNotes(serverNote.id, serverNote.title);
 				return {
 					note: serverNote,
 					blocks: serverBlocks,
@@ -133,7 +129,6 @@ export const noteService = {
 				handleAuthError(error);
 			}
 		}
-
 		const cachedNote = await db.notesGet(noteID);
 		if (cachedNote) {
 			const blocks = Array.isArray(cachedNote.blocks) ? cachedNote.blocks : [];
@@ -144,7 +139,6 @@ export const noteService = {
 					? { ranges: formattingMap[block.id] }
 					: block.formatting || { ranges: [] },
 			}));
-
 			const activeNote = {
 				ID: cachedNote.ID,
 				title: cachedNote.title,
@@ -153,6 +147,7 @@ export const noteService = {
 			};
 			await this._setActiveNoteState(activeNote);
 			store.setActiveBlocks(blocksWithFormatting);
+			await store.addToRecentNotes(cachedNote.ID, cachedNote.title);
 			return {
 				note: {
 					id: cachedNote.ID,
@@ -165,7 +160,6 @@ export const noteService = {
 				blocks: blocksWithFormatting,
 			};
 		}
-
 		return null;
 	},
 
@@ -187,7 +181,6 @@ export const noteService = {
 	async createNote(data: CreateNoteData): Promise<Note> {
 		const isOnline = store.getOnline();
 		const localNoteId = `local-${Date.now()}`;
-
 		const localNote: Note = {
 			...data,
 			ID: localNoteId,
@@ -196,7 +189,6 @@ export const noteService = {
 			updatedAt: Date.now(),
 			blocks: [],
 		};
-
 		if (isOnline) {
 			try {
 				const result = await client.post<NoteApiResponse>('/notes', data);
@@ -204,23 +196,20 @@ export const noteService = {
 					ID: result.id,
 					title: result.title,
 					icon: null,
-					updatedAt: result.updated_at || result.UpdatedAt || Date.now(),
+					updatedAt: result.updated_at || Date.now(),
 					blocks: [],
+					parent_id: data.parent_id || null,
 				};
-
 				const createdBlock = await this.createBlock(note.ID, {
 					note_id: note.ID,
 					block_type_id: 1,
 					position: 0,
 					content: '',
 				});
-
 				const updatedNote = { ...note, blocks: [createdBlock] };
 				await db.notesPut(updatedNote);
-
 				const currentNotes = store.getNotes();
-				store.setNotes([note, ...currentNotes]);
-
+				store.setNotes([updatedNote, ...currentNotes]);
 				const activeNote = {
 					ID: note.ID,
 					title: note.title,
@@ -229,16 +218,14 @@ export const noteService = {
 				};
 				await this._setActiveNoteState(activeNote);
 				store.setActiveBlocks([createdBlock]);
+				store.setPendingFocus(createdBlock.id, 'start');
 				return note;
 			} catch (error) {
 				console.warn(`[noteService] Network failed, queueing create request`);
 				if (handleAuthError(error)) throw error;
-
 				await db.notesPut(localNote);
-
 				const currentNotes = store.getNotes();
 				store.setNotes([localNote, ...currentNotes]);
-
 				const activeNote = {
 					ID: localNoteId,
 					title: localNote.title,
@@ -247,7 +234,6 @@ export const noteService = {
 				};
 				await this._setActiveNoteState(activeNote);
 				store.setActiveBlocks([]);
-
 				await queueService.enqueueRequest({
 					method: 'POST',
 					endpoint: '/notes',
@@ -258,12 +244,9 @@ export const noteService = {
 				return localNote;
 			}
 		}
-
 		await db.notesPut(localNote);
-
 		const currentNotes = store.getNotes();
 		store.setNotes([localNote, ...currentNotes]);
-
 		const activeNote = {
 			ID: localNoteId,
 			title: localNote.title,
@@ -272,21 +255,31 @@ export const noteService = {
 		};
 		await this._setActiveNoteState(activeNote);
 		store.setActiveBlocks([]);
-
 		await queueService.enqueueRequest({
 			method: 'POST',
 			endpoint: '/notes',
 			body: data,
 			localId: localNoteId,
 		});
-
 		return localNote;
+	},
+
+	async deleteNoteRecursive(noteID: string | number): Promise<void> {
+		const allNotes = store.getNotes();
+		const subnotes = allNotes.filter((note) => note.parent_id === noteID);
+		for (const subnote of subnotes) {
+			await this.deleteNoteRecursive(subnote.ID);
+		}
+		await this.deleteNote(noteID);
 	},
 
 	async deleteNote(noteID: string | number): Promise<void> {
 		const isOnline = store.getOnline();
 		const isLocal = this._isLocalNote(noteID);
-
+		const note = store.getNotes().find((n) => n.ID === noteID);
+		if (note?.parent_id) {
+			await this.deleteSubnoteBlockFromParent(noteID, note.parent_id);
+		}
 		if (isOnline && !isLocal) {
 			try {
 				await client.delete(`/notes/${noteID}`);
@@ -310,14 +303,14 @@ export const noteService = {
 				body: null,
 			});
 		}
-
 		await db.notesDelete(noteID);
 		await db.imagesDeleteByNoteId?.(noteID);
 		await db.formattingDeleteByNoteId?.(noteID);
+		await db.recentNotesDelete(noteID);
 		const currentNotes = store.getNotes();
 		const remainingNotes = currentNotes.filter((note) => note.ID !== noteID);
 		store.setNotes(remainingNotes);
-
+		store.loadRecentNotes();
 		const activeNoteId = store.getActiveNoteId();
 		if (activeNoteId === noteID) {
 			if (remainingNotes.length > 0) {
@@ -331,24 +324,42 @@ export const noteService = {
 		}
 	},
 
+	async deleteSubnoteBlockFromParent(
+		subnoteId: string | number,
+		parentNoteId: string | number,
+	): Promise<void> {
+		const parentNote = store.getNotes().find((n) => n.ID === parentNoteId);
+		if (!parentNote || !parentNote.blocks) return;
+		const referenceBlock = parentNote.blocks.find(
+			(block) => block.block_type_id === 5 && block.content === subnoteId,
+		);
+		if (referenceBlock) {
+			await this.deleteBlock(parentNoteId, referenceBlock.id);
+		}
+	},
+
 	async updateNote(
 		noteID: string | number,
 		data: Partial<Note>,
 	): Promise<Note | null> {
 		const isOnline = store.getOnline();
 		const isLocal = this._isLocalNote(noteID);
-
+		const oldNote = store.getNotes().find((n) => n.ID === noteID);
+		const oldTitle = oldNote?.title || '';
 		if (isOnline && !isLocal) {
 			try {
 				const result = await client.put<NoteApiResponse>(
 					`/notes/${noteID}`,
 					data,
 				);
+				const currentNote = store.getNotes().find((n) => n.ID === noteID);
 				const note: Note = {
 					ID: result.id,
 					title: result.title,
 					icon: null,
 					updatedAt: result.updated_at || Date.now(),
+					parent_id: result.parent_id ?? currentNote?.parent_id ?? null,
+					blocks: currentNote?.blocks || [],
 				};
 				await db.notesPut(note);
 				const currentNotes = store.getNotes();
@@ -356,22 +367,22 @@ export const noteService = {
 					n.ID === noteID ? note : n,
 				);
 				store.setNotes(updatedNotes);
-
+				if (data.title && data.title !== oldTitle) {
+					await this.updateRecentNotesTitle(noteID, data.title);
+				}
 				if (store.getActiveNoteId() === noteID) {
 					const activeNote = {
 						ID: note.ID,
 						title: note.title,
 						breadcrumb: note.title,
 						text: store.getActiveNote()?.text || '',
+						parent_id: note.parent_id || null,
 					};
 					store.setActiveNote(activeNote);
 				}
-
 				return note;
 			} catch (error) {
-				console.warn(
-					`[noteService] Network failed (${error}), queueing update request`,
-				);
+				console.warn(`[noteService] Network failed, queueing update request`);
 				if (handleAuthError(error)) {
 					throw error;
 				}
@@ -388,7 +399,6 @@ export const noteService = {
 				body: data,
 			});
 		}
-
 		const currentNotes = store.getNotes();
 		const noteIndex = currentNotes.findIndex((n) => n.ID === noteID);
 		if (noteIndex !== -1) {
@@ -396,26 +406,42 @@ export const noteService = {
 				...currentNotes[noteIndex],
 				...data,
 				updatedAt: Date.now(),
+				parent_id: currentNotes[noteIndex].parent_id ?? null,
 			};
 			await db.notesPut(updatedNote);
 			const updatedNotes = [...currentNotes];
 			updatedNotes[noteIndex] = updatedNote;
 			store.setNotes(updatedNotes);
-
+			if (data.title && data.title !== oldTitle) {
+				await this.updateRecentNotesTitle(noteID, data.title);
+			}
 			if (store.getActiveNoteId() === noteID) {
 				const activeNote = {
 					ID: updatedNote.ID,
 					title: updatedNote.title,
 					breadcrumb: updatedNote.title,
 					text: store.getActiveNote()?.text || '',
+					parent_id: updatedNote.parent_id || null,
 				};
 				store.setActiveNote(activeNote);
 			}
-
 			return updatedNote;
 		}
-
 		return null;
+	},
+
+	async updateRecentNotesTitle(
+		subnoteId: string | number,
+		newTitle: string,
+	): Promise<void> {
+		const recentNotes = await db.recentNotesGetAll();
+		const updatedRecent = recentNotes.map((item) =>
+			item.noteId === subnoteId ? { ...item, title: newTitle } : item,
+		);
+		for (const item of updatedRecent) {
+			await db.recentNotesPut(item);
+		}
+		await store.loadRecentNotes();
 	},
 
 	async getBlocks(noteID: string | number): Promise<Block[]> {
@@ -449,10 +475,8 @@ export const noteService = {
 				handleAuthError(error);
 			}
 		}
-
 		const cachedNote = await db.notesGet(noteID);
 		const blocks = cachedNote?.blocks || [];
-
 		const formattingMap = await db.formattingGetByNoteId(noteID);
 		const blocksWithFormatting: Block[] = blocks.map((block) => ({
 			...block,
@@ -471,9 +495,7 @@ export const noteService = {
 	): Promise<Block> {
 		const blocks = store.getActiveBlocks();
 		const sortedBlocks = [...blocks].sort((a, b) => a.position - b.position);
-
 		let insertIndex: number;
-
 		if (afterBlockId) {
 			const afterIndex = sortedBlocks.findIndex(
 				(b) => String(b.id) === afterBlockId,
@@ -482,14 +504,19 @@ export const noteService = {
 		} else {
 			insertIndex = sortedBlocks.length;
 		}
-
-		const shifted = sortedBlocks.map((b, i) =>
-			i >= insertIndex ? { ...b, position: i + 1 } : { ...b, position: i },
-		);
-		store.setActiveBlocksSilently(shifted);
-
+		const shifted = sortedBlocks.map((block, i) => {
+			if (i >= insertIndex) {
+				return { ...block, position: i + 1 };
+			}
+			return { ...block, position: i };
+		});
+		store.setActiveBlocks(shifted);
+		const cachedNote = await db.notesGet(noteID);
+		if (cachedNote) {
+			const updatedBlocks = shifted;
+			await db.notesPut({ ...cachedNote, blocks: updatedBlocks });
+		}
 		const position = insertIndex;
-
 		return this.createBlock(noteID, {
 			...blockData,
 			position,
@@ -521,19 +548,27 @@ export const noteService = {
 					position: result.position,
 					formatting: { ranges: [] },
 				};
-				await this._updateCachedBlocksWithPosition(noteID, block, 'add');
-				const existingBlocks = store.getActiveBlocks();
-				const alreadyInStore = existingBlocks.some((b) => b.id === block.id);
-				if (!alreadyInStore) {
-					const updated = [...existingBlocks, block].sort(
-						(a, b) => a.position - b.position,
-					);
-					store.setActiveBlocksSilently(updated);
+				const currentBlocks = store.getActiveBlocks();
+				const updatedBlocks = [...currentBlocks, block];
+				updatedBlocks.sort((a, b) => a.position - b.position);
+				store.setActiveBlocks(updatedBlocks);
+				const currentNotes = store.getNotes();
+				const noteIndex = currentNotes.findIndex((n) => n.ID === noteID);
+				if (noteIndex !== -1) {
+					const updatedNote = {
+						...currentNotes[noteIndex],
+						blocks: updatedBlocks,
+					};
+					const updatedNotes = [...currentNotes];
+					updatedNotes[noteIndex] = updatedNote;
+					store.setNotesSilently(updatedNotes);
 				}
+				await this._updateCachedBlocksWithPosition(noteID, block, 'add');
 				return block;
 			} catch (error) {
+				console.log(error);
 				console.warn(
-					`[noteService] Network failed (${error}), queueing create block request`,
+					`[noteService] Network failed, queueing create block request`,
 				);
 				if (handleAuthError(error)) {
 					throw error;
@@ -546,24 +581,33 @@ export const noteService = {
 				});
 			}
 		}
-
 		await this._updateCachedBlocksWithPosition(noteID, localBlock, 'add');
-		const existingBlocks = store.getActiveBlocks();
-		const alreadyInStore = existingBlocks.some((b) => b.id === localBlock.id);
-		if (!alreadyInStore) {
-			const updated = [...existingBlocks, localBlock].sort(
-				(a, b) => a.position - b.position,
-			);
-			store.setActiveBlocksSilently(updated);
+		const currentBlocks = store.getActiveBlocks();
+		const existingLocalIndex = currentBlocks.findIndex(
+			(b) => b.id === localBlock.id,
+		);
+		if (existingLocalIndex === -1) {
+			const updated = [...currentBlocks, localBlock];
+			updated.sort((a, b) => a.position - b.position);
+			store.setActiveBlocks(updated);
+			const currentNotes = store.getNotes();
+			const noteIndex = currentNotes.findIndex((n) => n.ID === noteID);
+			if (noteIndex !== -1) {
+				const updatedNote = {
+					...currentNotes[noteIndex],
+					blocks: updated,
+				};
+				const updatedNotes = [...currentNotes];
+				updatedNotes[noteIndex] = updatedNote;
+				store.setNotesSilently(updatedNotes);
+			}
 		}
-
 		await queueService.enqueueRequest({
 			method: 'POST',
 			endpoint: `/notes/${noteID}/blocks`,
 			body: blockData,
 			localId: localBlock.id as string,
 		});
-
 		return localBlock;
 	},
 
@@ -593,14 +637,12 @@ export const noteService = {
 				});
 			}
 		} else {
-			console.log('CONTENT UPDATE');
 			await queueService.enqueueRequest({
 				method: 'PUT',
 				endpoint: `/notes/${noteID}/blocks/${blockID}/content`,
 				body: { content },
 			});
 		}
-
 		const existingBlocks = store.getActiveBlocks();
 		const existingBlock = existingBlocks.find((b) => b.id === blockID);
 		const block: Block = {
@@ -611,7 +653,24 @@ export const noteService = {
 			formatting: existingBlock?.formatting || null,
 		};
 		await this._updateCachedBlocksWithPosition(noteID, block, 'update');
-
+		const updatedActiveBlocks = existingBlocks.map((b) =>
+			b.id === blockID ? { ...b, content } : b,
+		);
+		store.setActiveBlocks(updatedActiveBlocks);
+		const currentNotes = store.getNotes();
+		const noteIndex = currentNotes.findIndex((n) => n.ID === noteID);
+		if (noteIndex !== -1) {
+			const updatedBlocks = (currentNotes[noteIndex].blocks || []).map((b) =>
+				b.id === blockID ? { ...b, content } : b,
+			);
+			const updatedNote = {
+				...currentNotes[noteIndex],
+				blocks: updatedBlocks,
+			};
+			const updatedNotes = [...currentNotes];
+			updatedNotes[noteIndex] = updatedNote;
+			store.setNotesSilently(updatedNotes);
+		}
 		return block;
 	},
 
@@ -623,16 +682,12 @@ export const noteService = {
 		const isOnline = store.getOnline();
 		const isLocalBlock = String(blockID).startsWith('local-');
 		const isLocalNote = this._isLocalNote(noteID);
-
 		const existingBlocks = store.getActiveBlocks();
 		const existingBlock = existingBlocks.find((b) => b.id === blockID);
-
 		if (!existingBlock) {
 			throw new Error(`Block ${blockID} not found`);
 		}
-
 		const shouldQueue = isLocalBlock || isLocalNote || !isOnline;
-
 		if (isOnline && !isLocalBlock && !isLocalNote) {
 			try {
 				const result = await client.put<BlockApiResponse>(
@@ -657,36 +712,24 @@ export const noteService = {
 				}
 			}
 		}
-
 		if (shouldQueue) {
 			await queueService.enqueueRequest({
 				method: 'PUT',
 				endpoint: `/notes/${noteID}/blocks/${blockID}/move`,
 				body: { new_position: newPosition },
 			});
-			console.log(
-				'[noteService] Queued block move:',
-				blockID,
-				'→',
-				newPosition,
-			);
 		}
-
 		const block: Block = {
 			...existingBlock,
 			position: newPosition,
 		};
-
 		await this._updateCachedBlocksWithPosition(noteID, block, 'update');
-
 		const updatedBlocks = existingBlocks.map((b) =>
 			b.id === blockID ? block : b,
 		);
 		updatedBlocks.sort((a, b) => a.position - b.position);
-
-		store.setActiveBlocksSilently(updatedBlocks);
+		store.setActiveBlocks(updatedBlocks);
 		store.reorderBlocks(blockID, newPosition);
-
 		return block;
 	},
 
@@ -731,6 +774,23 @@ export const noteService = {
 		updatedBlocks.forEach((block, idx) => {
 			block.position = idx;
 		});
+		store.setActiveBlocks(updatedBlocks);
+		const currentNotes = store.getNotes();
+		const noteIndex = currentNotes.findIndex((n) => n.ID === noteID);
+		if (noteIndex !== -1) {
+			const updatedNote = {
+				...currentNotes[noteIndex],
+				blocks: (currentNotes[noteIndex].blocks || []).filter(
+					(b) => b.id !== blockID,
+				),
+			};
+			updatedNote.blocks.forEach((b, idx) => {
+				b.position = idx;
+			});
+			const updatedNotes = [...currentNotes];
+			updatedNotes[noteIndex] = updatedNote;
+			store.setNotesSilently(updatedNotes);
+		}
 	},
 
 	async _updateCachedBlocksWithPosition(
@@ -741,7 +801,6 @@ export const noteService = {
 		const cachedNote = await db.notesGet(noteID);
 		if (!cachedNote) return;
 		let blocks = cachedNote.blocks || [];
-
 		if (action === 'add') {
 			const exists = blocks.some((b) => b.id === block.id);
 			if (!exists) {
@@ -771,7 +830,6 @@ export const noteService = {
 	): Promise<FormattingResponse> {
 		const isOnline = store.getOnline();
 		const isLocal = String(blockId).startsWith('local-');
-
 		const payload: FormattingPayload = {
 			start_pos: startPos,
 			end_pos: endPos,
@@ -779,9 +837,7 @@ export const noteService = {
 			italic: formatting.italic ?? null,
 			underline: formatting.underline ?? null,
 		};
-
 		const endpoint = `/notes/${noteId}/blocks/${blockId}/formatting`;
-
 		if (isOnline && !isLocal) {
 			try {
 				const result = await client.put<FormattingResponse>(endpoint, payload);
@@ -929,7 +985,6 @@ export const noteService = {
 		} else {
 			await queueService.enqueueRequest({ method: 'DELETE', endpoint });
 		}
-
 		return { block_id: blockId, ranges: [] };
 	},
 

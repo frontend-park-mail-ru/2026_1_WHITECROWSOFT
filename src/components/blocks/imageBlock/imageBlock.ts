@@ -73,6 +73,31 @@ export default class ImageBlock extends Component {
 		}
 	}
 
+	updateBlock(newBlock: Block): void {
+		const contentChanged = this.block.content !== newBlock.content;
+		this.block = newBlock;
+		if (!this.domElement || !contentChanged) {
+			return;
+		}
+
+		const imgEl = this.domElement.querySelector(
+			'.note__imageBlock-img',
+		) as HTMLImageElement | null;
+		if (!imgEl) return;
+
+		const placeholder = this.domElement.querySelector(
+			'.note__imageBlock-placeholder',
+		);
+		if (placeholder) {
+			placeholder.remove();
+		}
+
+		imgEl.src = '';
+		imgEl.classList.remove('hidden');
+		imgEl.classList.add('loading');
+		void this.loadImage();
+	}
+
 	private bindEvents(): void {
 		const blockEl = this.domElement;
 		if (!blockEl) return;
@@ -92,7 +117,6 @@ export default class ImageBlock extends Component {
 			if (isBackspace || isDelete) {
 				e.preventDefault();
 				e.stopPropagation();
-				console.log('Deleting image block:', this.block.id);
 				this.onDelete?.(String(this.block.id));
 			}
 		});
@@ -115,4 +139,6 @@ export default class ImageBlock extends Component {
 	setCursorAtStart(): void {}
 
 	setCursorAtOffset(): void {}
+
+	destroy(): void {}
 }

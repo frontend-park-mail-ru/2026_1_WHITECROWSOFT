@@ -1,5 +1,6 @@
 import { attachmentService } from '../../../services/attachmentService.js';
 import { noteService } from '../../../services/noteService.js';
+import { subnoteService } from '../../../services/subnoteService.js';
 import { store } from '../../../store.js';
 import { Block } from '../../../types.js';
 import { getElementPosition } from '../../../utils/utils.js';
@@ -18,7 +19,6 @@ export default class AttachPopup extends Component {
 	private anchorElement: HTMLElement;
 	private afterBlockId: string | null;
 	private fileInput: HTMLInputElement | null = null;
-	private onBlockCreated?: (block: Block) => void;
 
 	private boundHandlers: {
 		onDocumentClick?: (e: MouseEvent) => void;
@@ -26,6 +26,7 @@ export default class AttachPopup extends Component {
 		onTextClick?: () => void;
 		onPictureClick?: () => void;
 		onTableClick?: () => void;
+		onSubnoteClick?: () => void;
 		onFileChange?: (e: Event) => void;
 	} = {};
 
@@ -33,7 +34,6 @@ export default class AttachPopup extends Component {
 		super();
 		this.anchorElement = options.anchorElement;
 		this.afterBlockId = options.afterBlockId;
-		this.onBlockCreated = options.onBlockCreated;
 	}
 
 	protected getTemplateData() {
@@ -114,34 +114,18 @@ export default class AttachPopup extends Component {
 		}
 	}
 
-	private async createAndInsertBlock(
-		blockPromise: Promise<Block>,
-	): Promise<Block | null> {
-		const block = await blockPromise;
-		if (block) {
-			const currentBlocks = store.getActiveBlocks();
-			const exists = currentBlocks.some((b) => b.id === block.id);
-			if (!exists) {
-				const updatedBlocks = [...currentBlocks, block];
-				updatedBlocks.sort((a, b) => a.position - b.position);
-				store.setActiveBlocksSilently(updatedBlocks);
-			}
-			this.onBlockCreated?.(block);
-			return block;
-		}
-		return null;
-	}
-
 	private bindPopupEvents(): void {
 		if (!this.domElement) return;
 		const textBtn = this.domElement.querySelector('[data-action="text"]');
 		const pictureBtn = this.domElement.querySelector('[data-action="picture"]');
 		const tableBtn = this.domElement.querySelector('[data-action="table"]');
+		const subnoteBtn = this.domElement.querySelector('[data-action="subnote"]');
+
 		if (textBtn) {
 			this.boundHandlers.onTextClick = async () => {
 				const activeNoteId = store.getActiveNoteId();
 				if (activeNoteId) {
-					const blockPromise = noteService.createBlockAfter(
+					await noteService.createBlockAfter(
 						activeNoteId,
 						{
 							note_id: activeNoteId,
@@ -150,7 +134,6 @@ export default class AttachPopup extends Component {
 						},
 						this.afterBlockId,
 					);
-					await this.createAndInsertBlock(blockPromise);
 				}
 				this.close();
 			};
@@ -195,12 +178,11 @@ export default class AttachPopup extends Component {
 					return;
 				}
 				try {
-					const blockPromise = attachmentService.createImageBlock(
+					await attachmentService.createImageBlock(
 						activeNoteId,
 						file,
 						this.afterBlockId,
 					);
-					await this.createAndInsertBlock(blockPromise);
 				} catch (error) {
 					console.error('[AttachPopup] Error:', error);
 				}
@@ -214,6 +196,36 @@ export default class AttachPopup extends Component {
 				this.boundHandlers.onFileChange,
 			);
 		}
+
+		if (subnoteBtn) {
+			this.boundHandlers.onSubnoteClick = async () => {
+				const activeNoteId = store.getActiveNoteId();
+				if (!activeNoteId) {
+					console.error('No active note id');
+					this.close();
+					return;
+				}
+				try {
+					const newSubnote = await subnoteService.createSubnote(activeNoteId, {
+						title: 'Новая подзаметка',
+						parent_id: activeNoteId,
+					});
+					if (!newSubnote || !newSubnote.ID) {
+						throw new Error('Failed to create subnote');
+					}
+					await subnoteService.createSubnoteBlock(
+						activeNoteId,
+						newSubnote.ID,
+						newSubnote.title,
+						this.afterBlockId,
+					);
+				} catch (error) {
+					console.error('Error creating subnote:', error);
+				}
+				this.close();
+			};
+			subnoteBtn.addEventListener('click', this.boundHandlers.onSubnoteClick);
+		}
 	}
 
 	private unbindPopupEvents(): void {
@@ -221,6 +233,7 @@ export default class AttachPopup extends Component {
 		const textBtn = this.domElement.querySelector('[data-action="text"]');
 		const pictureBtn = this.domElement.querySelector('[data-action="picture"]');
 		const tableBtn = this.domElement.querySelector('[data-action="table"]');
+		const subnoteBtn = this.domElement.querySelector('[data-action="subnote"]');
 		if (textBtn && this.boundHandlers.onTextClick) {
 			textBtn.removeEventListener('click', this.boundHandlers.onTextClick);
 		}
@@ -232,6 +245,12 @@ export default class AttachPopup extends Component {
 		}
 		if (tableBtn && this.boundHandlers.onTableClick) {
 			tableBtn.removeEventListener('click', this.boundHandlers.onTableClick);
+		}
+		if (subnoteBtn && this.boundHandlers.onSubnoteClick) {
+			subnoteBtn.removeEventListener(
+				'click',
+				this.boundHandlers.onSubnoteClick,
+			);
 		}
 		if (this.fileInput && this.boundHandlers.onFileChange) {
 			this.fileInput.removeEventListener(

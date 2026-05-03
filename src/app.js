@@ -33,6 +33,8 @@ async function bootstrap() {
 			store.setUser(cachedUser);
 		}
 
+		await store.loadRecentNotes();
+
 		window.addEventListener('online', async () => {
 			store.setOnline(true);
 			await queueService.flushQueue();

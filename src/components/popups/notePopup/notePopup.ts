@@ -1,6 +1,5 @@
 import '../../../assets/style/genericPopup.scss';
 import { noteService } from '../../../services/noteService.js';
-import { store } from '../../../store.js';
 import { getElementPosition } from '../../../utils/utils.js';
 import Component from '../../component.js';
 import templateString from './notePopup.hbs?raw';
@@ -8,20 +7,22 @@ import templateString from './notePopup.hbs?raw';
 interface NotePopupOptions {
 	noteId: string | number;
 	anchorElement: HTMLElement;
-	onRename: () => void;
+	titleElement?: HTMLElement;
+	onRenameComplete?: () => void;
 }
 
 export default class NotePopup extends Component {
 	protected templateString = templateString;
 	private noteId: string | number;
 	private anchorElement: HTMLElement;
-	private onRename: () => void;
+	private titleElement?: HTMLElement;
 
 	private boundHandlers: {
 		onDocumentClick?: (e: MouseEvent) => void;
 		onEscape?: (e: KeyboardEvent) => void;
 		onDelete?: () => void;
 		onRename?: () => void;
+		onRenameComplete?: () => void;
 		onPin?: () => void;
 	} = {};
 
@@ -29,7 +30,8 @@ export default class NotePopup extends Component {
 		super();
 		this.noteId = options.noteId;
 		this.anchorElement = options.anchorElement;
-		this.onRename = options.onRename;
+		this.titleElement = options.titleElement;
+		this.boundHandlers.onRenameComplete = options.onRenameComplete;
 	}
 
 	protected getTemplateData() {
@@ -97,18 +99,21 @@ export default class NotePopup extends Component {
 		const deleteBtn = this.domElement?.querySelector('[data-action="delete"]');
 		const renameBtn = this.domElement?.querySelector('[data-action="rename"]');
 		const pinBtn = this.domElement?.querySelector('[data-action="pin"]');
+
 		if (deleteBtn) {
 			this.boundHandlers.onDelete = async () => {
 				await this.handleDelete();
 			};
 			deleteBtn.addEventListener('click', this.boundHandlers.onDelete);
 		}
+
 		if (renameBtn) {
 			this.boundHandlers.onRename = () => {
 				this.handleRename();
 			};
 			renameBtn.addEventListener('click', this.boundHandlers.onRename);
 		}
+
 		if (pinBtn) {
 			this.boundHandlers.onPin = () => {
 				this.handlePin();
@@ -121,6 +126,7 @@ export default class NotePopup extends Component {
 		const deleteBtn = this.domElement?.querySelector('[data-action="delete"]');
 		const renameBtn = this.domElement?.querySelector('[data-action="rename"]');
 		const pinBtn = this.domElement?.querySelector('[data-action="pin"]');
+
 		if (deleteBtn && this.boundHandlers.onDelete) {
 			deleteBtn.removeEventListener('click', this.boundHandlers.onDelete);
 		}
@@ -133,14 +139,11 @@ export default class NotePopup extends Component {
 	}
 
 	private async handleDelete(): Promise<void> {
+		const confirmed = confirm('Вы действительно хотите удалить эту заметку?');
+		if (!confirmed) return;
+
 		try {
-			await noteService.deleteNote(this.noteId);
-			const currentNotes = store.getNotes();
-			const updatedNotes = currentNotes.filter((n) => n.ID !== this.noteId);
-			store.setNotes(updatedNotes);
-			if (store.getActiveNoteId() === this.noteId) {
-				store.setActiveNoteId(null);
-			}
+			await noteService.deleteNoteRecursive(this.noteId);
 			this.close();
 		} catch (error) {
 			console.error('Error deleting note:', error);
@@ -148,8 +151,67 @@ export default class NotePopup extends Component {
 	}
 
 	private handleRename(): void {
-		this.onRename();
-		this.close();
+		const titleElement = this.titleElement;
+		if (!titleElement) {
+			console.error('Title element not found');
+			this.close();
+			return;
+		}
+		const currentTitle = titleElement.textContent || '';
+		const input = document.createElement('input');
+		input.type = 'text';
+		input.value = currentTitle;
+		input.className = 'inline-edit-input';
+		let isSaved = false;
+		const cleanup = (): void => {
+			titleElement.style.display = '';
+			input.remove();
+		};
+		const save = async (): Promise<void> => {
+			if (isSaved) return;
+			isSaved = true;
+			const newTitle = input.value.trim();
+			if (newTitle && newTitle !== currentTitle) {
+				try {
+					await noteService.updateNote(this.noteId, { title: newTitle });
+					titleElement.textContent = newTitle;
+					this.boundHandlers.onRenameComplete?.();
+				} catch (error) {
+					console.error('Failed to rename note:', error);
+					titleElement.textContent = currentTitle;
+				}
+			}
+			cleanup();
+			this.close();
+		};
+
+		const cancel = (): void => {
+			if (isSaved) return;
+			isSaved = true;
+			titleElement.textContent = currentTitle;
+			cleanup();
+			this.close();
+		};
+
+		titleElement.style.display = 'none';
+		titleElement.parentNode?.insertBefore(input, titleElement);
+		input.focus();
+		input.addEventListener('blur', () => {
+			if (isSaved) return;
+			save();
+		});
+		input.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				e.stopPropagation();
+				input.removeEventListener('blur', save);
+				save();
+			} else if (e.key === 'Escape') {
+				e.preventDefault();
+				e.stopPropagation();
+				cancel();
+			}
+		});
 	}
 
 	private async handlePin(): Promise<void> {

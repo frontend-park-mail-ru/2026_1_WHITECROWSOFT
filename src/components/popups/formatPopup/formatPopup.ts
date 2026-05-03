@@ -103,9 +103,7 @@ export default class FormatPopup extends Component {
 	}
 
 	onRender(): void {
-		console.log(this.domElement);
 		if (this.range && this.domElement) {
-			console.log('position');
 			positionPopup(this.range, this.domElement);
 		}
 		this.bindGlobalCloseHandlers();

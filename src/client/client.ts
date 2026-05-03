@@ -85,16 +85,20 @@ class Client {
 		const isMutatingMethod = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(
 			method.toUpperCase(),
 		);
+
 		const headers: Record<string, string> = { ...options.headers };
+
 		if (isMutatingMethod && !options.skipCsrf) {
 			const csrfToken = await this.fetchCsrfToken();
 			if (csrfToken) {
 				headers['X-CSRF-Token'] = csrfToken;
 			}
 		}
+
 		if (!(options.body instanceof FormData)) {
 			headers['Content-Type'] = 'application/json';
 		}
+
 		try {
 			const response = await fetch(url, {
 				credentials: 'include',
@@ -102,31 +106,38 @@ class Client {
 				...options,
 				body: options.body ?? null,
 			});
+
 			if (response.status === 403 && isMutatingMethod && !options._retried) {
 				this.resetCsrfToken();
 				const retryOptions: RequestOptions = { ...options, _retried: true };
 				return this.request<T>(endpoint, retryOptions);
 			}
+
 			let responseData: T | null = null;
 			try {
 				responseData = (await response.json()) as T;
 			} catch {
 				console.log('[CLIENT] Getting response JSON failed *for some reason*');
 			}
+
 			if (!response.ok) {
 				throw createError.fromResponse(response, responseData);
 			}
+
 			if (response.status === 204) {
 				return {} as T;
 			}
+
 			return responseData as T;
 		} catch (err) {
 			if (err instanceof AppError) {
 				throw err;
 			}
+
 			if (err instanceof Error && err.name === 'AbortError') {
 				throw createError.timeout(err);
 			}
+
 			throw createError.client(
 				err instanceof Error ? err : new Error(String(err)),
 			);

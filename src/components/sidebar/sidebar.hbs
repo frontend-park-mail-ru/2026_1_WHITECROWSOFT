@@ -1,49 +1,38 @@
 <aside class="sidebar">
-	<div class="sidebar__header">
-		<h1 class="logo__title">Noterian</h1>
-	</div>
-
-	<div class="sidebar__actionMenu">
-		<div class="search search--disabled">
-		    <img src="/icons/search.svg" class="icon search__icon" />
-			<input
-				type="text"
-				class="search__input input input--disabled"
-				placeholder="Поиск"
-				value="{{searchQuery}}"
-			/>
-		</div>
-		<button id="profileBtn" class="profileButton sidebar__btn" data-action="profile">
-			<img src="/icons/profile.svg" class="icon" />
-			<span id="profile-username">{{user.username}}</span>
-		</button>
-		<button id="homeButton" class="homeButton sidebar__btn" data-action="home">
-			<img src="/icons/home.svg" class="icon" />
-			Главная
-		</button>
-		<button class="sidebar__btn sidebar__btn--disabled">
-			<img src="/icons/bookmark.svg" class="icon" />
-			Библиотека
-		</button>
-	</div>
-
-	<hr class="sidebar__barrier" />
-
-	<div class="sidebar__sections">
-		<div class="sidebar__section" data-section="recent-notes"></div>
-		<div class="sidebar__section" data-section="personal-notes"></div>
-		<div class="sidebar__section" data-section="shared-notes"></div>
-	</div>
-
+    <div class="sidebar__header">
+        <h1 class="logo__title">Noterian</h1>
+    </div>
+    <div class="sidebar__actionMenu">
+        <div class="search search--disabled">
+            <img src="/icons/search.svg" class="icon search__icon" />
+            <input type="text" class="search__input input input--disabled" placeholder="Поиск" />
+        </div>
+        <button id="profileBtn" class="profileButton sidebar__btn" data-action="profile">
+            <img src="/icons/profile.svg" class="icon" />
+            <span id="profile-username">{{user.username}}</span>
+        </button>
+        <button id="homeButton" class="homeButton sidebar__btn" data-action="home">
+            <img src="/icons/home.svg" class="icon" />
+            Главная
+        </button>
+        <button class="sidebar__btn sidebar__btn--disabled">
+            <img src="/icons/bookmark.svg" class="icon" />
+            Библиотека
+        </button>
+    </div>
+    <hr class="sidebar__barrier" />
+    <div class="sidebar__sections">
+        <div class="sidebar__section" data-section="recent"></div>
+        <div class="sidebar__section" data-section="personal"></div>
+        <div class="sidebar__section" data-section="shared"></div>
+    </div>
     <button class="sidebar__btn newNoteButton" data-action="newNote">
         <img src="/icons/add.svg" class="icon" />
         Новая Заметка
     </button>
-
-	<hr class="sidebar__barrier" />
-
-	<button class="sidebar__btn bottom sidebar__btn--disabled">
-		<img src="/icons/settings.svg" class="icon" />
-		Настройки
-	</button>
+    <hr class="sidebar__barrier" />
+    <button class="sidebar__btn bottom sidebar__btn--disabled">
+        <img src="/icons/settings.svg" class="icon" />
+        Настройки
+    </button>
 </aside>

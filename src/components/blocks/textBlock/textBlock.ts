@@ -32,6 +32,7 @@ export default class TextBlock extends Component {
 		joinOffset: number,
 	) => void;
 	private isProcessing: boolean = false;
+	private isBeingDeleted: boolean = false;
 
 	constructor(options: TextBlockOptions) {
 		super();
@@ -69,6 +70,7 @@ export default class TextBlock extends Component {
 		const blockEl = this.domElement;
 		if (!blockEl) return;
 		blockEl.addEventListener('blur', async () => {
+			if (this.isBeingDeleted) return;
 			await this.saveContent();
 		});
 		blockEl.addEventListener('keydown', async (e) => {
@@ -105,7 +107,7 @@ export default class TextBlock extends Component {
 		if ((isBackspace || isDelete) && isEmpty) {
 			e.preventDefault();
 			this.isProcessing = true;
-			console.log('delete empty block');
+			this.isBeingDeleted = true;
 			this.onDelete?.(String(this.block.id));
 			this.isProcessing = false;
 			return;
@@ -113,7 +115,6 @@ export default class TextBlock extends Component {
 		if (isBackspace && !isEmpty && this.isCaretAtStart(blockEl)) {
 			e.preventDefault();
 			this.isProcessing = true;
-			console.log('join with previous block');
 			await this.handleJoinBackward(blockEl);
 			this.isProcessing = false;
 			return;
@@ -124,7 +125,6 @@ export default class TextBlock extends Component {
 		const parts = this.getCaretParts(blockEl);
 		if (!parts) return;
 		blockEl.innerHTML = parts.before;
-		await this.saveContent();
 		this.onSplit?.(String(this.block.id), parts.before, parts.after);
 	}
 
@@ -186,6 +186,23 @@ export default class TextBlock extends Component {
 		return this.block.content || '';
 	}
 
+	updateBlock(newBlock: Block): void {
+		const contentChanged = this.block.content !== newBlock.content;
+		const formattingChanged =
+			JSON.stringify(this.block.formatting) !==
+			JSON.stringify(newBlock.formatting);
+		this.block = newBlock;
+
+		if (!this.domElement || (!contentChanged && !formattingChanged)) {
+			return;
+		}
+
+		this.domElement.innerHTML = this.block.content || '';
+		if (formattingChanged) {
+			this.applyFormatting();
+		}
+	}
+
 	setCursorAtStart(): void {
 		const blockEl = this.domElement;
 		if (!blockEl) return;
@@ -223,4 +240,6 @@ export default class TextBlock extends Component {
 		selection.removeAllRanges();
 		selection.addRange(range);
 	}
+
+	destroy(): void {}
 }

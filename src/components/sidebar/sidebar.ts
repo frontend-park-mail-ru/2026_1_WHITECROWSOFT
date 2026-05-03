@@ -1,21 +1,25 @@
 import { router } from '../../route/router.js';
 import { noteService } from '../../services/noteService.js';
+import { sidebarService } from '../../services/sidebarService.js';
+import { subnoteService } from '../../services/subnoteService.js';
 import { store } from '../../store.js';
-import type { Note, User } from '../../types.js';
-import { startInlineEdit } from '../../utils/inlineEdit.js';
+import type { User } from '../../types.js';
 import Component from '../component.js';
 import NotePopup from '../popups/notePopup/notePopup.js';
-import NoteItems from './noteItems/noteItems.js';
+import NoteSection from './noteSection/noteSection.js';
 import templateString from './sidebar.hbs?raw';
 import './sidebar.scss';
 
 export default class Sidebar extends Component {
 	protected templateString = templateString;
-	private recentNotesComponent: NoteItems | null = null;
-	private personalNotesComponent: NoteItems | null = null;
-	private sharedNotesComponent: NoteItems | null = null;
+
+	private recentSection: NoteSection | null = null;
+	private personalSection: NoteSection | null = null;
+	private sharedSection: NoteSection | null = null;
 	private currentPopup: NotePopup | null = null;
+	private expandedState: Map<string | number, boolean> = new Map();
 	private unsubscribeNotes: (() => void) | null = null;
+	private unsubscribeRecentNotes: (() => void) | null = null;
 	private unsubscribeActiveNoteId: (() => void) | null = null;
 	private unsubscribeUser: (() => void) | null = null;
 
@@ -25,85 +29,81 @@ export default class Sidebar extends Component {
 			user: {
 				username: user?.username || 'Пользователь',
 			},
-			searchQuery: '',
 		};
 	}
 
-	onRender(): void {
+	async onRender(): Promise<void> {
+		await store.loadRecentNotes();
 		this.renderSections();
 		this.bindNavigationEvents();
 		this.subscribeToStore();
-		this.updateNoteComponents();
+		this.updatePersonalNotes();
+		await this.updateRecentNotes();
 	}
 
 	private renderSections(): void {
-		const allNotes = store.getNotes();
-		this.recentNotesComponent = this.renderSection(
-			'recent-notes',
-			allNotes.slice(0, 5),
-			'Недавние заметки',
-			'Нет недавних заметок',
+		const recentContainer = this.domElement?.querySelector(
+			'[data-section="recent"]',
 		);
-		this.personalNotesComponent = this.renderSection(
-			'personal-notes',
-			allNotes,
-			'Личные заметки',
-			'Нет личных заметок',
+		const personalContainer = this.domElement?.querySelector(
+			'[data-section="personal"]',
 		);
-		this.sharedNotesComponent = this.renderSection(
-			'shared-notes',
-			[],
-			'Общие заметки',
-			'Нет общих заметок',
+		const sharedContainer = this.domElement?.querySelector(
+			'[data-section="shared"]',
 		);
-	}
 
-	private renderSection(
-		sectionName: string,
-		notes: Note[],
-		title: string,
-		emptyMessage: string,
-	): NoteItems {
-		const container = this.domElement?.querySelector(
-			`[data-section="${sectionName}"]`,
-		);
-		if (!container) {
-			throw new Error(`Container ${sectionName} not found`);
+		if (recentContainer) {
+			this.recentSection = new NoteSection({
+				title: 'Недавние заметки',
+				notes: [],
+				emptyMessage: 'Нет недавних заметок',
+				onNoteClick: this.handleNoteClick,
+				onToggle: this.handleToggle,
+				onAddSubnote: this.handleAddSubnote,
+				onSettingsClick: this.handleSettingsClick,
+				onTitleDoubleClick: this.handleTitleDoubleClick,
+			});
+			this.recentSection.renderTo(recentContainer as HTMLElement);
 		}
-		const notesCopy = notes.map((note) => ({ ...note }));
-		const component = new NoteItems({
-			notes: notesCopy,
-			activeNoteId: store.getActiveNoteId(),
-			title,
-			emptyMessage,
-			onNoteClick: this.handleNoteClick,
-			onAddSubnote: this.handleAddSubnote,
-			onSettingsClick: this.handleSettingsClick,
-			onTitleDoubleClick: this.handleTitleDoubleClick,
-		});
-		component.renderTo(container as HTMLElement);
-		return component;
-	}
 
-	public updateNoteComponents(): void {
-		const allNotes = store.getNotes();
-		const activeNote = store.getActiveNoteId();
-		this.recentNotesComponent?.syncNotes(
-			allNotes.slice(0, 5).map((n) => ({ ...n })),
-			activeNote,
-		);
-		this.personalNotesComponent?.syncNotes(
-			allNotes.map((n) => ({ ...n })),
-			activeNote,
-		);
-		this.sharedNotesComponent?.syncNotes([], activeNote);
-	}
-
-	public updateUser(user: User | null): void {
-		const usernameSpan = this.domElement?.querySelector('#profile-username');
-		if (usernameSpan && user) {
-			usernameSpan.textContent = user.username || 'Пользователь';
+		if (personalContainer) {
+			this.personalSection = new NoteSection({
+				title: 'Личные заметки',
+				notes: [],
+				emptyMessage: 'Нет личных заметок',
+				onNoteClick: this.handleNoteClick,
+				onToggle: this.handleToggle,
+				onAddSubnote: this.handleAddSubnote,
+				onSettingsClick: this.handleSettingsClick,
+				onTitleDoubleClick: this.handleTitleDoubleClick,
+			});
+			this.personalSection.renderTo(personalContainer as HTMLElement);
 		}
+
+		if (sharedContainer) {
+			this.sharedSection = new NoteSection({
+				title: 'Общие заметки',
+				notes: [],
+				emptyMessage: 'Нет общих заметок',
+				onNoteClick: this.handleNoteClick,
+				onToggle: this.handleToggle,
+				onAddSubnote: this.handleAddSubnote,
+				onSettingsClick: this.handleSettingsClick,
+				onTitleDoubleClick: this.handleTitleDoubleClick,
+			});
+			this.sharedSection.renderTo(sharedContainer as HTMLElement);
+		}
+	}
+
+	private updatePersonalNotes(): void {
+		const tree = sidebarService.getTreeFromStore();
+		this.personalSection?.updateNotes(tree);
+		this.sharedSection?.updateNotes([]);
+	}
+
+	private async updateRecentNotes(): Promise<void> {
+		const recentNotes = await sidebarService.getRecentNotes();
+		this.recentSection?.updateNotes(recentNotes);
 	}
 
 	private bindNavigationEvents(): void {
@@ -124,7 +124,10 @@ export default class Sidebar extends Component {
 			const btn = e.currentTarget as HTMLElement;
 			if (!btn.dataset.pending) {
 				btn.dataset.pending = 'true';
-				await noteService.createNote({ title: 'Новая заметка' });
+				await noteService.createNote({
+					title: 'Новая заметка',
+					parent_id: null,
+				});
 				delete btn.dataset.pending;
 			}
 		});
@@ -132,14 +135,17 @@ export default class Sidebar extends Component {
 
 	private subscribeToStore(): void {
 		this.unsubscribeNotes = store.subscribe('notes', () => {
-			this.updateNoteComponents();
+			this.updatePersonalNotes();
+		});
+		this.unsubscribeRecentNotes = store.subscribe('recentNotes', () => {
+			this.updateRecentNotes();
 		});
 		this.unsubscribeActiveNoteId = store.subscribe(
 			'activeNoteId',
 			(noteId: string | number | null) => {
-				this.recentNotesComponent?.updateActiveNote(noteId);
-				this.personalNotesComponent?.updateActiveNote(noteId);
-				this.sharedNotesComponent?.updateActiveNote(noteId);
+				this.recentSection?.updateActiveNote(noteId);
+				this.personalSection?.updateActiveNote(noteId);
+				this.sharedSection?.updateActiveNote(noteId);
 			},
 		);
 		this.unsubscribeUser = store.subscribe('user', (user: User | null) => {
@@ -150,68 +156,50 @@ export default class Sidebar extends Component {
 		});
 	}
 
-	private handleNoteClick = (noteId: string | number): void => {
+	private handleNoteClick = async (noteId: string | number): Promise<void> => {
+		const note = store.getNotes().find((n) => n.ID === noteId);
+		if (note) {
+			await store.addToRecentNotes(noteId, note.title);
+		}
 		store.setActiveNoteId(noteId);
 		router.push('/');
 	};
 
+	private handleToggle = (noteId: string | number): void => {
+		sidebarService.toggleExpanded(noteId);
+		this.updatePersonalNotes();
+	};
+
 	private handleAddSubnote = async (noteId: string | number): Promise<void> => {
-		const activeNoteId = store.getActiveNoteId();
-		if (activeNoteId) {
-			await noteService.createBlock(activeNoteId, {
-				note_id: noteId,
-				block_type_id: 1,
-				position: store.getActiveBlocks().length,
-				content: '',
+		try {
+			const subnote = await subnoteService.createSubnote(noteId, {
+				title: 'Новая подзаметка',
+				parent_id: noteId,
 			});
+			await subnoteService.createSubnoteBlock(
+				noteId,
+				subnote.ID,
+				subnote.title,
+			);
+			sidebarService.setExpanded(noteId, true);
+			this.updatePersonalNotes();
+			await this.updateRecentNotes();
+		} catch (error) {
+			console.error('[Sidebar] Failed to create subnote:', error);
 		}
 	};
 
 	private handleSettingsClick = (
 		noteId: string | number,
 		anchor: HTMLElement,
+		titleElement: HTMLElement,
 	): void => {
-		let currentSection: 'recent-notes' | 'personal-notes' | 'shared-notes' =
-			'personal-notes';
-		const sectionContainer = anchor.closest('.sidebar__section');
-		if (sectionContainer) {
-			const sectionName = sectionContainer.getAttribute('data-section');
-			if (
-				sectionName === 'recent-notes' ||
-				sectionName === 'personal-notes' ||
-				sectionName === 'shared-notes'
-			) {
-				currentSection = sectionName;
-			}
-		}
-
 		this.currentPopup?.close();
 		this.currentPopup = new NotePopup({
 			noteId,
 			anchorElement: anchor,
-			onRename: () => {
-				let titleElement: HTMLElement | null = null;
-				switch (currentSection) {
-					case 'recent-notes':
-						titleElement =
-							this.recentNotesComponent?.getNoteTitleElementById?.(noteId) ||
-							null;
-						break;
-					case 'personal-notes':
-						titleElement =
-							this.personalNotesComponent?.getNoteTitleElementById?.(noteId) ||
-							null;
-						break;
-					case 'shared-notes':
-						titleElement =
-							this.sharedNotesComponent?.getNoteTitleElementById?.(noteId) ||
-							null;
-						break;
-				}
-				if (titleElement) {
-					startInlineEdit(titleElement, noteId);
-				}
-			},
+			titleElement: titleElement,
+			onRenameComplete: async () => {},
 		});
 		this.currentPopup.renderTo(document.body);
 	};
@@ -220,16 +208,62 @@ export default class Sidebar extends Component {
 		noteId: string | number,
 		element: HTMLElement,
 	): void => {
-		startInlineEdit(element, noteId);
+		console.log('Double click disabled for note:', noteId, element);
 	};
+
+	/*
+    // Временно отключено
+    private async startInlineEdit(noteId: string | number, element: HTMLElement): Promise<void> {
+        const currentTitle = element.textContent || '';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = currentTitle;
+        input.className = 'inline-edit-input';
+        
+        const save = async () => {
+            const newTitle = input.value.trim();
+            if (newTitle && newTitle !== currentTitle) {
+                try {
+                    await noteService.updateNote(noteId, { title: newTitle });
+                    element.textContent = newTitle;
+                } catch (error) {
+                    console.error('Failed to rename note:', error);
+                    element.textContent = currentTitle;
+                }
+            }
+            element.style.display = '';
+            input.remove();
+        };
+        
+        const cancel = () => {
+            element.textContent = currentTitle;
+            element.style.display = '';
+            input.remove();
+        };
+        
+        element.style.display = 'none';
+        element.parentNode?.insertBefore(input, element);
+        input.focus();
+        
+        input.addEventListener('blur', save);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                save();
+            } else if (e.key === 'Escape') {
+                cancel();
+            }
+        });
+    }
+    */
 
 	destroy(): void {
 		this.unsubscribeNotes?.();
+		this.unsubscribeRecentNotes?.();
 		this.unsubscribeActiveNoteId?.();
 		this.unsubscribeUser?.();
 		this.currentPopup?.close();
-		this.recentNotesComponent?.destroy();
-		this.personalNotesComponent?.destroy();
-		this.sharedNotesComponent?.destroy();
+		this.recentSection?.destroy();
+		this.personalSection?.destroy();
+		this.sharedSection?.destroy();
 	}
 }

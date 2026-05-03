@@ -5,7 +5,7 @@ import AttachPopup from '../../components/popups/attachPopup/attachPopup.js';
 import { db } from '../../db.js';
 import { noteService } from '../../services/noteService.js';
 import { store } from '../../store.js';
-import type { ActiveNote, Block } from '../../types.js';
+import type { ActiveNote } from '../../types.js';
 import { handleAuthError } from '../../utils/handleAuthError.js';
 import { registerHelpers } from '../../utils/utils.js';
 import templateText from './mainPage.hbs?raw';
@@ -16,14 +16,17 @@ let unsubscribeFunctions: Array<() => void> = [];
 let attachPopupInstance: AttachPopup | null = null;
 let noteHeader: NoteHeader | null = null;
 let noteBody: NoteBody | null = null;
+let refreshNoteBodyHandler: ((e: Event) => void) | null = null;
 
 export async function initMainPage(container: HTMLElement): Promise<void> {
 	await cleanupMainPage();
 	currentContainer = container;
 	registerHelpers();
+
 	const template = Handlebars.compile(templateText);
 	let notes = store.getNotes();
 	let activeNote = store.getActiveNote();
+
 	if (notes.length === 0) {
 		try {
 			await noteService.getNotes();
@@ -33,6 +36,7 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 			console.error('Failed to load notes:', error);
 		}
 	}
+
 	const savedNoteId = await db.settingsGet<string | number>('activeNoteId');
 	if (savedNoteId && !activeNote) {
 		try {
@@ -43,6 +47,7 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 			console.error('Failed to load saved note:', error);
 		}
 	}
+
 	if (!activeNote && notes[0]?.ID) {
 		try {
 			await noteService.getNote(notes[0].ID);
@@ -52,43 +57,41 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 			console.error('Failed to load note:', error);
 		}
 	}
+
 	const html = template({});
 	container.innerHTML = html;
+
 	const emptyState = container.querySelector('.empty-state') as HTMLElement;
 	const noteContainer = container.querySelector(
 		'.note-container',
 	) as HTMLElement;
 	const headerContainer = container.querySelector('.note__header-container');
 	const bodyContainer = container.querySelector('.note__body-container');
+
 	if (headerContainer) {
 		noteHeader = new NoteHeader();
 		noteHeader.renderTo(headerContainer as HTMLElement);
 	}
 	if (bodyContainer) {
-		noteBody = new NoteBody((blocks: Block[]) => {
-			store.setActiveBlocksSilently(blocks);
-		});
+		noteBody = new NoteBody();
 		noteBody.renderTo(bodyContainer as HTMLElement);
 		noteBody.getElement()?.addEventListener('addBlock', ((e: CustomEvent) => {
 			handleAddBlock(e.detail.afterBlockId);
 		}) as EventListener);
 	}
+
 	function setVisibility(hasNote: boolean): void {
 		if (!emptyState || !noteContainer) return;
 		emptyState.style.display = hasNote ? 'none' : 'flex';
 		noteContainer.style.display = hasNote ? 'block' : 'none';
 	}
+
 	const unsubActiveNoteId = store.subscribe(
 		'activeNoteId',
 		async (noteId: string | number | null) => {
 			if (noteId && noteId !== store.getActiveNote()?.ID) {
 				try {
 					await noteService.getNote(noteId);
-					const activeNoteData = store.getActiveNote();
-					noteHeader?.updateNote(activeNoteData);
-					const blocks = store.getActiveBlocks();
-					await noteBody?.updateBlocks(blocks);
-					setVisibility(!!activeNoteData);
 				} catch (error) {
 					if (handleAuthError(error)) return;
 					console.error('Failed to load note:', error);
@@ -105,13 +108,6 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 		},
 	);
 	unsubscribeFunctions.push(unsubActiveNote);
-	const unsubActiveBlocks = store.subscribe(
-		'activeBlocks',
-		async (blocks: Block[]) => {
-			noteBody?.updateBlocks(blocks);
-		},
-	);
-	unsubscribeFunctions.push(unsubActiveBlocks);
 	setVisibility(!!store.getActiveNote());
 	window.addEventListener('beforeunload', async () => {
 		await noteBody?.saveAllBlocks();
@@ -137,19 +133,6 @@ async function handleAddBlock(afterBlockId: string): Promise<void> {
 		attachPopupInstance = new AttachPopup({
 			anchorElement: btn,
 			afterBlockId,
-			onBlockCreated: async (block: Block) => {
-				const currentBlocks = store.getActiveBlocks();
-				await noteBody?.updateBlocks(currentBlocks);
-				setTimeout(() => {
-					const newWrapper = document.querySelector(
-						`.note__block-wrapper[data-block-id="${block.id}"]`,
-					) as HTMLElement;
-					const blockEl = newWrapper?.querySelector(
-						'.note__block',
-					) as HTMLElement;
-					blockEl?.focus();
-				}, 100);
-			},
 		});
 		attachPopupInstance.open();
 		const unsub = store.subscribe('activeNoteId', () => {
@@ -165,6 +148,10 @@ async function handleAddBlock(afterBlockId: string): Promise<void> {
 export async function cleanupMainPage(): Promise<void> {
 	unsubscribeFunctions.forEach((fn) => typeof fn === 'function' && fn());
 	unsubscribeFunctions = [];
+	if (refreshNoteBodyHandler) {
+		window.removeEventListener('refreshNoteBody', refreshNoteBodyHandler);
+		refreshNoteBodyHandler = null;
+	}
 	noteBody?.cleanup();
 	noteBody = null;
 	noteHeader = null;

@@ -15,10 +15,16 @@ interface FormattingRecord {
 	updatedAt: number;
 }
 
+interface RecentNote {
+	noteId: string | number;
+	lastOpenedAt: number;
+	title: string;
+}
+
 class Database {
 	private db: IDBDatabase | null = null;
 	private readonly DB_NAME = 'Noterian';
-	private readonly DB_VERSION = 10;
+	private readonly DB_VERSION = 11;
 
 	async open(): Promise<IDBDatabase> {
 		return new Promise((resolve, reject) => {
@@ -30,6 +36,15 @@ class Database {
 				if (!db.objectStoreNames.contains('notes')) {
 					const notes = db.createObjectStore('notes', { keyPath: 'ID' });
 					notes.createIndex('updatedAt', 'updatedAt', { unique: false });
+					notes.createIndex('parent_id', 'parent_id', { unique: false });
+				}
+				if (!db.objectStoreNames.contains('recentNotes')) {
+					const recentNotes = db.createObjectStore('recentNotes', {
+						keyPath: 'noteId',
+					});
+					recentNotes.createIndex('lastOpenedAt', 'lastOpenedAt', {
+						unique: false,
+					});
 				}
 				if (!db.objectStoreNames.contains('settings')) {
 					db.createObjectStore('settings', { keyPath: 'key' });
@@ -84,6 +99,50 @@ class Database {
 		return this._get<Note>('notes', noteID);
 	}
 
+	async notesGetByParentId(parentId: string | number | null): Promise<Note[]> {
+		return new Promise((resolve, reject) => {
+			const transaction = this.db!.transaction('notes', 'readonly');
+			const store = transaction.objectStore('notes');
+			const index = store.index('parent_id');
+			const request = index.getAll(parentId === null ? null : parentId);
+			request.onsuccess = () => resolve(request.result);
+			request.onerror = () => reject(request.error);
+		});
+	}
+
+	async notesGetTree(noteId: string | number): Promise<Note[]> {
+		const notes: Note[] = [];
+		const stack = [noteId];
+		while (stack.length > 0) {
+			const currentId = stack.pop()!;
+			const children = await this.notesGetByParentId(currentId);
+			for (const child of children) {
+				notes.push(child);
+				stack.push(child.ID);
+			}
+		}
+		return notes;
+	}
+
+	async notesGetAllWithChildren(): Promise<Note[]> {
+		const allNotes = await this.notesGetAll();
+		const noteMap = new Map<string | number, Note & { children?: Note[] }>();
+		const roots: Note[] = [];
+		for (const note of allNotes) {
+			noteMap.set(note.ID, { ...note, children: [] });
+		}
+		for (const note of noteMap.values()) {
+			if (note.parent_id && noteMap.has(note.parent_id)) {
+				const parent = noteMap.get(note.parent_id)!;
+				parent.children = parent.children || [];
+				parent.children.push(note);
+			} else {
+				roots.push(note);
+			}
+		}
+		return roots;
+	}
+
 	async notesPut(note: Note): Promise<void> {
 		return this._put('notes', note);
 	}
@@ -94,6 +153,22 @@ class Database {
 
 	async notesClear(): Promise<void> {
 		return this._clear('notes');
+	}
+
+	async recentNotesGetAll(): Promise<RecentNote[]> {
+		return this._getAll<RecentNote>('recentNotes');
+	}
+
+	async recentNotesPut(recentNote: RecentNote): Promise<void> {
+		return this._put('recentNotes', recentNote);
+	}
+
+	async recentNotesDelete(noteId: string | number): Promise<void> {
+		return this._delete('recentNotes', noteId);
+	}
+
+	async recentNotesClear(): Promise<void> {
+		return this._clear('recentNotes');
 	}
 
 	async settingsGet<T = unknown>(key: string): Promise<T | undefined> {

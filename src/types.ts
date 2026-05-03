@@ -11,6 +11,7 @@ export interface Note {
 	icon: string | null;
 	updatedAt: string | number;
 	blocks?: Block[];
+	parent_id?: string | number | null;
 	isLocal?: boolean;
 	breadcrumb?: string;
 }
@@ -20,6 +21,22 @@ export interface ActiveNote {
 	title: string;
 	breadcrumb: string;
 	text: string;
+}
+
+export interface RecentNote {
+	noteId: string | number;
+	lastOpenedAt: number;
+	title: string;
+}
+
+export interface SidebarNote {
+	id: string | number;
+	title: string;
+	parentId: string | number | null;
+	children: SidebarNote[];
+	isExpanded: boolean;
+	isActive: boolean;
+	level: number;
 }
 
 export interface Block {
@@ -32,6 +49,7 @@ export interface Block {
 	created_at?: string;
 	updated_at?: string;
 	isLocal?: boolean;
+	subnote_id?: string | number;
 }
 
 export interface BlockFormatting {
@@ -99,6 +117,11 @@ export interface StoreState {
 	activeNote: ActiveNote | null;
 	activeBlocks: Block[];
 	online: boolean;
+	recentNotes: RecentNote[];
+	pendingFocus: {
+		blockId: string | number | null;
+		offset: number | 'start' | 'end' | null;
+	};
 }
 
 export interface ApiResponse<T = unknown> {
@@ -110,8 +133,8 @@ export interface ApiResponse<T = unknown> {
 export interface NoteApiResponse {
 	id: string | number;
 	title: string;
-	updated_at?: string; // FIXME: Why the two "updated at" fields? Huh?
-	UpdatedAt?: string;
+	updated_at?: string;
+	parent_id?: string | number | null;
 }
 
 export interface BlockApiResponse {

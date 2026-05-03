@@ -10,24 +10,25 @@ import templateString from './noteBody.hbs?raw';
 export default class NoteBody extends Component {
 	protected templateString = templateString;
 
-	private blocks: Block[] = [];
 	private blockWrappers: Map<string, BlockWrapper> = new Map();
 	private formattingPopup: FormatPopup | null = null;
 	private isDraggingSelection = false;
 	private selectionTimeout: number | null = null;
 	private draggedBlockWrapper: HTMLElement | null = null;
 	private draggedBlockId: string | null = null;
-	private onBlocksChange?: (blocks: Block[]) => void;
+	private isRendering = false;
+	private needsRender = false;
+	private unsubscribeActiveBlocks: (() => void) | null = null;
+	private unsubscribePendingFocus: (() => void) | null = null;
 
-	constructor(onBlocksChange?: (blocks: Block[]) => void) {
+	constructor() {
 		super();
-		this.onBlocksChange = onBlocksChange;
-		this.blocks = store.getActiveBlocks();
 	}
 
 	protected getTemplateData() {
+		const blocks = store.getActiveBlocks();
 		return {
-			hasBlocks: this.blocks.length > 0,
+			hasBlocks: blocks.length > 0,
 		};
 	}
 
@@ -36,20 +37,111 @@ export default class NoteBody extends Component {
 	}
 
 	async onRender(): Promise<void> {
+		this.subscribeToStore();
+		this.subscribeToPendingFocus();
 		await this.renderBlocks();
 		this.bindEvents();
 	}
 
-	private async renderBlocks(): Promise<void> {
-		const container = this.domElement?.querySelector('.note__body-container');
-		if (!container) return;
-		container.innerHTML = '';
-		this.blockWrappers.clear();
-		for (const block of this.blocks) {
-			await this.appendBlock(block, container as HTMLElement);
+	private subscribeToStore(): void {
+		this.unsubscribeActiveBlocks = store.subscribe('activeBlocks', () => {
+			this.renderBlocks();
+		});
+	}
+
+	private subscribeToPendingFocus(): void {
+		this.unsubscribePendingFocus = store.subscribe(
+			'pendingFocus',
+			(focusData) => {
+				if (focusData && focusData.blockId && !this.isRendering) {
+					this.applyPendingFocus(focusData.blockId, focusData.offset);
+				}
+			},
+		);
+	}
+
+	private applyPendingFocus(
+		blockId: string | number,
+		offset: number | 'start' | 'end' | null,
+	): void {
+		const wrapper = this.blockWrappers.get(String(blockId));
+		if (wrapper) {
+			wrapper.focus();
+			const blockComponent = wrapper.getBlockComponent();
+			if (blockComponent) {
+				if (offset === 'start') {
+					if ('setCursorAtStart' in blockComponent) {
+						blockComponent.setCursorAtStart();
+					}
+				} else if (offset === 'end') {
+					const content = blockComponent.getContent?.() || '';
+					if ('setCursorAtOffset' in blockComponent) {
+						blockComponent.setCursorAtOffset?.(content.length);
+					}
+				} else if (typeof offset === 'number') {
+					if ('setCursorAtOffset' in blockComponent) {
+						blockComponent.setCursorAtOffset?.(offset);
+					}
+				}
+			}
+			store.clearPendingFocus();
 		}
-		if (this.blocks.length === 0) {
-			await this.createFirstBlock();
+	}
+
+	private async renderBlocks(): Promise<void> {
+		if (this.isRendering) {
+			this.needsRender = true;
+			return;
+		}
+		this.isRendering = true;
+		try {
+			const container = this.domElement?.querySelector(
+				'.note__body-container',
+			) as HTMLElement | null;
+			if (!container) return;
+
+			const blocks = store.getActiveBlocks();
+			if (blocks.length === 0) {
+				if (this.blockWrappers.size === 0) {
+					await this.createFirstBlock();
+					return;
+				}
+				this.clearBlocks(container);
+				await this.createFirstBlock();
+				return;
+			}
+			const nextIds = blocks.map((block) => String(block.id));
+			for (const [id, wrapper] of this.blockWrappers.entries()) {
+				if (!nextIds.includes(id)) {
+					wrapper.destroy();
+					this.blockWrappers.delete(id);
+				}
+			}
+			for (let index = 0; index < blocks.length; index++) {
+				const block = blocks[index];
+				const blockId = String(block.id);
+				const wrapper = this.blockWrappers.get(blockId);
+				const targetNode = container.children[index] as HTMLElement | null;
+				if (wrapper) {
+					wrapper.updateBlock(block);
+					const wrapperElement = wrapper.getElement();
+					if (wrapperElement && wrapperElement !== targetNode) {
+						container.insertBefore(wrapperElement, targetNode);
+					}
+				} else {
+					await this.insertBlockAt(block, container, index);
+				}
+			}
+			const pendingFocus = store.getPendingFocus();
+			if (pendingFocus.blockId) {
+				this.applyPendingFocus(pendingFocus.blockId, pendingFocus.offset);
+			}
+		} finally {
+			this.isRendering = false;
+			if (this.needsRender) {
+				this.needsRender = false;
+				await this.renderBlocks();
+			}
 		}
 	}
 
@@ -65,9 +157,43 @@ export default class NoteBody extends Component {
 			onJoin: this.handleJoinBlocks.bind(this),
 			onAddBlock: this.handleAddBlock.bind(this),
 			onDragStart: this.handleDragStart.bind(this),
+			onFocusBlock: this.handleFocusBlock.bind(this),
 		});
 		wrapper.renderTo(container);
 		this.blockWrappers.set(String(block.id), wrapper);
+	}
+
+	private async insertBlockAt(
+		block: Block,
+		container: HTMLElement,
+		index: number,
+	): Promise<void> {
+		const wrapper = new BlockWrapper({
+			block: block,
+			onContentChange: this.handleContentChange.bind(this),
+			onDelete: this.handleDeleteBlock.bind(this),
+			onSplit: this.handleSplitBlock.bind(this),
+			onJoin: this.handleJoinBlocks.bind(this),
+			onAddBlock: this.handleAddBlock.bind(this),
+			onDragStart: this.handleDragStart.bind(this),
+		});
+		wrapper.renderTo(container);
+		const wrapperElement = wrapper.getElement();
+		if (wrapperElement) {
+			const referenceNode = container.children[index] as HTMLElement | null;
+			if (referenceNode && wrapperElement !== referenceNode) {
+				container.insertBefore(wrapperElement, referenceNode);
+			}
+		}
+		this.blockWrappers.set(String(block.id), wrapper);
+	}
+
+	private clearBlocks(container: HTMLElement): void {
+		for (const wrapper of this.blockWrappers.values()) {
+			if (wrapper.destroy) wrapper.destroy();
+		}
+		this.blockWrappers.clear();
+		container.innerHTML = '';
 	}
 
 	private async createFirstBlock(): Promise<void> {
@@ -80,39 +206,35 @@ export default class NoteBody extends Component {
 				position: 0,
 				content: '',
 			});
-			if (newBlock) {
-				this.blocks = [newBlock];
-				this.onBlocksChange?.(this.blocks);
-				await this.renderBlocks();
-				this.focusFirstBlock();
+			if (newBlock && newBlock.id) {
+				store.setPendingFocus(newBlock.id, 'start');
 			}
 		} catch (error) {
 			console.error('Failed to create first block:', error);
 		}
 	}
 
-	private focusFirstBlock(): void {
-		const firstWrapper = this.blockWrappers.values().next().value;
-		firstWrapper?.focus();
+	private handleFocusBlock(blockId: string): void {
+		for (const [id, wrapper] of this.blockWrappers) {
+			const el = wrapper.getElement();
+			if (el) {
+				if (id === blockId) {
+					el.classList.add('note__block-wrapper--focused');
+				} else {
+					el.classList.remove('note__block-wrapper--focused');
+				}
+			}
+		}
 	}
 
 	private async handleContentChange(
 		blockId: string,
 		content: string,
 	): Promise<void> {
-		const blockExists = this.blocks.some((b) => String(b.id) === blockId);
-		if (!blockExists) {
-			return;
-		}
 		const activeNoteId = store.getActiveNoteId();
 		if (!activeNoteId) return;
 		try {
 			await noteService.updateBlockContent(activeNoteId, blockId, content);
-			const updatedBlocks = this.blocks.map((b) =>
-				String(b.id) === blockId ? { ...b, content } : b,
-			);
-			this.blocks = updatedBlocks;
-			this.onBlocksChange?.(this.blocks);
 		} catch (error) {
 			console.error('Failed to save block content:', error);
 		}
@@ -121,38 +243,79 @@ export default class NoteBody extends Component {
 	private async handleDeleteBlock(blockId: string): Promise<void> {
 		const activeNoteId = store.getActiveNoteId();
 		if (!activeNoteId) return;
-		const currentIndex = this.blocks.findIndex((b) => String(b.id) === blockId);
-		const prevBlockId =
-			currentIndex > 0 ? String(this.blocks[currentIndex - 1].id) : null;
-		const nextBlockId =
-			currentIndex < this.blocks.length - 1
-				? String(this.blocks[currentIndex + 1].id)
-				: null;
-		const block = this.blocks.find((b) => String(b.id) === blockId);
-		if (block && block.block_type_id === 2 && block.content) {
+		const blocks = store.getActiveBlocks();
+		const block = blocks.find((b) => String(b.id) === blockId);
+		if (!block) return;
+
+		if (block.block_type_id === 5 && block.content) {
+			const subnoteId = block.content;
+			const subnote = store.getNotes().find((n) => n.ID === subnoteId);
+			const subnoteTitle = subnote?.title || 'эту подзаметку';
+			const confirmed = confirm(
+				`Вы действительно хотите удалить подзаметку "${subnoteTitle}"?\n\n` +
+					`Внимание: Подзаметка и все её содержимое будут удалены без возможности восстановления.`,
+			);
+			if (!confirmed) return;
+			try {
+				await noteService.deleteBlock(activeNoteId, blockId);
+				await noteService.deleteNoteRecursive(subnoteId);
+				const currentNotes = store.getNotes();
+				const updatedNotes = currentNotes.filter((n) => n.ID !== subnoteId);
+				store.setNotes(updatedNotes);
+				if (store.getActiveNoteId() === subnoteId) {
+					if (updatedNotes.length > 0) {
+						await noteService.getNote(updatedNotes[0].ID);
+					} else {
+						store.setActiveNote(null);
+						store.setActiveBlocks([]);
+						store.setActiveNoteId(null);
+					}
+				}
+				const currentIndex = blocks.findIndex((b) => String(b.id) === blockId);
+				const prevBlockId =
+					currentIndex > 0 ? String(blocks[currentIndex - 1].id) : null;
+				const nextBlockId =
+					currentIndex < blocks.length - 1
+						? String(blocks[currentIndex + 1].id)
+						: null;
+				const blockToFocus = prevBlockId || nextBlockId;
+				if (blockToFocus) {
+					store.setPendingFocus(blockToFocus, 'end');
+				}
+			} catch (error) {
+				console.error('Failed to delete subnote:', error);
+			}
+			return;
+		}
+
+		if (block.block_type_id === 2 && block.content) {
 			try {
 				await attachmentService.deleteAttachment(activeNoteId, blockId);
 			} catch (error) {
 				console.error('Failed to delete attachment:', error);
 			}
 		}
-		if (this.blocks.length > 1) {
+
+		if (blocks.length > 1) {
 			await noteService.deleteBlock(activeNoteId, blockId);
-			this.blocks = this.blocks.filter((b) => String(b.id) !== blockId);
-			this.onBlocksChange?.(this.blocks);
-			await this.renderBlocks();
-			const blockToFocus = prevBlockId || nextBlockId;
-			if (blockToFocus) {
-				const wrapperToFocus = this.blockWrappers.get(blockToFocus);
-				if (wrapperToFocus) {
-					wrapperToFocus.focus();
-					const blockComponent = wrapperToFocus.getBlockComponent();
-					if (blockComponent && 'setCursorAtOffset' in blockComponent) {
-						const content = blockComponent.getContent?.() || '';
-						blockComponent.setCursorAtOffset?.(content.length);
-					}
-				}
-			}
+		}
+
+		const wrapper = this.blockWrappers.get(blockId);
+		if (wrapper) {
+			wrapper.destroy();
+			this.blockWrappers.delete(blockId);
+		}
+
+		const currentIndex = blocks.findIndex((b) => String(b.id) === blockId);
+		const prevBlockId =
+			currentIndex > 0 ? String(blocks[currentIndex - 1].id) : null;
+		const nextBlockId =
+			currentIndex < blocks.length - 1
+				? String(blocks[currentIndex + 1].id)
+				: null;
+		const blockToFocus = prevBlockId || nextBlockId;
+		if (blocks.length > 1 && blockToFocus) {
+			store.setPendingFocus(blockToFocus, 'end');
 		}
 	}
 
@@ -163,27 +326,17 @@ export default class NoteBody extends Component {
 	): Promise<void> {
 		const activeNoteId = store.getActiveNoteId();
 		if (!activeNoteId) return;
-		const createdBlock = await noteService.createBlockAfter(
+		const newBlock = await noteService.createBlockAfter(
 			activeNoteId,
-			{ note_id: activeNoteId, block_type_id: 1, content: '' },
+			{ note_id: activeNoteId, block_type_id: 1, content: afterContent },
 			blockId,
 		);
-		const newBlock = await noteService.updateBlockContent(
+		await noteService.updateBlockContent(
 			activeNoteId,
-			createdBlock.id,
+			newBlock.id,
 			afterContent,
 		);
-		const newBlocks = [...this.blocks];
-		const index = newBlocks.findIndex((b) => String(b.id) === blockId);
-		if (index !== -1) {
-			newBlocks.splice(index + 1, 0, newBlock);
-			this.blocks = newBlocks;
-			this.onBlocksChange?.(this.blocks);
-			await this.renderBlocks();
-			const newWrapper = this.blockWrappers.get(String(newBlock.id));
-			newWrapper?.focus();
-			newWrapper?.getBlockComponent()?.setCursorAtStart?.();
-		}
+		store.setPendingFocus(newBlock.id, 'start');
 	}
 
 	private async handleJoinBlocks(
@@ -206,32 +359,7 @@ export default class NoteBody extends Component {
 				newContent,
 			);
 			await noteService.deleteBlock(activeNoteId, blockId);
-			this.blocks = this.blocks.filter((b) => String(b.id) !== blockId);
-			const updatedPrevBlock = this.blocks.find(
-				(b) => String(b.id) === prevBlockId,
-			);
-			if (updatedPrevBlock) {
-				updatedPrevBlock.content = newContent;
-			}
-			this.onBlocksChange?.(this.blocks);
-			const prevBlockEl = prevWrapper
-				.getElement()
-				?.querySelector('.note__block') as HTMLElement;
-			if (prevBlockEl) {
-				prevBlockEl.innerHTML = newContent;
-			}
-			const currentBlockEl = currentWrapper.getElement();
-			if (currentBlockEl) {
-				currentBlockEl.remove();
-			}
-			this.blockWrappers.delete(blockId);
-			const freshPrevWrapper = this.blockWrappers.get(prevBlockId);
-			if (freshPrevWrapper) {
-				freshPrevWrapper.focus();
-				setTimeout(() => {
-					freshPrevWrapper.getBlockComponent()?.setCursorAtOffset?.(joinOffset);
-				}, 0);
-			}
+			store.setPendingFocus(prevBlockId, joinOffset);
 		}
 	}
 
@@ -315,12 +443,6 @@ export default class NoteBody extends Component {
 					this.draggedBlockId,
 					newIndex,
 				);
-				const updatedBlocks = this.blocks.map((b, idx) => ({
-					...b,
-					position: idx,
-				}));
-				this.blocks = updatedBlocks;
-				this.onBlocksChange?.(this.blocks);
 			} catch (error) {
 				console.error('Error moving block:', error);
 			}
@@ -407,16 +529,12 @@ export default class NoteBody extends Component {
 		}
 	};
 
-	async updateBlocks(blocks: Block[]): Promise<void> {
-		this.blocks = blocks;
-		await this.renderBlocks();
-	}
-
 	async saveAllBlocks(): Promise<void> {
 		const activeNoteId = store.getActiveNoteId();
 		if (!activeNoteId) return;
+		const blocks = store.getActiveBlocks();
 		const savePromises: Promise<Block | void>[] = [];
-		for (const block of this.blocks) {
+		for (const block of blocks) {
 			if (block.block_type_id !== 2) {
 				const wrapper = this.blockWrappers.get(String(block.id));
 				const currentContent = wrapper?.getBlockComponent()?.getContent?.();
@@ -454,10 +572,14 @@ export default class NoteBody extends Component {
 			clearTimeout(this.selectionTimeout);
 			this.selectionTimeout = null;
 		}
+		for (const wrapper of this.blockWrappers.values()) {
+			if (wrapper.destroy) wrapper.destroy();
+		}
 		this.blockWrappers.clear();
-		this.blocks = [];
 		this.draggedBlockWrapper = null;
 		this.draggedBlockId = null;
 		this.isDraggingSelection = false;
+		this.unsubscribeActiveBlocks?.();
+		this.unsubscribePendingFocus?.();
 	}
 }

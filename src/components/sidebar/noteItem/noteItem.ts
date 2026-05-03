@@ -14,6 +14,7 @@ interface NoteItemOptions {
 export default class NoteItem extends Component {
 	protected templateString = templateString;
 	private contentZone: HTMLElement | null = null;
+	private openSubnoteBtn: HTMLElement | null = null;
 	private titleElement: HTMLElement | null = null;
 	private addSubnoteBtn: HTMLElement | null = null;
 	private settingsBtn: HTMLElement | null = null;
@@ -48,6 +49,8 @@ export default class NoteItem extends Component {
 	private cacheElements(): void {
 		this.titleElement =
 			this.domElement?.querySelector('[data-name="noteItemTitle"]') || null;
+		this.openSubnoteBtn =
+			this.domElement?.querySelector('[data-action="openSubnote"]') || null;
 		this.contentZone = this.titleElement;
 		this.addSubnoteBtn =
 			this.domElement?.querySelector('[data-action="addSubnote"]') || null;
@@ -78,6 +81,13 @@ export default class NoteItem extends Component {
 				'dblclick',
 				this.boundHandlers.onTitleDoubleClick,
 			);
+		}
+
+		if (this.openSubnoteBtn) {
+			this.openSubnoteBtn.addEventListener('click', (e) => {
+				e.stopPropagation();
+				this.options.onNoteClick(this.options.note.ID);
+			});
 		}
 
 		if (this.addSubnoteBtn) {

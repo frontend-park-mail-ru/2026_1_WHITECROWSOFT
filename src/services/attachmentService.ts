@@ -50,61 +50,48 @@ export const attachmentService = {
 		file: File,
 		afterBlockId: string | null = null,
 	): Promise<Block> {
-		let newPosition: number;
+		const currentBlocks = store.getActiveBlocks();
+		const sortedBlocks = [...currentBlocks].sort(
+			(a, b) => a.position - b.position,
+		);
 
+		let insertIndex: number;
 		if (afterBlockId) {
-			const blocks = store.getActiveBlocks();
-			const sortedBlocks = [...blocks].sort((a, b) => a.position - b.position);
-			const afterBlock = sortedBlocks.find(
+			const afterIndex = sortedBlocks.findIndex(
 				(b) => String(b.id) === afterBlockId,
 			);
-
-			if (afterBlock) {
-				const afterIndex = sortedBlocks.findIndex(
-					(b) => String(b.id) === afterBlockId,
-				);
-				if (afterIndex === sortedBlocks.length - 1) {
-					newPosition = afterBlock.position + 1;
-				} else {
-					const nextBlock = sortedBlocks[afterIndex + 1];
-					newPosition = nextBlock.position;
-				}
-			} else {
-				newPosition =
-					sortedBlocks.length > 0
-						? sortedBlocks[sortedBlocks.length - 1].position + 1
-						: 0;
-			}
+			insertIndex = afterIndex + 1;
 		} else {
-			const sortedBlocks = [...store.getActiveBlocks()].sort(
-				(a, b) => a.position - b.position,
-			);
-			newPosition =
-				sortedBlocks.length > 0
-					? sortedBlocks[sortedBlocks.length - 1].position + 1
-					: 0;
+			insertIndex = sortedBlocks.length;
 		}
-
+		const shiftedBlocks = sortedBlocks.map((block, idx) => {
+			if (idx >= insertIndex) {
+				return { ...block, position: idx + 1 };
+			}
+			return { ...block, position: idx };
+		});
+		store.setActiveBlocks(shiftedBlocks);
+		const cachedNote = await db.notesGet(noteId);
+		if (cachedNote) {
+			await db.notesPut({ ...cachedNote, blocks: shiftedBlocks });
+		}
 		const blockData: CreateBlockData = {
 			note_id: noteId,
 			block_type_id: 2,
-			position: newPosition,
+			position: insertIndex,
 			content: '',
 		};
-
 		const createdBlock = await client.post<CreateBlockResponse>(
 			`/notes/${noteId}/blocks`,
 			blockData,
 		);
 		const blockId = createdBlock.id;
-
 		const formData = new FormData();
 		formData.append('file', file);
 		const attachmentResult = await client.postForm<AttachmentApiResponse>(
 			`/notes/${noteId}/blocks/${blockId}/attachments`,
 			formData,
 		);
-
 		const imageContent = JSON.stringify({
 			url: attachmentResult.attach_url,
 			filename: attachmentResult.minio_key || file.name,
@@ -112,11 +99,9 @@ export const attachmentService = {
 			mimeType: file.type,
 			attachmentId: attachmentResult.id,
 		});
-
 		await client.put(`/notes/${noteId}/blocks/${blockId}/content`, {
 			content: imageContent,
 		});
-
 		const blob = await this._fileToBlob(file);
 		await db.imagesPut({
 			id: attachmentResult.id,
@@ -130,35 +115,25 @@ export const attachmentService = {
 			status: 'synced',
 			syncedAt: Date.now(),
 		});
-
-		const cachedNote = await db.notesGet(noteId);
-		if (cachedNote) {
-			const finalBlockForCache: Block = {
-				id: blockId,
-				note_id: noteId,
-				block_type_id: 2,
-				position: newPosition,
-				content: imageContent,
-				created_at: createdBlock.created_at,
-				updated_at: new Date().toISOString(),
-				formatting: { ranges: [] },
-			};
-			const blocks = [...(cachedNote.blocks || []), finalBlockForCache];
-			blocks.sort((a, b) => a.position - b.position);
-			await db.notesPut({ ...cachedNote, blocks });
-		}
-
 		const finalBlock: Block = {
 			id: blockId,
 			note_id: noteId,
 			block_type_id: 2,
-			position: newPosition,
+			position: insertIndex,
 			content: imageContent,
 			created_at: createdBlock.created_at,
 			updated_at: new Date().toISOString(),
 			formatting: { ranges: [] },
 		};
-
+		const updatedBlocks = shiftedBlocks.map((block) =>
+			block.id === finalBlock.id ? finalBlock : block,
+		);
+		const alreadyExists = updatedBlocks.some((b) => b.id === finalBlock.id);
+		if (!alreadyExists) {
+			updatedBlocks.push(finalBlock);
+		}
+		updatedBlocks.sort((a, b) => a.position - b.position);
+		store.setActiveBlocks(updatedBlocks);
 		return finalBlock;
 	},
 
@@ -167,45 +142,33 @@ export const attachmentService = {
 		file: File,
 		afterBlockId: string | null = null,
 	): Promise<Block> {
-		let newPosition: number;
-
+		const currentBlocks = store.getActiveBlocks();
+		const sortedBlocks = [...currentBlocks].sort(
+			(a, b) => a.position - b.position,
+		);
+		let insertIndex: number;
 		if (afterBlockId) {
-			const blocks = store.getActiveBlocks();
-			const sortedBlocks = [...blocks].sort((a, b) => a.position - b.position);
-			const afterBlock = sortedBlocks.find(
+			const afterIndex = sortedBlocks.findIndex(
 				(b) => String(b.id) === afterBlockId,
 			);
-
-			if (afterBlock) {
-				const afterIndex = sortedBlocks.findIndex(
-					(b) => String(b.id) === afterBlockId,
-				);
-				if (afterIndex === sortedBlocks.length - 1) {
-					newPosition = afterBlock.position + 1;
-				} else {
-					const nextBlock = sortedBlocks[afterIndex + 1];
-					newPosition = (afterBlock.position + nextBlock.position) / 2;
-				}
-			} else {
-				newPosition =
-					sortedBlocks.length > 0
-						? sortedBlocks[sortedBlocks.length - 1].position + 1
-						: 0;
-			}
+			insertIndex = afterIndex + 1;
 		} else {
-			const sortedBlocks = [...store.getActiveBlocks()].sort(
-				(a, b) => a.position - b.position,
-			);
-			newPosition =
-				sortedBlocks.length > 0
-					? sortedBlocks[sortedBlocks.length - 1].position + 1
-					: 0;
+			insertIndex = sortedBlocks.length;
 		}
-
+		const shiftedBlocks = sortedBlocks.map((block, idx) => {
+			if (idx >= insertIndex) {
+				return { ...block, position: idx + 1 };
+			}
+			return { ...block, position: idx };
+		});
+		store.setActiveBlocks(shiftedBlocks);
+		const cachedNote = await db.notesGet(noteId);
+		if (cachedNote) {
+			await db.notesPut({ ...cachedNote, blocks: shiftedBlocks });
+		}
 		const localAttachmentId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 		const localBlockId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 		const blob = await this._fileToBlob(file);
-
 		await db.imagesPut({
 			id: localAttachmentId,
 			blockId: localBlockId,
@@ -218,7 +181,6 @@ export const attachmentService = {
 			isLocal: true,
 			createdAt: Date.now(),
 		});
-
 		await db.queueFilePut({
 			id: localAttachmentId,
 			blockId: localBlockId,
@@ -229,7 +191,6 @@ export const attachmentService = {
 			size: file.size,
 			queuedAt: Date.now(),
 		});
-
 		const imageContent = JSON.stringify({
 			url: `local://${localAttachmentId}`,
 			filename: file.name,
@@ -239,14 +200,12 @@ export const attachmentService = {
 			isLocal: true,
 			pendingSync: true,
 		});
-
 		const newBlock = await noteService.createBlock(noteId, {
 			note_id: noteId,
 			block_type_id: 2,
-			position: newPosition,
+			position: insertIndex,
 			content: imageContent,
 		});
-
 		await db.imagesDelete(localAttachmentId);
 		await db.imagesPut({
 			id: localAttachmentId,
@@ -260,7 +219,6 @@ export const attachmentService = {
 			isLocal: true,
 			createdAt: Date.now(),
 		});
-
 		await db.queueFileDelete(localAttachmentId);
 		await db.queueFilePut({
 			id: localAttachmentId,
@@ -272,7 +230,6 @@ export const attachmentService = {
 			size: file.size,
 			queuedAt: Date.now(),
 		});
-
 		await queueService.enqueueRequest({
 			method: 'POST',
 			endpoint: `/notes/${noteId}/blocks/${newBlock.id}/attachments`,
@@ -280,7 +237,6 @@ export const attachmentService = {
 			localId: localAttachmentId,
 			body: { fileId: localAttachmentId, noteId, blockId: newBlock.id },
 		});
-
 		return newBlock;
 	},
 
