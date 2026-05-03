@@ -2,13 +2,21 @@ import { db } from './db';
 import type {
 	ActiveNote,
 	Block,
+	CollaborativeUser,
 	Note,
 	RecentNote,
 	StoreState,
 	User,
 } from './types';
 
+/**
+ * Тип коллбека подписчика на изменения в store
+ */
 export type SubscriberCallback<T> = (value: T) => void;
+
+/**
+ * Типы подписчиков для каждого поля состояния
+ */
 export type Subscribers = {
 	user: Map<number, SubscriberCallback<User | null>>;
 	notes: Map<number, SubscriberCallback<Note[]>>;
@@ -24,8 +32,17 @@ export type Subscribers = {
 			offset: number | 'start' | 'end' | null;
 		}>
 	>;
+	collaborativeUsers: Map<
+		number,
+		SubscriberCallback<Map<string, CollaborativeUser>>
+	>; // Подписчики для пользователей совместного редактирования
 };
 
+/**
+ * Глобальный store приложения для управления состоянием
+ * Реализует паттерн observer для подписки на изменения состояния
+ * Включает поддержку совместного редактирования через collaborativeUsers
+ */
 class Store {
 	private state: StoreState;
 	private subscribers: Subscribers;
@@ -44,6 +61,7 @@ class Store {
 				blockId: null,
 				offset: null,
 			},
+			collaborativeUsers: new Map(),
 		};
 		this.subscribers = {
 			user: new Map(),
@@ -54,6 +72,7 @@ class Store {
 			online: new Map(),
 			recentNotes: new Map(),
 			pendingFocus: new Map(),
+			collaborativeUsers: new Map(),
 		};
 		this.nextId = 0;
 	}
@@ -126,6 +145,51 @@ class Store {
 	setOnline(online: boolean): void {
 		this.state.online = online;
 		this._notify('online', online);
+	}
+
+	/**
+	 * Получает копию Map с пользователями совместного редактирования
+	 * @returns Map пользователей, где ключ - userId, значение - данные пользователя
+	 */
+	getCollaborativeUsers(): Map<string, CollaborativeUser> {
+		return new Map(this.state.collaborativeUsers);
+	}
+
+	/**
+	 * Устанавливает полный список пользователей совместного редактирования
+	 * @param users Map с пользователями
+	 */
+	setCollaborativeUsers(users: Map<string, CollaborativeUser>): void {
+		this.state.collaborativeUsers = new Map(users);
+		this._notify('collaborativeUsers', this.state.collaborativeUsers);
+	}
+
+	/**
+	 * Обновляет или добавляет пользователя совместного редактирования
+	 * @param userId ID пользователя
+	 * @param user Данные пользователя с позицией курсора
+	 */
+	updateCollaborativeUser(userId: string, user: CollaborativeUser): void {
+		this.state.collaborativeUsers.set(userId, user);
+		this._notify('collaborativeUsers', new Map(this.state.collaborativeUsers));
+	}
+
+	/**
+	 * Удаляет пользователя из списка совместного редактирования
+	 * @param userId ID пользователя для удаления
+	 */
+	removeCollaborativeUser(userId: string): void {
+		this.state.collaborativeUsers.delete(userId);
+		this._notify('collaborativeUsers', new Map(this.state.collaborativeUsers));
+	}
+
+	/**
+	 * Очищает список пользователей совместного редактирования
+	 * Вызывается при отключении от заметки
+	 */
+	clearCollaborativeUsers(): void {
+		this.state.collaborativeUsers.clear();
+		this._notify('collaborativeUsers', new Map(this.state.collaborativeUsers));
 	}
 
 	reorderBlocks(blockId: string | number, newIndex: number): void {
