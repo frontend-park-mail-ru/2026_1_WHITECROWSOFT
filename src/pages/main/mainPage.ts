@@ -6,6 +6,8 @@ import { db } from '../../db.js';
 import { noteService } from '../../services/noteService.js';
 import { store } from '../../store.js';
 import type { ActiveNote, Block } from '../../types.js';
+import { CollaborativeCursorsRenderer } from '../../utils/collaborativeCursorsRenderer.js';
+import { collabManager } from '../../utils/collaborativeManager.js';
 import { handleAuthError } from '../../utils/handleAuthError.js';
 import { registerHelpers } from '../../utils/utils.js';
 import templateText from './mainPage.hbs?raw';
@@ -16,6 +18,7 @@ let unsubscribeFunctions: Array<() => void> = [];
 let attachPopupInstance: AttachPopup | null = null;
 let noteHeader: NoteHeader | null = null;
 let noteBody: NoteBody | null = null;
+let cursorsRenderer: CollaborativeCursorsRenderer | null = null;
 
 export async function initMainPage(container: HTMLElement): Promise<void> {
 	await cleanupMainPage();
@@ -72,6 +75,11 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 		noteBody.getElement()?.addEventListener('addBlock', ((e: CustomEvent) => {
 			handleAddBlock(e.detail.afterBlockId);
 		}) as EventListener);
+
+		const noteBodyElement = noteBody.getElement();
+		if (noteBodyElement) {
+			cursorsRenderer = new CollaborativeCursorsRenderer(noteBodyElement);
+		}
 	}
 	function setVisibility(hasNote: boolean): void {
 		if (!emptyState || !noteContainer) return;
@@ -89,6 +97,17 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 					const blocks = store.getActiveBlocks();
 					await noteBody?.updateBlocks(blocks);
 					setVisibility(!!activeNoteData);
+
+					if (activeNoteData) {
+						try {
+							await collabManager.startCollab(String(noteId));
+						} catch (error) {
+							console.warn(
+								'[MainPage] Failed to start collaborative editing:',
+								error,
+							);
+						}
+					}
 				} catch (error) {
 					if (handleAuthError(error)) return;
 					console.error('Failed to load note:', error);
@@ -163,6 +182,11 @@ async function handleAddBlock(afterBlockId: string): Promise<void> {
 }
 
 export async function cleanupMainPage(): Promise<void> {
+	collabManager.stopCollab();
+
+	cursorsRenderer?.cleanup();
+	cursorsRenderer = null;
+
 	unsubscribeFunctions.forEach((fn) => typeof fn === 'function' && fn());
 	unsubscribeFunctions = [];
 	noteBody?.cleanup();

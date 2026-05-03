@@ -92,13 +92,122 @@ export interface QueuedRequest {
 	retryCount: number;
 }
 
+/**
+ * Пользователь, участвующий в совместном редактировании заметки
+ */
+export interface CollaborativeUser {
+	userId: string; // Уникальный ID пользователя
+	userName: string; // Имя пользователя для отображения
+	cursor: CursorPosition; // Текущая позиция курсора пользователя
+}
+
+/**
+ * Позиция курсора пользователя в блоке
+ */
+export interface CursorPosition {
+	blockId: string; // ID блока, в котором находится курсор
+	position: number; // Позиция курсора в тексте блока
+	timestamp: number; // Время последнего обновления позиции
+}
+
+/**
+ * Типы сообщений WebSocket для совместного редактирования
+ */
+export type WebSocketMessageType =
+	| 'user_joined' // Пользователь присоединился к редактированию
+	| 'user_left' // Пользователь покинул редактирование
+	| 'error' // Ошибка
+	| 'sync_state' // Синхронизация состояния при подключении
+	| 'heartbeat' // Проверка соединения
+	| 'cursor_move' // Движение курсора
+	| 'insert_char' // Вставка символа
+	| 'delete_char' // Удаление символа
+	| 'apply_formatting' // Применение форматирования
+	| 'create_block' // Создание блока
+	| 'delete_block' // Удаление блока
+	| 'move_block' // Перемещение блока
+	| 'update_note_title' // Обновление заголовка заметки
+	| 'update_note_public' // Изменение публичности заметки
+	| 'delete_note' // Удаление заметки
+	| 'note_private' // Заметка стала приватной
+	| 'note_deleted'; // Заметка удалена
+
+/**
+ * Структура сообщения WebSocket
+ */
+export interface WebSocketMessage {
+	type: WebSocketMessageType; // Тип сообщения
+	isLocal?: boolean; // Флаг локального сообщения (не отправлять на сервер)
+	userId?: string; // ID пользователя-отправителя
+	userName?: string; // Имя пользователя-отправителя
+	noteId?: string; // ID заметки
+	blockId?: string; // ID блока (для операций с блоками)
+	msg: unknown; // Полезная нагрузка сообщения
+	timestamp: number; // Время отправки
+}
+
+/**
+ * Сообщение о вставке символа
+ */
+export interface InsertCharMsg {
+	blockId: string; // ID блока
+	position: number; // Позиция вставки
+	char: string; // Вставляемый символ
+	uniqueId: string; // Уникальный ID операции для предотвращения дублирования
+}
+
+/**
+ * Сообщение об удалении символа
+ */
+export interface DeleteCharMsg {
+	blockId: string; // ID блока
+	position: number; // Позиция удаления
+	uniqueId: string; // Уникальный ID операции
+}
+
+/**
+ * Сообщение о применении форматирования к тексту
+ */
+export interface ApplyFormattingMsg {
+	blockId: string; // ID блока
+	startPos: number; // Начальная позиция форматирования
+	endPos: number; // Конечная позиция форматирования
+	bold?: boolean | null; // Жирный текст
+	italic?: boolean | null; // Курсив
+	underline?: boolean | null; // Подчеркивание
+	textAlign?: number | null; // Выравнивание текста
+}
+
+export interface CreateBlockMsg {
+	blockTypeId: number;
+	position: number;
+}
+
+export interface DeleteBlockMsg {
+	blockId: string;
+}
+
+export interface MoveBlockMsg {
+	blockId: string;
+	newPosition: number;
+}
+
+export interface CursorMoveMsg {
+	blockId: string;
+	position: number;
+}
+
+/**
+ * Состояние глобального store приложения
+ */
 export interface StoreState {
-	user: User | null;
-	notes: Note[];
-	activeNoteId: string | number | null;
-	activeNote: ActiveNote | null;
-	activeBlocks: Block[];
-	online: boolean;
+	user: User | null; // Текущий авторизованный пользователь
+	notes: Note[]; // Список заметок пользователя
+	activeNoteId: string | number | null; // ID активной заметки
+	activeNote: ActiveNote | null; // Данные активной заметки
+	activeBlocks: Block[]; // Блоки активной заметки
+	online: boolean; // Статус подключения к интернету
+	collaborativeUsers: Map<string, CollaborativeUser>; // Пользователи, редактирующие заметку совместно
 }
 
 export interface ApiResponse<T = unknown> {

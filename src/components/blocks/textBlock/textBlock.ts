@@ -1,4 +1,5 @@
 import type { Block } from '../../../types.js';
+import { collabManager } from '../../../utils/collaborativeManager.js';
 import { rebuildBlockFromRanges } from '../../../utils/formattingUtils.js';
 import Component from '../../component.js';
 import templateString from './textBlock.hbs?raw';
@@ -15,6 +16,9 @@ interface TextBlockOptions {
 	onJoin?: (blockId: string, prevBlockId: string, joinOffset: number) => void;
 }
 
+/**
+ * Компонент текстового блока заметки с поддержкой совместного редактирования через WebSocket
+ */
 export default class TextBlock extends Component {
 	protected templateString = templateString;
 
@@ -32,6 +36,7 @@ export default class TextBlock extends Component {
 		joinOffset: number,
 	) => void;
 	private isProcessing: boolean = false;
+	private previousContent: string = '';
 
 	constructor(options: TextBlockOptions) {
 		super();
@@ -40,6 +45,7 @@ export default class TextBlock extends Component {
 		this.onDelete = options.onDelete;
 		this.onSplit = options.onSplit;
 		this.onJoin = options.onJoin;
+		this.previousContent = options.block.content || '';
 	}
 
 	protected getTemplateData() {
@@ -68,13 +74,89 @@ export default class TextBlock extends Component {
 	private bindEvents(): void {
 		const blockEl = this.domElement;
 		if (!blockEl) return;
+
+		blockEl.addEventListener('focus', () => {
+			this.updateCursorPosition();
+		});
+
+		blockEl.addEventListener('click', () => {
+			this.updateCursorPosition();
+		});
+
+		blockEl.addEventListener('beforeinput', (e) => {
+			this.handleBeforeInput(e as InputEvent, blockEl as HTMLElement);
+		});
+
+		blockEl.addEventListener('input', () => {
+			this.updateCursorPosition();
+		});
+
 		blockEl.addEventListener('blur', async () => {
 			await this.saveContent();
 		});
+
 		blockEl.addEventListener('keydown', async (e) => {
 			if (this.isProcessing) return;
 			await this.handleKeydown(e as KeyboardEvent, blockEl as HTMLElement);
 		});
+	}
+
+	/**
+	 * Обрабатывает событие beforeinput для отправки операций
+	 * Определяет тип операции (вставка/удаление) и отправляет соответствующее сообщение
+	 */
+	private handleBeforeInput(e: InputEvent, blockEl: HTMLElement): void {
+		if (!e.inputType) return;
+
+		const selection = window.getSelection();
+		if (!selection || selection.rangeCount === 0) return;
+
+		const range = selection.getRangeAt(0);
+		let cursorPosition = 0;
+
+		const preRange = document.createRange();
+		preRange.setStart(blockEl, 0);
+		preRange.setEnd(range.startContainer, range.startOffset);
+		cursorPosition = preRange.toString().length;
+
+		collabManager.sendCursorMove(String(this.block.id), cursorPosition);
+
+		if (e.inputType === 'insertText' && e.data) {
+			setTimeout(() => {
+				collabManager.sendInsertChar(
+					String(this.block.id),
+					cursorPosition,
+					e.data!,
+				);
+			}, 0);
+		} else if (e.inputType === 'deleteContentBackward') {
+			if (cursorPosition > 0) {
+				collabManager.sendDeleteChar(String(this.block.id), cursorPosition - 1);
+			}
+		} else if (e.inputType === 'deleteContentForward') {
+			collabManager.sendDeleteChar(String(this.block.id), cursorPosition);
+		}
+	}
+
+	/**
+	 * Обновляет позицию курсора и отправляет её другим участникам
+	 * Вызывается при фокусе, клике и вводе текста
+	 */
+	private updateCursorPosition(): void {
+		const blockEl = this.domElement;
+		if (!blockEl) return;
+
+		const selection = window.getSelection();
+		if (!selection || selection.rangeCount === 0) return;
+
+		const range = selection.getRangeAt(0);
+
+		const preRange = document.createRange();
+		preRange.setStart(blockEl, 0);
+		preRange.setEnd(range.startContainer, range.startOffset);
+		const cursorPosition = preRange.toString().length;
+
+		collabManager.sendCursorMove(String(this.block.id), cursorPosition);
 	}
 
 	private async saveContent(): Promise<void> {
