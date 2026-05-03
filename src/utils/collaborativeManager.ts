@@ -381,7 +381,10 @@ export class CollaborativeManager {
 		const blockIndex = blocks.findIndex((b) => b.id === msg.blockId);
 
 		if (blockIndex === -1) {
-			console.warn('[CollaborativeManager] handleInsertChar: block not found', { blockId: msg.blockId, availableIds: blocks.map(b => b.id) });
+			console.warn('[CollaborativeManager] handleInsertChar: block not found', {
+				blockId: msg.blockId,
+				availableIds: blocks.map((b) => b.id),
+			});
 			return;
 		}
 
@@ -395,13 +398,16 @@ export class CollaborativeManager {
 		block.content = newContent;
 		store.setActiveBlocks([...blocks]);
 
-		console.log('[CollaborativeManager] Dispatching collaborativeBlockUpdate:', {
-			blockId: msg.blockId,
-			userId: message.userId,
-			isLocal: message.is_local,
-			position,
-			newContent
-		});
+		console.log(
+			'[CollaborativeManager] Dispatching collaborativeBlockUpdate:',
+			{
+				blockId: msg.blockId,
+				userId: message.userId,
+				isLocal: message.is_local,
+				position,
+				newContent,
+			},
+		);
 
 		window.dispatchEvent(
 			new CustomEvent('collaborativeBlockUpdate', {
@@ -429,17 +435,22 @@ export class CollaborativeManager {
 		const blockIndex = blocks.findIndex((b) => b.id === msg.blockId);
 
 		if (blockIndex === -1) {
-			console.warn('[CollaborativeManager] handleDeleteChar: block not found', { blockId: msg.blockId });
+			console.warn('[CollaborativeManager] handleDeleteChar: block not found', {
+				blockId: msg.blockId,
+			});
 			return;
 		}
 
 		const block = blocks[blockIndex];
 		const position = msg.position ?? 0;
 		if (position < 0 || position >= block.content.length) {
-			console.warn('[CollaborativeManager] handleDeleteChar: position out of bounds', { position, contentLength: block.content.length });
+			console.warn(
+				'[CollaborativeManager] handleDeleteChar: position out of bounds',
+				{ position, contentLength: block.content.length },
+			);
 			return;
 		}
-		
+
 		const newContent =
 			block.content.slice(0, msg.position) +
 			block.content.slice(msg.position + 1);
@@ -447,12 +458,15 @@ export class CollaborativeManager {
 		block.content = newContent;
 		store.setActiveBlocks([...blocks]);
 
-		console.log('[CollaborativeManager] Dispatching collaborativeBlockUpdate (delete):', {
-			blockId: msg.blockId,
-			userId: message.userId,
-			position,
-			newContent
-		});
+		console.log(
+			'[CollaborativeManager] Dispatching collaborativeBlockUpdate (delete):',
+			{
+				blockId: msg.blockId,
+				userId: message.userId,
+				position,
+				newContent,
+			},
+		);
 
 		window.dispatchEvent(
 			new CustomEvent('collaborativeBlockUpdate', {
@@ -522,10 +536,13 @@ export class CollaborativeManager {
 	 */
 	private handleCreateBlock(message: WebSocketMessage): void {
 		// if (message.is_local) return;
-    
-		const msg = message.msg as CreateBlockMsg & { id: string; content?: string };
+
+		const msg = message.msg as CreateBlockMsg & {
+			id: string;
+			content?: string;
+		};
 		const blocks = store.getActiveBlocks();
-		
+
 		const newBlock: Block = {
 			id: msg.id,
 			block_type_id: msg.block_type_id,
@@ -533,19 +550,21 @@ export class CollaborativeManager {
 			position: msg.position,
 			formatting: { ranges: [] },
 		};
-		
+
 		blocks.splice(msg.position, 0, newBlock);
-		blocks.forEach((b, i) => { b.position = i; });
+		blocks.forEach((b, i) => {
+			b.position = i;
+		});
 		store.setActiveBlocks([...blocks]);
-		
+
 		const activeNoteId = store.getActiveNoteId();
 		if (activeNoteId) {
 			const currentNotes = store.getNotes();
-			const noteIndex = currentNotes.findIndex(n => n.ID === activeNoteId);
+			const noteIndex = currentNotes.findIndex((n) => n.ID === activeNoteId);
 			if (noteIndex !== -1) {
 				const updatedNote = {
 					...currentNotes[noteIndex],
-					blocks: blocks
+					blocks: blocks,
 				};
 				const updatedNotes = [...currentNotes];
 				updatedNotes[noteIndex] = updatedNote;
@@ -559,7 +578,7 @@ export class CollaborativeManager {
 					block: newBlock,
 					userId: message.userId,
 				},
-			})
+			}),
 		);
 	}
 
@@ -586,11 +605,11 @@ export class CollaborativeManager {
 		const activeNoteId = store.getActiveNoteId();
 		if (activeNoteId) {
 			const currentNotes = store.getNotes();
-			const noteIndex = currentNotes.findIndex(n => n.ID === activeNoteId);
+			const noteIndex = currentNotes.findIndex((n) => n.ID === activeNoteId);
 			if (noteIndex !== -1) {
 				const updatedNote = {
 					...currentNotes[noteIndex],
-					blocks: blocks
+					blocks: blocks,
 				};
 				const updatedNotes = [...currentNotes];
 				updatedNotes[noteIndex] = updatedNote;

@@ -56,15 +56,20 @@ export default class TextBlock extends Component {
 	private subscribeToCollabEvents(): void {
 		const blockId = String(this.block.id);
 		const currentUserId = store.getUser()?.id;
-		console.log('[TextBlock] subscribeToCollabEvents for blockId:', blockId, 'currentUserId:', currentUserId);
-		
+		console.log(
+			'[TextBlock] subscribeToCollabEvents for blockId:',
+			blockId,
+			'currentUserId:',
+			currentUserId,
+		);
+
 		const handleBlockUpdate = (e: Event) => {
 			const detail = (e as CustomEvent).detail;
-			
+
 			// Логирование для отладки
 			const idMatches = detail.blockId === blockId;
 			const userMatches = detail.userId !== currentUserId;
-			
+
 			console.log('[TextBlock] collaborativeBlockUpdate event:', {
 				eventBlockId: detail.blockId,
 				expectedBlockId: blockId,
@@ -75,12 +80,15 @@ export default class TextBlock extends Component {
 				shouldApply: idMatches && userMatches,
 				domElementExists: !!this.domElement,
 			});
-			
+
 			if (idMatches && userMatches) {
 				if (this.domElement) {
 					this.applyRemoteUpdate(detail);
 				} else {
-					console.warn('[TextBlock] Cannot apply update - domElement not found for blockId:', blockId);
+					console.warn(
+						'[TextBlock] Cannot apply update - domElement not found for blockId:',
+						blockId,
+					);
 				}
 			}
 		};
@@ -90,7 +98,12 @@ export default class TextBlock extends Component {
 		};
 	}
 
-	private applyRemoteUpdate(detail: { content: string; position: number; char?: string; isInsert?: boolean }): void {
+	private applyRemoteUpdate(detail: {
+		content: string;
+		position: number;
+		char?: string;
+		isInsert?: boolean;
+	}): void {
 		const blockEl = this.domElement;
 		if (!blockEl) return;
 		const wasFocused = document.activeElement === blockEl;
@@ -187,43 +200,52 @@ export default class TextBlock extends Component {
 	 */
 	private handleBeforeInput(e: InputEvent, blockEl: HTMLElement): void {
 		if (!e.inputType) return;
-		
+
 		const activeNoteId = store.getActiveNoteId();
 		const note = store.getNotes().find((n: Note) => n.ID === activeNoteId);
-		const isPublic = (note as any)?.is_public === true;
-		
-		console.log('[TextBlock] handleBeforeInput:', { 
-			inputType: e.inputType, 
-			isPublic, 
+		const isPublic = note?.is_public === true;
+
+		console.log('[TextBlock] handleBeforeInput:', {
+			inputType: e.inputType,
+			isPublic,
 			data: e.data,
-			blockId: this.block.id
+			blockId: this.block.id,
 		});
-		
+
 		if (!isPublic) return;
 
 		const selection = window.getSelection();
 		if (!selection || selection.rangeCount === 0) return;
 
 		const range = selection.getRangeAt(0);
-		let cursorPosition = 0;
 
 		const preRange = document.createRange();
 		preRange.setStart(blockEl, 0);
 		preRange.setEnd(range.startContainer, range.startOffset);
-		cursorPosition = preRange.toString().length;
+		const cursorPosition = preRange.toString().length;
 
 		const blockId = String(this.block.id);
-		
+
 		if (e.inputType === 'insertText' && e.data) {
-			console.log('[TextBlock] Sending insert char:', { blockId, cursorPosition, char: e.data });
+			console.log('[TextBlock] Sending insert char:', {
+				blockId,
+				cursorPosition,
+				char: e.data,
+			});
 			collabManager.sendInsertChar(blockId, cursorPosition, e.data);
 		} else if (e.inputType === 'deleteContentBackward') {
 			if (cursorPosition > 0) {
-				console.log('[TextBlock] Sending delete char:', { blockId, position: cursorPosition - 1 });
+				console.log('[TextBlock] Sending delete char:', {
+					blockId,
+					position: cursorPosition - 1,
+				});
 				collabManager.sendDeleteChar(blockId, cursorPosition - 1);
 			}
 		} else if (e.inputType === 'deleteContentForward') {
-			console.log('[TextBlock] Sending delete char:', { blockId, position: cursorPosition });
+			console.log('[TextBlock] Sending delete char:', {
+				blockId,
+				position: cursorPosition,
+			});
 			collabManager.sendDeleteChar(blockId, cursorPosition);
 		}
 	}
@@ -235,8 +257,8 @@ export default class TextBlock extends Component {
 	private updateCursorPosition(): void {
 		const activeNoteId = store.getActiveNoteId();
 		const note = store.getNotes().find((n: Note) => n.ID === activeNoteId);
-		const isPublic = (note as any)?.is_public === true;
-		
+		const isPublic = note?.is_public === true;
+
 		if (!isPublic) return;
 		const blockEl = this.domElement;
 		if (!blockEl) return;
@@ -298,23 +320,23 @@ export default class TextBlock extends Component {
 	private async handleSplit(blockEl: HTMLElement): Promise<void> {
 		const parts = this.getCaretParts(blockEl);
 		if (!parts) return;
-		
+
 		const activeNoteId = store.getActiveNoteId();
 		const note = store.getNotes().find((n: Note) => n.ID === activeNoteId);
-		const isPublic = (note as any)?.is_public === true;
-		
+		const isPublic = note?.is_public === true;
+
 		blockEl.innerHTML = parts.before;
 
 		if (isPublic) {
 			const blocks = store.getActiveBlocks();
-			const currentIndex = blocks.findIndex(b => b.id === this.block.id);
+			const currentIndex = blocks.findIndex((b) => b.id === this.block.id);
 			const newPosition = currentIndex + 1;
 			collabManager.sendCreateBlock(1, newPosition);
 		} else {
 			this.onSplit?.(String(this.block.id), parts.before, parts.after);
 		}
 	}
-	
+
 	private async handleJoinBackward(blockEl: HTMLElement): Promise<void> {
 		const wrapper = blockEl.closest('.note__block-wrapper');
 		if (!wrapper) return;
@@ -429,17 +451,22 @@ export default class TextBlock extends Component {
 		}
 
 		if (!this.domElement) {
-			console.warn('[TextBlock] updateBlock called but domElement not ready, skipping update');
+			console.warn(
+				'[TextBlock] updateBlock called but domElement not ready, skipping update',
+			);
 			return;
 		}
 
-		console.log('[TextBlock] Updating content for block:', this.block.id, { contentChanged, formattingChanged });
+		console.log('[TextBlock] Updating content for block:', this.block.id, {
+			contentChanged,
+			formattingChanged,
+		});
 
 		if (contentChanged) {
 			// Сохраняем позицию курсора если блок в фокусе
 			const wasFocused = document.activeElement === this.domElement;
 			let oldCursorPosition = 0;
-			
+
 			if (wasFocused) {
 				const selection = window.getSelection();
 				if (selection && selection.rangeCount > 0) {

@@ -86,12 +86,12 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 		if (noteBodyElement) {
 			const activeNoteId = store.getActiveNoteId();
 			const note = store.getNotes().find((n) => n.ID === activeNoteId);
-			const isPublic = (note as any)?.is_public === true;
+			const isPublic = note?.is_public === true;
 			if (isPublic) {
 				cursorsRenderer = new CollaborativeCursorsRenderer(noteBodyElement);
 			} else {
 				cursorsRenderer?.cleanup();
-            	cursorsRenderer = null;
+				cursorsRenderer = null;
 			}
 		}
 	}
@@ -112,7 +112,7 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 					setVisibility(!!activeNoteData);
 					if (activeNoteData) {
 						const note = store.getNotes().find((n: Note) => n.ID === noteId);
-                        const isPublic = (note as any)?.is_public === true;
+						const isPublic = note?.is_public === true;
 						console.log('Active note changed. Public:', isPublic);
 						if (isPublic) {
 							try {

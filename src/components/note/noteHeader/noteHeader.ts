@@ -68,7 +68,7 @@ export default class NoteHeader extends Component {
 					});
 				}
 				const note = store.getNotes().find((n: Note) => n.ID === activeNoteId);
-				const isPublic = (note as any)?.is_public === true;
+				const isPublic = note?.is_public === true;
 				if (isPublic) {
 					collabManager.sendUpdateNoteTitle(newTitle);
 				}

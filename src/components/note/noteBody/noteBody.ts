@@ -22,7 +22,7 @@ export default class NoteBody extends Component {
 	private unsubscribePendingFocus: (() => void) | null = null;
 	private unsubscribeCollaborativeCreate: (() => void) | null = null;
 	private unsubscribeCollaborativeDelete: (() => void) | null = null;
-	
+
 	constructor() {
 		super();
 	}
@@ -72,7 +72,7 @@ export default class NoteBody extends Component {
 				blockId: block.id,
 				userId,
 				currentUserId,
-				isOwnEvent: userId === currentUserId
+				isOwnEvent: userId === currentUserId,
 			});
 			if (userId === currentUserId) {
 				console.log('[NoteBody] Skipping own block creation');
@@ -95,18 +95,21 @@ export default class NoteBody extends Component {
 				blockId,
 				userId,
 				currentUserId,
-				isOwnEvent: userId === currentUserId
+				isOwnEvent: userId === currentUserId,
 			});
 			if (userId === currentUserId) {
 				console.log('[NoteBody] Skipping own block deletion');
 				return;
 			}
 			const blocks = store.getActiveBlocks();
-			const updatedBlocks = blocks.filter(b => String(b.id) !== blockId);
+			const updatedBlocks = blocks.filter((b) => String(b.id) !== blockId);
 			updatedBlocks.forEach((block, idx) => {
 				block.position = idx;
 			});
-			console.log('[NoteBody] Updating blocks after deletion, removed blockId:', blockId);
+			console.log(
+				'[NoteBody] Updating blocks after deletion, removed blockId:',
+				blockId,
+			);
 			store.setActiveBlocks(updatedBlocks);
 		}) as EventListener;
 		window.addEventListener('collaborativeBlockDelete', handleBlockDelete);

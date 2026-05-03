@@ -131,7 +131,7 @@ export default class NotePopup extends Component {
 				});
 				console.log(result);
 			};
-			shareBtn.addEventListener('click', this.boundHandlers.onShare)
+			shareBtn.addEventListener('click', this.boundHandlers.onShare);
 		}
 	}
 

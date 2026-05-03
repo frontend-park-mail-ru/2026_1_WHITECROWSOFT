@@ -27,7 +27,7 @@ export class WebSocketService {
 			try {
 				const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 				const wsUrl = `${protocol}//${window.location.host}/ws/notes/${noteId}`;
-				
+
 				console.log('[WebSocket] Connecting to:', wsUrl);
 
 				this.ws = new WebSocket(wsUrl);
@@ -50,7 +50,7 @@ export class WebSocketService {
 				};
 
 				this.ws.onerror = (error) => {
-					console.error('[WebSocket] Connection error');
+					console.error('[WebSocket] Connection error', error);
 					reject(new Error('WebSocket connection failed'));
 				};
 
