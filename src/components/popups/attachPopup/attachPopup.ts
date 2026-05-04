@@ -13,18 +13,22 @@ interface AttachPopupOptions {
 	onBlockCreated?: (block: Block) => void;
 }
 
+type FileType = 'image' | 'audio' | null;
+
 export default class AttachPopup extends Component {
 	protected templateString = templateString;
 
 	private anchorElement: HTMLElement;
 	private afterBlockId: string | null;
 	private fileInput: HTMLInputElement | null = null;
+	private pendingFileType: FileType = null;
 
 	private boundHandlers: {
 		onDocumentClick?: (e: MouseEvent) => void;
 		onEscape?: (e: KeyboardEvent) => void;
 		onTextClick?: () => void;
 		onPictureClick?: () => void;
+		onMusicClick?: () => void;
 		onTableClick?: () => void;
 		onSubnoteClick?: () => void;
 		onFileChange?: (e: Event) => void;
@@ -56,8 +60,8 @@ export default class AttachPopup extends Component {
 		this.close();
 		this.fileInput = document.createElement('input');
 		this.fileInput.type = 'file';
-		this.fileInput.accept = 'image/*';
 		this.fileInput.style.display = 'none';
+		this.pendingFileType = null;
 		this.renderTo(document.body);
 	}
 
@@ -120,6 +124,7 @@ export default class AttachPopup extends Component {
 		const pictureBtn = this.domElement.querySelector('[data-action="picture"]');
 		const tableBtn = this.domElement.querySelector('[data-action="table"]');
 		const subnoteBtn = this.domElement.querySelector('[data-action="subnote"]');
+		const musicBtn = this.domElement.querySelector('[data-action="music"]');
 
 		if (textBtn) {
 			this.boundHandlers.onTextClick = async () => {
@@ -142,11 +147,24 @@ export default class AttachPopup extends Component {
 
 		if (pictureBtn) {
 			this.boundHandlers.onPictureClick = () => {
+				this.pendingFileType = 'image';
 				if (this.fileInput) {
+					this.fileInput.accept = 'image/*';
 					this.fileInput.click();
 				}
 			};
 			pictureBtn.addEventListener('click', this.boundHandlers.onPictureClick);
+		}
+
+		if (musicBtn) {
+			this.boundHandlers.onMusicClick = () => {
+				this.pendingFileType = 'audio';
+				if (this.fileInput) {
+					this.fileInput.accept = 'audio/*';
+					this.fileInput.click();
+				}
+			};
+			musicBtn.addEventListener('click', this.boundHandlers.onMusicClick);
 		}
 
 		if (tableBtn) {
@@ -161,31 +179,52 @@ export default class AttachPopup extends Component {
 			this.boundHandlers.onFileChange = async (e: Event) => {
 				const target = e.target as HTMLInputElement;
 				const file = target.files?.[0];
-				if (!file) return;
+				if (!file) {
+					this.close();
+					return;
+				}
+
 				const activeNoteId = store.getActiveNoteId();
 				if (!activeNoteId) {
 					this.close();
 					return;
 				}
+
 				if (file.size > 10 * 1024 * 1024) {
-					console.warn('File too large');
+					console.warn('File too large (max 10MB)');
 					this.close();
 					return;
 				}
-				if (!file.type.startsWith('image/')) {
-					console.warn('Not an image');
-					this.close();
-					return;
-				}
+
 				try {
-					await attachmentService.createImageBlock(
-						activeNoteId,
-						file,
-						this.afterBlockId,
-					);
+					if (
+						this.pendingFileType === 'image' &&
+						file.type.startsWith('image/')
+					) {
+						await attachmentService.createImageBlock(
+							activeNoteId,
+							file,
+							this.afterBlockId,
+						);
+					} else if (
+						this.pendingFileType === 'audio' &&
+						file.type.startsWith('audio/')
+					) {
+						await attachmentService.createAudioBlock(
+							activeNoteId,
+							file,
+							this.afterBlockId,
+						);
+					} else {
+						console.warn(
+							`Unsupported file type for ${this.pendingFileType}:`,
+							file.type,
+						);
+					}
 				} catch (error) {
 					console.error('[AttachPopup] Error:', error);
 				}
+
 				if (this.fileInput) {
 					this.fileInput.value = '';
 				}
@@ -234,6 +273,8 @@ export default class AttachPopup extends Component {
 		const pictureBtn = this.domElement.querySelector('[data-action="picture"]');
 		const tableBtn = this.domElement.querySelector('[data-action="table"]');
 		const subnoteBtn = this.domElement.querySelector('[data-action="subnote"]');
+		const musicBtn = this.domElement.querySelector('[data-action="music"]');
+
 		if (textBtn && this.boundHandlers.onTextClick) {
 			textBtn.removeEventListener('click', this.boundHandlers.onTextClick);
 		}
@@ -242,6 +283,9 @@ export default class AttachPopup extends Component {
 				'click',
 				this.boundHandlers.onPictureClick,
 			);
+		}
+		if (musicBtn && this.boundHandlers.onMusicClick) {
+			musicBtn.removeEventListener('click', this.boundHandlers.onMusicClick);
 		}
 		if (tableBtn && this.boundHandlers.onTableClick) {
 			tableBtn.removeEventListener('click', this.boundHandlers.onTableClick);
@@ -271,6 +315,7 @@ export default class AttachPopup extends Component {
 			this.fileInput.remove();
 			this.fileInput = null;
 		}
+		this.pendingFileType = null;
 	}
 
 	getElement(): HTMLElement | null {

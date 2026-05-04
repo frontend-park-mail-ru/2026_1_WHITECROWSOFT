@@ -1,0 +1,97 @@
+.note__musicBlock {
+    margin: 8px 0;
+    border-radius: 12px;
+    background: #f5f5f5;
+    transition: all 0.2s ease;
+
+    &:focus {
+        outline: none;
+    }
+
+    &-container {
+        padding: 12px 16px;
+    }
+
+    &-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    &-play {
+        flex-shrink: 0;
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: #4a90e2;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+
+        &:hover {
+            background: #357abd;
+            transform: scale(1.05);
+        }
+
+        &:active {
+            transform: scale(0.95);
+        }
+
+        .icon {
+            width: 16px;
+            height: 16px;
+            filter: brightness(0) invert(1);
+        }
+    }
+
+    &-waveform {
+        flex: 1;
+        cursor: pointer;
+        height: 40px;
+        display: flex;
+        align-items: center;
+    }
+
+    &-canvas {
+        width: 100%;
+        height: 40px;
+        display: block;
+    }
+
+    &-time {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        font-family: monospace;
+        color: #666;
+        flex-shrink: 0;
+    }
+
+    &-current,
+    &-duration {
+        min-width: 40px;
+    }
+
+    &-separator {
+        color: #ccc;
+    }
+
+    &-error {
+        text-align: center;
+        color: #e74c3c;
+        font-size: 14px;
+        padding: 8px;
+    }
+}
+
+.note__block-wrapper--focused {
+    .note__musicBlock {
+        background: #ebf3ff;
+        outline: 2px solid #4a90e2;
+        outline-offset: 2px;
+    }
+}

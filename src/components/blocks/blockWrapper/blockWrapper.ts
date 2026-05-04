@@ -3,6 +3,7 @@ import { store } from '../../../store.js';
 import type { Block } from '../../../types.js';
 import Component from '../../component.js';
 import ImageBlock from '../imageBlock/imageBlock.js';
+import MusicBlock from '../musicBlock/musicBlock.js';
 import SubnoteBlock from '../subnoteBlock/subnoteBlock.js';
 import TextBlock from '../textBlock/textBlock.js';
 import templateString from './blockWrapper.hbs?raw';
@@ -26,7 +27,12 @@ export default class BlockWrapper extends Component {
 	protected templateString = templateString;
 
 	private block: Block;
-	private blockComponent: TextBlock | ImageBlock | SubnoteBlock | null = null;
+	private blockComponent:
+		| TextBlock
+		| ImageBlock
+		| MusicBlock
+		| SubnoteBlock
+		| null = null;
 	private onContentChange?: (blockId: string, content: string) => void;
 	private onDelete?: (blockId: string) => void;
 	private onSplit?: (
@@ -59,6 +65,7 @@ export default class BlockWrapper extends Component {
 		return {
 			blockId: this.block.id,
 			isImageBlock: this.block.block_type_id === 2,
+			isAudioBlock: this.block.block_type_id === 6,
 		};
 	}
 
@@ -72,6 +79,11 @@ export default class BlockWrapper extends Component {
 		if (!container) return;
 		if (this.block.block_type_id === 2) {
 			this.blockComponent = new ImageBlock({
+				block: this.block,
+				onDelete: this.onDelete,
+			});
+		} else if (this.block.block_type_id === 6) {
+			this.blockComponent = new MusicBlock({
 				block: this.block,
 				onDelete: this.onDelete,
 			});
@@ -167,7 +179,12 @@ export default class BlockWrapper extends Component {
 		this.blockComponent?.focus();
 	}
 
-	getBlockComponent(): TextBlock | ImageBlock | SubnoteBlock | null {
+	getBlockComponent():
+		| TextBlock
+		| ImageBlock
+		| MusicBlock
+		| SubnoteBlock
+		| null {
 		return this.blockComponent;
 	}
 

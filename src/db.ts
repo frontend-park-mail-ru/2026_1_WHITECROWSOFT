@@ -1,4 +1,5 @@
 import type {
+	AudioAttachment,
 	BlockFormatting,
 	FormattingRange,
 	ImageAttachment,
@@ -24,7 +25,7 @@ interface RecentNote {
 class Database {
 	private db: IDBDatabase | null = null;
 	private readonly DB_NAME = 'Noterian';
-	private readonly DB_VERSION = 12;
+	private readonly DB_VERSION = 13;
 
 	async open(): Promise<IDBDatabase> {
 		return new Promise((resolve, reject) => {
@@ -69,6 +70,13 @@ class Database {
 					images.createIndex('noteId', 'noteId', { unique: false });
 					images.createIndex('url', 'url', { unique: false });
 					images.createIndex('status', 'status', { unique: false });
+				}
+				if (!db.objectStoreNames.contains('audios')) {
+					const audios = db.createObjectStore('audios', { keyPath: 'id' });
+					audios.createIndex('blockId', 'blockId', { unique: false });
+					audios.createIndex('noteId', 'noteId', { unique: false });
+					audios.createIndex('url', 'url', { unique: false });
+					audios.createIndex('status', 'status', { unique: false });
 				}
 				if (!db.objectStoreNames.contains('queueFiles')) {
 					const queueFiles = db.createObjectStore('queueFiles', {
@@ -294,6 +302,50 @@ class Database {
 
 	async imagesClear(): Promise<void> {
 		return this._clear('images');
+	}
+
+	async audiosPut(audio: AudioAttachment): Promise<void> {
+		return this._put('audios', audio);
+	}
+
+	async audiosGet(id: string | number): Promise<AudioAttachment | undefined> {
+		return this._get<AudioAttachment>('audios', id);
+	}
+
+	async audiosGetByNoteId(noteId: string | number): Promise<AudioAttachment[]> {
+		const all = await this._getAll<AudioAttachment>('audios');
+		return all.filter((audio) => audio.noteId === noteId);
+	}
+
+	async audiosGetByBlockId(
+		blockId: string | number,
+	): Promise<AudioAttachment[]> {
+		const all = await this._getAll<AudioAttachment>('audios');
+		return all.filter((audio) => audio.blockId === blockId);
+	}
+
+	async audiosGetByUrl(url: string): Promise<AudioAttachment[]> {
+		const all = await this._getAll<AudioAttachment>('audios');
+		return all.filter((audio) => audio.url === url);
+	}
+
+	async audiosGetAll(): Promise<AudioAttachment[]> {
+		return this._getAll<AudioAttachment>('audios');
+	}
+
+	async audiosDelete(id: string | number): Promise<void> {
+		return this._delete('audios', id);
+	}
+
+	async audiosDeleteByNoteId(noteId: string | number): Promise<void> {
+		const audios = await this.audiosGetByNoteId(noteId);
+		for (const audio of audios) {
+			await this.audiosDelete(audio.id);
+		}
+	}
+
+	async audiosClear(): Promise<void> {
+		return this._clear('audios');
 	}
 
 	async queueFilePut(file: QueueFile): Promise<void> {
