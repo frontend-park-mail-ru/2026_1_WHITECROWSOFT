@@ -6,6 +6,7 @@ import ImageBlock from '../imageBlock/imageBlock.js';
 import MusicBlock from '../musicBlock/musicBlock.js';
 import SubnoteBlock from '../subnoteBlock/subnoteBlock.js';
 import TextBlock from '../textBlock/textBlock.js';
+import VideoBlock from '../videoBlock/videoBlock.js';
 import templateString from './blockWrapper.hbs?raw';
 
 interface BlockWrapperOptions {
@@ -31,6 +32,7 @@ export default class BlockWrapper extends Component {
 		| TextBlock
 		| ImageBlock
 		| MusicBlock
+		| VideoBlock
 		| SubnoteBlock
 		| null = null;
 	private onContentChange?: (blockId: string, content: string) => void;
@@ -66,6 +68,7 @@ export default class BlockWrapper extends Component {
 			blockId: this.block.id,
 			isImageBlock: this.block.block_type_id === 2,
 			isAudioBlock: this.block.block_type_id === 6,
+			isVideoBlock: this.block.block_type_id === 7,
 		};
 	}
 
@@ -84,6 +87,11 @@ export default class BlockWrapper extends Component {
 			});
 		} else if (this.block.block_type_id === 6) {
 			this.blockComponent = new MusicBlock({
+				block: this.block,
+				onDelete: this.onDelete,
+			});
+		} else if (this.block.block_type_id === 7) {
+			this.blockComponent = new VideoBlock({
 				block: this.block,
 				onDelete: this.onDelete,
 			});
@@ -183,6 +191,7 @@ export default class BlockWrapper extends Component {
 		| TextBlock
 		| ImageBlock
 		| MusicBlock
+		| VideoBlock
 		| SubnoteBlock
 		| null {
 		return this.blockComponent;

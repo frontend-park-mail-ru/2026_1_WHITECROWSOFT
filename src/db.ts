@@ -6,6 +6,7 @@ import type {
 	Note,
 	QueueFile,
 	QueuedRequest,
+	VideoAttachment,
 } from './types';
 
 interface FormattingRecord {
@@ -25,7 +26,7 @@ interface RecentNote {
 class Database {
 	private db: IDBDatabase | null = null;
 	private readonly DB_NAME = 'Noterian';
-	private readonly DB_VERSION = 13;
+	private readonly DB_VERSION = 14;
 
 	async open(): Promise<IDBDatabase> {
 		return new Promise((resolve, reject) => {
@@ -77,6 +78,13 @@ class Database {
 					audios.createIndex('noteId', 'noteId', { unique: false });
 					audios.createIndex('url', 'url', { unique: false });
 					audios.createIndex('status', 'status', { unique: false });
+				}
+				if (!db.objectStoreNames.contains('videos')) {
+					const videos = db.createObjectStore('videos', { keyPath: 'id' });
+					videos.createIndex('blockId', 'blockId', { unique: false });
+					videos.createIndex('noteId', 'noteId', { unique: false });
+					videos.createIndex('url', 'url', { unique: false });
+					videos.createIndex('status', 'status', { unique: false });
 				}
 				if (!db.objectStoreNames.contains('queueFiles')) {
 					const queueFiles = db.createObjectStore('queueFiles', {
@@ -346,6 +354,23 @@ class Database {
 
 	async audiosClear(): Promise<void> {
 		return this._clear('audios');
+	}
+
+	async videosPut(video: VideoAttachment): Promise<void> {
+		return this._put('videos', video);
+	}
+
+	async videosGet(id: string | number): Promise<VideoAttachment | undefined> {
+		return this._get<VideoAttachment>('videos', id);
+	}
+
+	async videosGetByNoteId(noteId: string | number): Promise<VideoAttachment[]> {
+		const all = await this._getAll<VideoAttachment>('videos');
+		return all.filter((video) => video.noteId === noteId);
+	}
+
+	async videosDelete(id: string | number): Promise<void> {
+		return this._delete('videos', id);
 	}
 
 	async queueFilePut(file: QueueFile): Promise<void> {

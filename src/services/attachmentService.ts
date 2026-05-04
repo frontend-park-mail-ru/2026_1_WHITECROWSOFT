@@ -58,6 +58,265 @@ export const attachmentService = {
 		}
 	},
 
+	async createVideoBlock(
+		noteId: string | number,
+		file: File,
+		afterBlockId: string | null = null,
+	): Promise<Block> {
+		const isOnline = store.getOnline();
+		if (isOnline) {
+			return await this._createVideoOnline(noteId, file, afterBlockId);
+		} else {
+			return await this._createVideoOffline(noteId, file, afterBlockId);
+		}
+	},
+
+	async _createVideoOnline(
+		noteId: string | number,
+		file: File,
+		afterBlockId: string | null = null,
+	): Promise<Block> {
+		const currentBlocks = store.getActiveBlocks();
+		const sortedBlocks = [...currentBlocks].sort(
+			(a, b) => a.position - b.position,
+		);
+
+		let insertIndex: number;
+		if (afterBlockId) {
+			const afterIndex = sortedBlocks.findIndex(
+				(b) => String(b.id) === afterBlockId,
+			);
+			insertIndex = afterIndex + 1;
+		} else {
+			insertIndex = sortedBlocks.length;
+		}
+
+		const shiftedBlocks = sortedBlocks.map((block, idx) => {
+			if (idx >= insertIndex) {
+				return { ...block, position: idx + 1 };
+			}
+			return { ...block, position: idx };
+		});
+		store.setActiveBlocks(shiftedBlocks);
+
+		const cachedNote = await db.notesGet(noteId);
+		if (cachedNote) {
+			await db.notesPut({ ...cachedNote, blocks: shiftedBlocks });
+		}
+
+		const blockData: CreateBlockData = {
+			note_id: noteId,
+			block_type_id: 7,
+			position: insertIndex,
+			content: '',
+		};
+		const createdBlock = await client.post<CreateBlockResponse>(
+			`/notes/${noteId}/blocks`,
+			blockData,
+		);
+		const blockId = createdBlock.id;
+
+		const formData = new FormData();
+		formData.append('file', file);
+		const attachmentResult = await client.postForm<AttachmentApiResponse>(
+			`/notes/${noteId}/blocks/${blockId}/attachments`,
+			formData,
+		);
+
+		const videoContent = JSON.stringify({
+			url: attachmentResult.attach_url,
+			filename: attachmentResult.minio_key || file.name,
+			size: file.size,
+			mimeType: file.type,
+			attachmentId: attachmentResult.id,
+		});
+
+		await client.put(`/notes/${noteId}/blocks/${blockId}/content`, {
+			content: videoContent,
+		});
+
+		const blob = await this._fileToBlob(file);
+		await db.videosPut({
+			id: attachmentResult.id,
+			blockId: blockId,
+			noteId: noteId,
+			blob: blob,
+			filename: file.name,
+			mimeType: file.type,
+			size: file.size,
+			url: attachmentResult.attach_url,
+			status: 'synced',
+			syncedAt: Date.now(),
+		});
+
+		const finalBlock: Block = {
+			id: blockId,
+			note_id: noteId,
+			block_type_id: 7,
+			position: insertIndex,
+			content: videoContent,
+			created_at: createdBlock.created_at,
+			updated_at: new Date().toISOString(),
+			formatting: { ranges: [] },
+		};
+
+		const updatedBlocks = shiftedBlocks.map((block) =>
+			block.id === finalBlock.id ? finalBlock : block,
+		);
+		const alreadyExists = updatedBlocks.some((b) => b.id === finalBlock.id);
+		if (!alreadyExists) {
+			updatedBlocks.push(finalBlock);
+		}
+		updatedBlocks.sort((a, b) => a.position - b.position);
+		store.setActiveBlocks(updatedBlocks);
+
+		return finalBlock;
+	},
+
+	async _createVideoOffline(
+		noteId: string | number,
+		file: File,
+		afterBlockId: string | null = null,
+	): Promise<Block> {
+		const currentBlocks = store.getActiveBlocks();
+		const sortedBlocks = [...currentBlocks].sort(
+			(a, b) => a.position - b.position,
+		);
+		let insertIndex: number;
+		if (afterBlockId) {
+			const afterIndex = sortedBlocks.findIndex(
+				(b) => String(b.id) === afterBlockId,
+			);
+			insertIndex = afterIndex + 1;
+		} else {
+			insertIndex = sortedBlocks.length;
+		}
+		const shiftedBlocks = sortedBlocks.map((block, idx) => {
+			if (idx >= insertIndex) {
+				return { ...block, position: idx + 1 };
+			}
+			return { ...block, position: idx };
+		});
+		store.setActiveBlocks(shiftedBlocks);
+		const cachedNote = await db.notesGet(noteId);
+		if (cachedNote) {
+			await db.notesPut({ ...cachedNote, blocks: shiftedBlocks });
+		}
+		const localAttachmentId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+		const localBlockId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+		const blob = await this._fileToBlob(file);
+		await db.videosPut({
+			id: localAttachmentId,
+			blockId: localBlockId,
+			noteId: noteId,
+			blob: blob,
+			filename: file.name,
+			mimeType: file.type,
+			size: file.size,
+			status: 'pending',
+			isLocal: true,
+			createdAt: Date.now(),
+		});
+		await db.queueFilePut({
+			id: localAttachmentId,
+			blockId: localBlockId,
+			noteId: noteId,
+			blob: blob,
+			filename: file.name,
+			mimeType: file.type,
+			size: file.size,
+			queuedAt: Date.now(),
+		});
+		const videoContent = JSON.stringify({
+			url: `local://${localAttachmentId}`,
+			filename: file.name,
+			size: file.size,
+			mimeType: file.type,
+			attachmentId: localAttachmentId,
+			isLocal: true,
+			pendingSync: true,
+		});
+		const newBlock = await noteService.createBlock(noteId, {
+			note_id: noteId,
+			block_type_id: 7,
+			position: insertIndex,
+			content: videoContent,
+		});
+		await db.videosDelete(localAttachmentId);
+		await db.videosPut({
+			id: localAttachmentId,
+			blockId: newBlock.id,
+			noteId: noteId,
+			blob: blob,
+			filename: file.name,
+			mimeType: file.type,
+			size: file.size,
+			status: 'pending',
+			isLocal: true,
+			createdAt: Date.now(),
+		});
+		await db.queueFileDelete(localAttachmentId);
+		await db.queueFilePut({
+			id: localAttachmentId,
+			blockId: newBlock.id,
+			noteId: noteId,
+			blob: blob,
+			filename: file.name,
+			mimeType: file.type,
+			size: file.size,
+			queuedAt: Date.now(),
+		});
+		await queueService.enqueueRequest({
+			method: 'POST',
+			endpoint: `/notes/${noteId}/blocks/${newBlock.id}/attachments`,
+			type: 'VIDEO_UPLOAD',
+			localId: localAttachmentId,
+			body: { fileId: localAttachmentId, noteId, blockId: newBlock.id },
+		});
+		return newBlock;
+	},
+
+	async getVideoUrl(
+		attachmentId: string | number,
+		noteId: string | number,
+		blockId: string | number,
+	): Promise<string | null> {
+		const localVideo = await db.videosGet(attachmentId);
+		if (localVideo?.blob) {
+			return URL.createObjectURL(localVideo.blob);
+		}
+		if (store.getOnline()) {
+			try {
+				const attachData = await client.get<AttachmentApiResponse>(
+					`/notes/${noteId}/blocks/${blockId}/attachments`,
+				);
+				let videoUrl = attachData.attach_url;
+				videoUrl = videoUrl.replace('http://minio:9000', '/minio');
+				const response = await fetch(videoUrl);
+				if (response.ok) {
+					const blob = await response.blob();
+					await db.videosPut({
+						id: attachmentId,
+						blockId: blockId,
+						noteId: noteId,
+						blob: blob,
+						filename: localVideo?.filename || 'video',
+						mimeType: blob.type,
+						size: blob.size,
+						url: videoUrl,
+						status: 'synced',
+						syncedAt: Date.now(),
+					});
+					return URL.createObjectURL(blob);
+				}
+			} catch (error) {
+				console.warn('[attachmentService] Failed to fetch video:', error);
+				handleAuthError(error);
+			}
+		}
+		return null;
+	},
+
 	async _createAudioOnline(
 		noteId: string | number,
 		file: File,

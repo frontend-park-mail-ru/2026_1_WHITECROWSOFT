@@ -1,22 +1,7 @@
 <div class="note__block note__musicBlock" 
      data-block-id="{{blockId}}" 
      tabindex="0">
-    <div class="note__musicBlock-container">
-        <div class="note__musicBlock-controls">
-            <button class="note__musicBlock-play" data-action="play">
-                <img src="/icons/play.svg" class="icon">
-            </button>
-            <div class="note__musicBlock-waveform" data-action="waveform">
-                <canvas class="note__musicBlock-canvas" width="300" height="40"></canvas>
-            </div>
-            <div class="note__musicBlock-time">
-                <span class="note__musicBlock-current">0:00</span>
-                <span class="note__musicBlock-separator">/</span>
-                <span class="note__musicBlock-duration">0:00</span>
-            </div>
-        </div>
-        <audio class="note__musicBlock-audio" style="display: none;">
-            <source src="" type="audio/mpeg">
-        </audio>
-    </div>
+    <audio class="note__musicBlock-audio" controls>
+        <source src="" type="audio/mpeg">
+    </audio>
 </div>

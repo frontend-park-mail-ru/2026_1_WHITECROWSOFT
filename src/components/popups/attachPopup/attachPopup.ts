@@ -13,7 +13,7 @@ interface AttachPopupOptions {
 	onBlockCreated?: (block: Block) => void;
 }
 
-type FileType = 'image' | 'audio' | null;
+type FileType = 'image' | 'audio' | 'video' | null;
 
 export default class AttachPopup extends Component {
 	protected templateString = templateString;
@@ -29,6 +29,7 @@ export default class AttachPopup extends Component {
 		onTextClick?: () => void;
 		onPictureClick?: () => void;
 		onMusicClick?: () => void;
+		onVideoClick?: () => void;
 		onTableClick?: () => void;
 		onSubnoteClick?: () => void;
 		onFileChange?: (e: Event) => void;
@@ -125,6 +126,7 @@ export default class AttachPopup extends Component {
 		const tableBtn = this.domElement.querySelector('[data-action="table"]');
 		const subnoteBtn = this.domElement.querySelector('[data-action="subnote"]');
 		const musicBtn = this.domElement.querySelector('[data-action="music"]');
+		const videoBtn = this.domElement.querySelector('[data-action="video"]');
 
 		if (textBtn) {
 			this.boundHandlers.onTextClick = async () => {
@@ -165,6 +167,17 @@ export default class AttachPopup extends Component {
 				}
 			};
 			musicBtn.addEventListener('click', this.boundHandlers.onMusicClick);
+		}
+
+		if (videoBtn) {
+			this.boundHandlers.onVideoClick = () => {
+				this.pendingFileType = 'video';
+				if (this.fileInput) {
+					this.fileInput.accept = 'video/*';
+					this.fileInput.click();
+				}
+			};
+			videoBtn.addEventListener('click', this.boundHandlers.onVideoClick);
 		}
 
 		if (tableBtn) {
@@ -211,6 +224,15 @@ export default class AttachPopup extends Component {
 						file.type.startsWith('audio/')
 					) {
 						await attachmentService.createAudioBlock(
+							activeNoteId,
+							file,
+							this.afterBlockId,
+						);
+					} else if (
+						this.pendingFileType === 'video' &&
+						file.type.startsWith('video/')
+					) {
+						await attachmentService.createVideoBlock(
 							activeNoteId,
 							file,
 							this.afterBlockId,
@@ -274,6 +296,7 @@ export default class AttachPopup extends Component {
 		const tableBtn = this.domElement.querySelector('[data-action="table"]');
 		const subnoteBtn = this.domElement.querySelector('[data-action="subnote"]');
 		const musicBtn = this.domElement.querySelector('[data-action="music"]');
+		const videoBtn = this.domElement.querySelector('[data-action="video"]');
 
 		if (textBtn && this.boundHandlers.onTextClick) {
 			textBtn.removeEventListener('click', this.boundHandlers.onTextClick);
@@ -286,6 +309,9 @@ export default class AttachPopup extends Component {
 		}
 		if (musicBtn && this.boundHandlers.onMusicClick) {
 			musicBtn.removeEventListener('click', this.boundHandlers.onMusicClick);
+		}
+		if (videoBtn && this.boundHandlers.onVideoClick) {
+			videoBtn.removeEventListener('click', this.boundHandlers.onVideoClick);
 		}
 		if (tableBtn && this.boundHandlers.onTableClick) {
 			tableBtn.removeEventListener('click', this.boundHandlers.onTableClick);

@@ -104,6 +104,22 @@ export interface AudioAttachment {
 	timestamp?: number;
 }
 
+export interface VideoAttachment {
+	id: string | number;
+	blockId: string | number;
+	noteId: string | number;
+	blob?: Blob;
+	filename: string;
+	mimeType: string;
+	size: number;
+	url?: string;
+	status: 'pending' | 'synced' | 'failed';
+	isLocal?: boolean;
+	createdAt?: number;
+	syncedAt?: number;
+	timestamp?: number;
+}
+
 export interface QueueFile {
 	id: string;
 	blockId: string | number;

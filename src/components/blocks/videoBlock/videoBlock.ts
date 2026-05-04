@@ -2,22 +2,22 @@ import { attachmentService } from '../../../services/attachmentService.js';
 import { store } from '../../../store.js';
 import type { Block } from '../../../types.js';
 import Component from '../../component.js';
-import templateString from './musicBlock.hbs?raw';
-import './musicBlock.scss';
+import templateString from './videoBlock.hbs?raw';
+import './videoBlock.scss';
 
-interface MusicBlockOptions {
+interface VideoBlockOptions {
 	block: Block;
 	onDelete?: (blockId: string) => void;
 }
 
-export default class MusicBlock extends Component {
+export default class VideoBlock extends Component {
 	protected templateString = templateString;
 
 	private block: Block;
 	private onDelete?: (blockId: string) => void;
-	private audioElement: HTMLAudioElement | null = null;
+	private videoElement: HTMLVideoElement | null = null;
 
-	constructor(options: MusicBlockOptions) {
+	constructor(options: VideoBlockOptions) {
 		super();
 		this.block = options.block;
 		this.onDelete = options.onDelete;
@@ -30,15 +30,15 @@ export default class MusicBlock extends Component {
 	}
 
 	async onRender(): Promise<void> {
-		await this.loadAudio();
+		await this.loadVideo();
 		this.bindEvents();
 	}
 
-	private async loadAudio(): Promise<void> {
-		const audioEl = this.domElement?.querySelector(
-			'.note__musicBlock-audio',
-		) as HTMLAudioElement;
-		if (!audioEl) return;
+	private async loadVideo(): Promise<void> {
+		const videoEl = this.domElement?.querySelector(
+			'.note__videoBlock-video',
+		) as HTMLVideoElement;
+		if (!videoEl) return;
 
 		try {
 			if (
@@ -46,34 +46,34 @@ export default class MusicBlock extends Component {
 				this.block.content.trim() !== '' &&
 				this.block.content !== '{}'
 			) {
-				const musicData = JSON.parse(this.block.content) as {
+				const videoData = JSON.parse(this.block.content) as {
 					attachmentId: string | number;
 					url?: string;
 				};
-				const attachmentId = musicData.attachmentId;
+				const attachmentId = videoData.attachmentId;
 				const noteId = this.block.note_id || store.getActiveNoteId();
 
 				if (noteId && attachmentId) {
-					const audioUrl = await attachmentService.getAudioUrl(
+					const videoUrl = await attachmentService.getVideoUrl(
 						attachmentId,
 						noteId,
 						this.block.id,
 					);
-					if (audioUrl) {
-						audioEl.src = audioUrl;
-						audioEl.load();
+					if (videoUrl) {
+						videoEl.src = videoUrl;
+						videoEl.load();
 						return;
 					}
 				}
 			}
-			throw new Error('No audio data');
+			throw new Error('No video data');
 		} catch (e) {
-			console.warn('Failed to load audio', e);
-			if (audioEl) {
-				audioEl.style.display = 'none';
+			console.warn('Failed to load video', e);
+			if (videoEl) {
+				videoEl.style.display = 'none';
 				const errorMsg = document.createElement('div');
-				errorMsg.className = 'note__musicBlock-error';
-				errorMsg.textContent = '❌ Ошибка загрузки аудио';
+				errorMsg.className = 'note__videoBlock-error';
+				errorMsg.textContent = '❌ Ошибка загрузки видео';
 				this.domElement?.appendChild(errorMsg);
 			}
 		}
@@ -114,12 +114,12 @@ export default class MusicBlock extends Component {
 			return;
 		}
 
-		if (this.audioElement) {
-			this.audioElement.pause();
-			this.audioElement.src = '';
+		if (this.videoElement) {
+			this.videoElement.pause();
+			this.videoElement.src = '';
 		}
 
-		void this.loadAudio();
+		void this.loadVideo();
 	}
 
 	focus(): void {
@@ -140,10 +140,10 @@ export default class MusicBlock extends Component {
 	setCursorAtOffset(): void {}
 
 	destroy(): void {
-		if (this.audioElement) {
-			this.audioElement.pause();
-			this.audioElement.src = '';
+		if (this.videoElement) {
+			this.videoElement.pause();
+			this.videoElement.src = '';
 		}
-		this.audioElement = null;
+		this.videoElement = null;
 	}
 }
