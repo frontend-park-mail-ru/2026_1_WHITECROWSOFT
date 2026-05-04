@@ -17,9 +17,6 @@ interface TextBlockOptions {
 	onJoin?: (blockId: string, prevBlockId: string, joinOffset: number) => void;
 }
 
-/**
- * Компонент текстового блока заметки с поддержкой совместного редактирования через WebSocket
- */
 export default class TextBlock extends Component {
 	protected templateString = templateString;
 
@@ -39,57 +36,25 @@ export default class TextBlock extends Component {
 	private unsubscribeCollabEvents: (() => void) | null = null;
 	private isProcessing: boolean = false;
 	private isBeingDeleted: boolean = false;
-	private previousContent: string = '';
 
 	constructor(options: TextBlockOptions) {
 		super();
 		this.block = options.block;
-		console.log('[TextBlock] Initializing block:', this.block);
 		this.onContentChange = options.onContentChange;
 		this.onDelete = options.onDelete;
 		this.onSplit = options.onSplit;
 		this.onJoin = options.onJoin;
-		this.previousContent = options.block.content || '';
 		this.subscribeToCollabEvents();
 	}
 
 	private subscribeToCollabEvents(): void {
 		const blockId = String(this.block.id);
 		const currentUserId = store.getUser()?.id;
-		console.log(
-			'[TextBlock] subscribeToCollabEvents for blockId:',
-			blockId,
-			'currentUserId:',
-			currentUserId,
-		);
 
 		const handleBlockUpdate = (e: Event) => {
 			const detail = (e as CustomEvent).detail;
-
-			// Логирование для отладки
-			const idMatches = detail.blockId === blockId;
-			const userMatches = detail.userId !== currentUserId;
-
-			console.log('[TextBlock] collaborativeBlockUpdate event:', {
-				eventBlockId: detail.blockId,
-				expectedBlockId: blockId,
-				idMatches,
-				eventUserId: detail.userId,
-				currentUserId,
-				userMatches,
-				shouldApply: idMatches && userMatches,
-				domElementExists: !!this.domElement,
-			});
-
-			if (idMatches && userMatches) {
-				if (this.domElement) {
-					this.applyRemoteUpdate(detail);
-				} else {
-					console.warn(
-						'[TextBlock] Cannot apply update - domElement not found for blockId:',
-						blockId,
-					);
-				}
+			if (detail.blockId === blockId && detail.userId !== currentUserId) {
+				this.applyRemoteUpdate(detail);
 			}
 		};
 		window.addEventListener('collaborativeBlockUpdate', handleBlockUpdate);
@@ -106,8 +71,10 @@ export default class TextBlock extends Component {
 	}): void {
 		const blockEl = this.domElement;
 		if (!blockEl) return;
+
 		const wasFocused = document.activeElement === blockEl;
 		let oldCursorPosition = 0;
+
 		if (wasFocused) {
 			const selection = window.getSelection();
 			if (selection && selection.rangeCount > 0) {
@@ -118,12 +85,16 @@ export default class TextBlock extends Component {
 				oldCursorPosition = preRange.toString().length;
 			}
 		}
-		blockEl.innerHTML = this.escapeHtml(detail.content);
+
+		blockEl.innerHTML = detail.content;
+
 		const ranges = this.block.formatting?.ranges || [];
 		if (ranges.length > 0) {
 			rebuildBlockFromRanges(blockEl as HTMLElement, ranges);
 		}
+
 		this.block.content = detail.content;
+
 		if (wasFocused) {
 			let newCursorPosition = oldCursorPosition;
 			if (detail.isInsert && detail.position !== undefined) {
@@ -194,10 +165,6 @@ export default class TextBlock extends Component {
 		});
 	}
 
-	/**
-	 * Обрабатывает событие beforeinput для отправки операций
-	 * Определяет тип операции (вставка/удаление) и отправляет соответствующее сообщение
-	 */
 	private handleBeforeInput(e: InputEvent, blockEl: HTMLElement): void {
 		if (!e.inputType) return;
 
@@ -205,20 +172,12 @@ export default class TextBlock extends Component {
 		const note = store.getNotes().find((n: Note) => n.ID === activeNoteId);
 		const isPublic = note?.is_public === true;
 
-		console.log('[TextBlock] handleBeforeInput:', {
-			inputType: e.inputType,
-			isPublic,
-			data: e.data,
-			blockId: this.block.id,
-		});
-
 		if (!isPublic) return;
 
 		const selection = window.getSelection();
 		if (!selection || selection.rangeCount === 0) return;
 
 		const range = selection.getRangeAt(0);
-
 		const preRange = document.createRange();
 		preRange.setStart(blockEl, 0);
 		preRange.setEnd(range.startContainer, range.startOffset);
@@ -227,39 +186,23 @@ export default class TextBlock extends Component {
 		const blockId = String(this.block.id);
 
 		if (e.inputType === 'insertText' && e.data) {
-			console.log('[TextBlock] Sending insert char:', {
-				blockId,
-				cursorPosition,
-				char: e.data,
-			});
 			collabManager.sendInsertChar(blockId, cursorPosition, e.data);
 		} else if (e.inputType === 'deleteContentBackward') {
 			if (cursorPosition > 0) {
-				console.log('[TextBlock] Sending delete char:', {
-					blockId,
-					position: cursorPosition - 1,
-				});
 				collabManager.sendDeleteChar(blockId, cursorPosition - 1);
 			}
 		} else if (e.inputType === 'deleteContentForward') {
-			console.log('[TextBlock] Sending delete char:', {
-				blockId,
-				position: cursorPosition,
-			});
 			collabManager.sendDeleteChar(blockId, cursorPosition);
 		}
 	}
 
-	/**
-	 * Обновляет позицию курсора и отправляет её другим участникам
-	 * Вызывается при фокусе, клике и вводе текста
-	 */
 	private updateCursorPosition(): void {
 		const activeNoteId = store.getActiveNoteId();
 		const note = store.getNotes().find((n: Note) => n.ID === activeNoteId);
 		const isPublic = note?.is_public === true;
 
 		if (!isPublic) return;
+
 		const blockEl = this.domElement;
 		if (!blockEl) return;
 
@@ -267,7 +210,6 @@ export default class TextBlock extends Component {
 		if (!selection || selection.rangeCount === 0) return;
 
 		const range = selection.getRangeAt(0);
-
 		const preRange = document.createRange();
 		preRange.setStart(blockEl, 0);
 		preRange.setEnd(range.startContainer, range.startOffset);
@@ -395,6 +337,23 @@ export default class TextBlock extends Component {
 		return this.block.content || '';
 	}
 
+	updateBlock(newBlock: Block): void {
+		const contentChanged = this.block.content !== newBlock.content;
+		const formattingChanged =
+			JSON.stringify(this.block.formatting) !==
+			JSON.stringify(newBlock.formatting);
+		this.block = newBlock;
+
+		if (!this.domElement || (!contentChanged && !formattingChanged)) {
+			return;
+		}
+
+		this.domElement.innerHTML = this.block.content || '';
+		if (formattingChanged) {
+			this.applyFormatting();
+		}
+	}
+
 	setCursorAtStart(): void {
 		const blockEl = this.domElement;
 		if (!blockEl) return;
@@ -431,67 +390,6 @@ export default class TextBlock extends Component {
 		range.collapse(false);
 		selection.removeAllRanges();
 		selection.addRange(range);
-	}
-
-	/**
-	 * Обновляет блок из store (когда содержимое изменилось извне)
-	 * Применяется при обновлениях от других пользователей
-	 */
-	updateBlock(newBlock: Block): void {
-		const contentChanged = this.block.content !== newBlock.content;
-		const formattingChanged =
-			JSON.stringify(this.block.formatting) !==
-			JSON.stringify(newBlock.formatting);
-
-		this.block = newBlock;
-
-		if (!contentChanged && !formattingChanged) {
-			console.log('[TextBlock] updateBlock called but no changes detected');
-			return;
-		}
-
-		if (!this.domElement) {
-			console.warn(
-				'[TextBlock] updateBlock called but domElement not ready, skipping update',
-			);
-			return;
-		}
-
-		console.log('[TextBlock] Updating content for block:', this.block.id, {
-			contentChanged,
-			formattingChanged,
-		});
-
-		if (contentChanged) {
-			// Сохраняем позицию курсора если блок в фокусе
-			const wasFocused = document.activeElement === this.domElement;
-			let oldCursorPosition = 0;
-
-			if (wasFocused) {
-				const selection = window.getSelection();
-				if (selection && selection.rangeCount > 0) {
-					const range = selection.getRangeAt(0);
-					const preRange = document.createRange();
-					preRange.setStart(this.domElement, 0);
-					preRange.setEnd(range.startContainer, range.startOffset);
-					oldCursorPosition = preRange.toString().length;
-				}
-			}
-
-			// Обновляем содержимое
-			this.domElement.textContent = newBlock.content || '';
-			this.previousContent = newBlock.content || '';
-
-			// Восстанавливаем фокус и позицию курсора
-			if (wasFocused) {
-				this.domElement.focus();
-				this.setCursorAtOffset(oldCursorPosition);
-			}
-		}
-
-		if (formattingChanged) {
-			this.applyFormatting();
-		}
 	}
 
 	destroy(): void {

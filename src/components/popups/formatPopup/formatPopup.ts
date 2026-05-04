@@ -1,3 +1,4 @@
+import { db } from '../../../db.js';
 import { noteService } from '../../../services/noteService.js';
 import { store } from '../../../store.js';
 import {
@@ -229,24 +230,10 @@ export default class FormatPopup extends Component {
 	private async applyFormatting(action: string, value: boolean): Promise<void> {
 		if (!this.selectionData) return;
 		const { blockEl, start, end, noteId, blockId } = this.selectionData;
-		const oldContent = blockEl.innerHTML;
 		updateFormattingInRange(blockEl, start, end, action, value);
 		const newContent = blockEl.innerHTML;
-
-		if (oldContent !== newContent) {
-			try {
-				await noteService.updateBlockContent(noteId, blockId, newContent);
-				const blocks = store.getActiveBlocks();
-				const updatedBlocks = blocks.map((b) =>
-					String(b.id) === String(blockId) ? { ...b, content: newContent } : b,
-				);
-				store.setActiveBlocksSilently(updatedBlocks);
-			} catch (error) {
-				console.warn('[FormatPopup] Failed to save content:', error);
-			}
-		}
-
 		try {
+			await noteService.updateBlockContent(noteId, blockId, newContent);
 			const formattingPayload: {
 				bold?: boolean;
 				italic?: boolean;
@@ -263,27 +250,49 @@ export default class FormatPopup extends Component {
 				formattingPayload,
 			);
 			const blocks = store.getActiveBlocks();
-			const updatedBlocks = blocks.map((b) => {
-				if (String(b.id) === String(blockId)) {
-					const existingRanges = b.formatting?.ranges || [];
-					const newRange = {
-						start_pos: start,
-						end_pos: end,
-						bold: action === 'bold' ? value : null,
-						italic: action === 'italic' ? value : null,
-						underline: action === 'underline' ? value : null,
-					};
-					const newRanges = applyFormattingToRanges(existingRanges, newRange);
-					return { ...b, formatting: { ranges: newRanges } };
-				}
-				return b;
-			});
-			store.setActiveBlocksSilently(updatedBlocks);
+			const blockIndex = blocks.findIndex(
+				(b) => String(b.id) === String(blockId),
+			);
+			if (blockIndex !== -1) {
+				const existingRanges = blocks[blockIndex].formatting?.ranges || [];
+				const newRange = {
+					start_pos: start,
+					end_pos: end,
+					bold: action === 'bold' ? value : null,
+					italic: action === 'italic' ? value : null,
+					underline: action === 'underline' ? value : null,
+				};
+				const newRanges = applyFormattingToRanges(existingRanges, newRange);
+				const updatedBlocks = [...blocks];
+				updatedBlocks[blockIndex] = {
+					...blocks[blockIndex],
+					content: newContent,
+					formatting: { ranges: newRanges },
+				};
+				store.setActiveBlocks(updatedBlocks);
+			}
+			const cachedNote = await db.notesGet(noteId);
+			if (cachedNote) {
+				const updatedBlocks = (cachedNote.blocks || []).map((block) => {
+					if (String(block.id) === String(blockId)) {
+						return { ...block, content: newContent };
+					}
+					return block;
+				});
+				await db.notesPut({ ...cachedNote, blocks: updatedBlocks });
+			}
 		} catch (error) {
 			console.warn('[FormatPopup] Save formatting failed:', error);
 		}
 		restoreSelectionByPositions(blockEl, start, end);
 		blockEl.focus();
+		if (this.currentFormatting) {
+			this.currentFormatting[action as keyof FormattingState] = value;
+			this.updateActiveStates();
+		} else {
+			this.currentFormatting = detectFormattingInSelection(blockEl, start, end);
+			this.updateActiveStates();
+		}
 	}
 
 	private updateActiveStates(): void {
