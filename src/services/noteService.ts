@@ -106,7 +106,6 @@ export const noteService = {
 
 				await db.notesPut(note);
 
-				// ДОБАВЛЯЕМ ЗАМЕТКУ В STORE.NOTES
 				const currentNotes = store.getNotes();
 				const existingIndex = currentNotes.findIndex((n) => n.ID === note.ID);
 				let updatedNotes;
@@ -155,7 +154,6 @@ export const noteService = {
 
 		const cachedNote = await db.notesGet(noteID);
 		if (cachedNote) {
-			// Также добавляем кэшированную заметку в store.notes
 			const currentNotes = store.getNotes();
 			const existingIndex = currentNotes.findIndex(
 				(n) => n.ID === cachedNote.ID,

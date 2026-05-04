@@ -66,20 +66,14 @@ export default class NoteBody extends Component {
 
 	private subscribeToCollaborativeCreate(): void {
 		const handleBlockCreate = ((e: CustomEvent) => {
-			const { block, userId } = e.detail;
+			const { userId, focusBlockId } = e.detail;
 			const currentUserId = store.getUser()?.id;
-			console.log('[NoteBody] Received collaborativeBlockCreate:', {
-				blockId: block.id,
-				userId,
-				currentUserId,
-				isOwnEvent: userId === currentUserId,
-			});
 			if (userId === currentUserId) {
-				console.log('[NoteBody] Skipping own block creation');
+				store.setPendingFocus(focusBlockId, 'start');
 				return;
 			}
-			console.log('[NoteBody] Rendering newly created block:', block);
 			this.renderBlocks();
+			store.setPendingFocus(focusBlockId, 'start');
 		}) as EventListener;
 		window.addEventListener('collaborativeBlockCreate', handleBlockCreate);
 		this.unsubscribeCollaborativeCreate = () => {
@@ -89,7 +83,7 @@ export default class NoteBody extends Component {
 
 	private subscribeToCollaborativeDelete(): void {
 		const handleBlockDelete = ((e: CustomEvent) => {
-			const { blockId, userId } = e.detail;
+			const { blockId, userId, focusBlockId } = e.detail;
 			const currentUserId = store.getUser()?.id;
 			console.log('[NoteBody] Received collaborativeBlockDelete:', {
 				blockId,
@@ -111,6 +105,7 @@ export default class NoteBody extends Component {
 				blockId,
 			);
 			store.setActiveBlocks(updatedBlocks);
+			store.setPendingFocus(focusBlockId, 'end');
 		}) as EventListener;
 		window.addEventListener('collaborativeBlockDelete', handleBlockDelete);
 		this.unsubscribeCollaborativeDelete = () => {

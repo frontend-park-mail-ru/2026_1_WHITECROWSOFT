@@ -612,6 +612,7 @@ export class CollaborativeManager {
 				detail: {
 					block: newBlock,
 					userId: message.userId,
+					focusBlockId: newBlock.id,
 				},
 			}),
 		);
@@ -622,19 +623,23 @@ export class CollaborativeManager {
 	 * Удаляет блок из store и пересчитывает позиции
 	 */
 	private handleDeleteBlock(message: WebSocketMessage): void {
-		// if (message.is_local) return;
+		if (message.is_local) return;
 
+		const blockId = message.msg;
 		const blocks = store.getActiveBlocks();
-		const blockIndex = blocks.findIndex((b) => b.id === message.msg);
+		const blockIndex = blocks.findIndex((b) => b.id === blockId);
 
 		if (blockIndex === -1) return;
 
-		blocks.splice(blockIndex, 1);
+		const prevBlockId = blockIndex > 0 ? blocks[blockIndex - 1].id : null;
+		const nextBlockId =
+			blockIndex < blocks.length - 1 ? blocks[blockIndex + 1].id : null;
+		const blockToFocus = prevBlockId || nextBlockId;
 
+		blocks.splice(blockIndex, 1);
 		blocks.forEach((b, i) => {
 			b.position = i;
 		});
-
 		store.setActiveBlocks([...blocks]);
 
 		const activeNoteId = store.getActiveNoteId();
@@ -655,8 +660,9 @@ export class CollaborativeManager {
 		window.dispatchEvent(
 			new CustomEvent('collaborativeBlockDelete', {
 				detail: {
-					blockId: message.msg,
+					blockId: blockId,
 					userId: message.userId,
+					focusBlockId: blockToFocus,
 				},
 			}),
 		);
