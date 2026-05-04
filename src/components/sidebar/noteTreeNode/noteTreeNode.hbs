@@ -3,12 +3,13 @@
         <div class="note-tree-node__indent" style="width: {{level}}px;"></div>
         {{#if hasChildren}}
             <button class="note-tree-node__toggle" data-action="toggle">
-                <img src="/icons/expand.svg" class="note-tree-node__toggle-icon {{#if isExpanded}}rotated{{/if}}">
+                <img src="/icons/expand.svg" class="icon {{#if isExpanded}}rotated{{/if}}">
             </button>
+            <img src="/icons/document.svg" class="note-tree-node__icon">
         {{else}}
-            <div class="note-tree-node__toggle-placeholder"></div>
+            <img src="/icons/document.svg" class="icon">
         {{/if}}
-        <img src="/icons/document.svg" class="note-tree-node__icon">
+        
         <span class="note-tree-node__title" data-name="noteTitle">{{title}}</span>
         <div class="note-tree-node__actions">
             <button class="note-tree-node__action" data-action="addSubnote" title="Добавить подзаметку">
