@@ -20,36 +20,59 @@ export class CollaborativeManager {
 	private noteId: string | null = null;
 	private unsubscribeWs: (() => void) | null = null;
 	private isStarting = false;
+	private isConnected = false;
 
 	/**
 	 * Запускает совместное редактирование для заметки
 	 * Очищает предыдущих участников и подключается к новому WebSocket
 	 */
 	async startCollab(noteId: string): Promise<void> {
+		// Проверяем, является ли заметка публичной
+		const note = store.getNotes().find((n) => String(n.ID) === noteId);
+		if (!note || !note.is_public) {
+			console.log(
+				'[CollaborativeManager] Note not public, skipping collab:',
+				noteId,
+			);
+			return;
+		}
+
 		if (this.isStarting) {
 			console.log('[CollaborativeManager] Already starting, skipping');
 			return;
 		}
-		if (this.noteId === noteId) {
+
+		if (this.isConnected && this.noteId === noteId) {
 			console.log(
 				'[CollaborativeManager] Already connected to this note, skipping',
 			);
 			return;
 		}
+
+		console.log(
+			'[CollaborativeManager] Starting collab for public note:',
+			noteId,
+		);
 		this.isStarting = true;
-		this.noteId = noteId;
-		if (this.unsubscribeWs) {
-			this.unsubscribeWs();
+
+		if (this.isConnected || this.unsubscribeWs) {
+			this.stopCollab();
 		}
+
+		this.noteId = noteId;
 		store.clearCollaborativeUsers();
+
 		try {
 			await wsService.connect(noteId);
+			this.isConnected = true;
 			this.unsubscribeWs = wsService.onMessage((message) => {
 				this.handleMessage(message);
 			});
 			console.log('[CollaborativeManager] Started for note:', noteId);
 		} catch (error) {
 			console.error('[CollaborativeManager] Failed to start:', error);
+			this.noteId = null;
+			this.isConnected = false;
 			throw error;
 		} finally {
 			this.isStarting = false;
@@ -61,14 +84,17 @@ export class CollaborativeManager {
 	 * Закрывает соединение и очищает список подключенных пользователей
 	 */
 	stopCollab(): void {
+		console.log('[CollaborativeManager] stopCollab called');
+
 		if (this.unsubscribeWs) {
 			this.unsubscribeWs();
 			this.unsubscribeWs = null;
 		}
 
-		wsService.disconnect();
+		wsService.disconnect(true);
 		store.clearCollaborativeUsers();
 		this.noteId = null;
+		this.isConnected = false;
 
 		console.log('[CollaborativeManager] Stopped');
 	}

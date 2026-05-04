@@ -1,4 +1,5 @@
 import '../../../assets/style/genericPopup.scss';
+import { collabManager } from '../../../utils/collaborativeManager.js';
 import { getElementPosition } from '../../../utils/utils.js';
 import Component from '../../component.js';
 import templateString from './publicPopup.hbs?raw';
@@ -129,6 +130,7 @@ export default class PublicNotePopup extends Component {
 				const noteId = input.value.trim();
 				if (noteId) {
 					this.onOpenNote(noteId);
+					await collabManager.startCollab(String(noteId));
 					this.close();
 				}
 			} else if (e.key === 'Escape') {

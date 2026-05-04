@@ -9,11 +9,12 @@ type MessageHandler = (message: WebSocketMessage) => void;
 export class WebSocketService {
 	private ws: WebSocket | null = null;
 	private url: string;
-	private messageHandlers: Set<MessageHandler> = new Set(); // Список обработчиков входящих сообщений
+	private messageHandlers: Set<MessageHandler> = new Set();
 	private reconnectAttempts = 0;
 	private maxReconnectAttempts = 5;
 	private reconnectDelay = 1000;
 	private heartbeatTimeout: ReturnType<typeof setTimeout> | null = null;
+	private shouldReconnect: boolean = true;
 
 	constructor(baseUrl: string = window.location.origin) {
 		this.url = baseUrl;
@@ -31,6 +32,7 @@ export class WebSocketService {
 				console.log('[WebSocket] Connecting to:', wsUrl);
 
 				this.ws = new WebSocket(wsUrl);
+				this.shouldReconnect = true;
 
 				this.ws.onopen = () => {
 					console.log('[WebSocket] Connected successfully to note:', noteId);
@@ -57,7 +59,11 @@ export class WebSocketService {
 				this.ws.onclose = (event) => {
 					console.log('[WebSocket] Disconnected, code:', event.code);
 					this.clearHeartbeat();
-					this.attemptReconnect(noteId);
+					if (this.shouldReconnect) {
+						this.attemptReconnect(noteId);
+					} else {
+						console.log('[WebSocket] Auto-reconnect disabled');
+					}
 				};
 			} catch (error) {
 				console.error('[WebSocket] Connection error:', error);
@@ -65,11 +71,16 @@ export class WebSocketService {
 			}
 		});
 	}
+
 	/**
 	 * Отключается от WebSocket
 	 */
-	disconnect(): void {
+	disconnect(disableReconnect: boolean = true): void {
 		this.clearHeartbeat();
+		if (disableReconnect) {
+			this.shouldReconnect = false;
+			this.reconnectAttempts = this.maxReconnectAttempts;
+		}
 		if (this.ws) {
 			this.ws.close();
 			this.ws = null;
@@ -88,7 +99,7 @@ export class WebSocketService {
 		const fullMessage: WebSocketMessage = {
 			...message,
 			timestamp: Date.now(),
-			is_local: true, // Помечаем как локальное сообщение
+			is_local: true,
 		};
 
 		try {
@@ -103,8 +114,6 @@ export class WebSocketService {
 	 */
 	onMessage(handler: MessageHandler): () => void {
 		this.messageHandlers.add(handler);
-
-		// Возвращаем функцию для отписки
 		return () => {
 			this.messageHandlers.delete(handler);
 		};
@@ -136,13 +145,16 @@ export class WebSocketService {
 	private setupHeartbeat(): void {
 		this.clearHeartbeat();
 		this.heartbeatTimeout = setTimeout(() => {
-			if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-				// Отправляем heartbeat каждые 30 секунд
+			if (
+				this.ws &&
+				this.ws.readyState === WebSocket.OPEN &&
+				this.shouldReconnect
+			) {
 				this.send({
 					type: 'heartbeat',
 					msg: {},
 				});
-				this.setupHeartbeat(); // Запускаем следующий heartbeat
+				this.setupHeartbeat();
 			}
 		}, 30000);
 	}
@@ -161,13 +173,18 @@ export class WebSocketService {
 	 * Пытается переподключиться с экспоненциальной задержкой
 	 */
 	private attemptReconnect(noteId: string): void {
+		if (!this.shouldReconnect) {
+			console.log('[WebSocket] Reconnect disabled, not attempting');
+			return;
+		}
+
 		if (this.reconnectAttempts >= this.maxReconnectAttempts) {
 			console.error('[WebSocket] Max reconnection attempts reached');
 			return;
 		}
 
 		this.reconnectAttempts++;
-		const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1); // Экспоненциальная задержка
+		const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
 
 		console.log(
 			`[WebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`,

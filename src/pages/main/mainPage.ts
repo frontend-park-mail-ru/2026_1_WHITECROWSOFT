@@ -23,7 +23,10 @@ let cursorsRenderer: CollaborativeCursorsRenderer | null = null;
 let currentNoteId: string | number | null = null;
 let isInitializing = false;
 
-export async function initMainPage(container: HTMLElement): Promise<void> {
+export async function initMainPage(
+	container: HTMLElement,
+	data?: { query?: Record<string, string> },
+): Promise<void> {
 	await cleanupMainPage();
 	currentContainer = container;
 	registerHelpers();
@@ -42,7 +45,16 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 		}
 	}
 
-	const savedNoteId = await db.settingsGet<string | number>('activeNoteId');
+	// Получаем ID из query параметров
+	const sharedNoteId = data?.query?.note;
+	let savedNoteId = await db.settingsGet<string | number>('activeNoteId');
+
+	if (sharedNoteId) {
+		savedNoteId = sharedNoteId;
+		const newUrl = window.location.pathname;
+		window.history.replaceState({}, '', newUrl);
+	}
+
 	if (savedNoteId && !activeNote) {
 		try {
 			await noteService.getNote(savedNoteId);
@@ -98,6 +110,8 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 			if (noteId === currentNoteId) return;
 			if (isInitializing) return;
 
+			console.log('[MainPage] activeNoteId changed to:', noteId);
+
 			currentNoteId = noteId;
 
 			try {
@@ -112,6 +126,13 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 				if (activeNoteData) {
 					const note = store.getNotes().find((n: Note) => n.ID === noteId);
 					const isPublic = note?.is_public === true;
+
+					console.log(
+						'[MainPage] Note is public:',
+						isPublic,
+						'noteId:',
+						noteId,
+					);
 
 					const noteBodyElement = noteBody?.getElement();
 					if (noteBodyElement && isPublic) {
@@ -139,21 +160,40 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 	setVisibility(!!store.getActiveNote());
 
 	isInitializing = true;
-	const initialNoteId = store.getActiveNoteId();
-	if (initialNoteId) {
-		currentNoteId = initialNoteId;
-		const note = store.getNotes().find((n: Note) => n.ID === initialNoteId);
+
+	let targetNoteId = store.getActiveNoteId();
+	if (
+		sharedNoteId &&
+		(!targetNoteId || String(targetNoteId) !== sharedNoteId)
+	) {
+		targetNoteId = sharedNoteId;
+	}
+
+	if (targetNoteId) {
+		currentNoteId = targetNoteId;
+		const note = store.getNotes().find((n: Note) => n.ID === targetNoteId);
 		const isPublic = note?.is_public === true;
+
+		console.log(
+			'[MainPage] Initial note setup - isPublic:',
+			isPublic,
+			'noteId:',
+			targetNoteId,
+		);
 
 		const noteBodyElement = noteBody?.getElement();
 		if (noteBodyElement && isPublic) {
 			cursorsRenderer = new CollaborativeCursorsRenderer(noteBodyElement);
-			await collabManager.startCollab(String(initialNoteId)).catch((err) => {
+			await collabManager.startCollab(String(targetNoteId)).catch((err) => {
 				console.warn(
 					'[MainPage] Failed to start collaborative editing on init:',
 					err,
 				);
 			});
+		}
+
+		if (sharedNoteId && store.getActiveNoteId() !== targetNoteId) {
+			store.setActiveNoteId(targetNoteId);
 		}
 	}
 	isInitializing = false;

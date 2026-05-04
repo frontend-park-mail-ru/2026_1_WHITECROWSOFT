@@ -27,6 +27,9 @@ export async function initSignupPage(): Promise<void> {
 		return;
 	}
 
+	const urlParams = new URLSearchParams(window.location.search);
+	const redirectUrl = urlParams.get('redirect') || '/';
+
 	app.innerHTML = template({
 		formData: { username: '', password: '', passwordConfirm: '' },
 		errors: {},
@@ -69,10 +72,16 @@ export async function initSignupPage(): Promise<void> {
 			});
 		},
 		onSuccess: () => {
-			router.replace('/');
+			router.replace(redirectUrl);
 		},
 		onNavigate: (link: string) => {
-			if (link === 'signin') router.push('/signin');
+			if (link === 'signin') {
+				const signinUrl =
+					redirectUrl !== '/'
+						? `/signin?redirect=${encodeURIComponent(redirectUrl)}`
+						: '/signin';
+				router.push(signinUrl);
+			}
 		},
 	});
 

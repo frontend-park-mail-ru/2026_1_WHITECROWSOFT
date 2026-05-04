@@ -2,6 +2,7 @@ import '../../../assets/style/genericPopup.scss';
 import { noteService } from '../../../services/noteService.js';
 import { getElementPosition } from '../../../utils/utils.js';
 import Component from '../../component.js';
+import { collabManager } from './../../../utils/collaborativeManager.js';
 import templateString from './notePopup.hbs?raw';
 
 interface NotePopupOptions {
@@ -171,8 +172,9 @@ export default class NotePopup extends Component {
 			});
 
 			const noteIdStr = String(this.noteId);
-			await navigator.clipboard.writeText(noteIdStr);
-
+			const shareUrl = `${window.location.origin}/?note=${noteIdStr}`;
+			await navigator.clipboard.writeText(shareUrl);
+			collabManager.startCollab(noteIdStr);
 			alert('Заметка стала публичной. ID заметки скопирован в буфер обмена');
 
 			this.close();

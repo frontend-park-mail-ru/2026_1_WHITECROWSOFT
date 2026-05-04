@@ -10,6 +10,7 @@ const modules = import.meta.glob<{ default?: unknown; [key: string]: unknown }>(
 export const router = {
 	_currentPath: null as string | null,
 	_currentLayout: null as Layout | null,
+	_pendingQuery: null as Record<string, string> | null,
 
 	init(): void {
 		window.addEventListener('popstate', (e: PopStateEvent) => {
@@ -46,29 +47,52 @@ export const router = {
 			}
 		});
 
-		this.handleRoute(window.location.pathname);
+		this.handleRoute(window.location.pathname + window.location.search);
 	},
 
 	push(path: string): void {
-		if (path === this._currentPath) return;
-		history.pushState({ path }, '', path);
+		const pathWithoutQuery = path.split('?')[0];
+		if (pathWithoutQuery === this._currentPath) return;
+		history.pushState({ path: pathWithoutQuery }, '', path);
 		this.handleRoute(path);
 	},
 
 	replace(path: string): void {
-		if (path === this._currentPath) return;
-		history.replaceState({ path }, '', path);
+		const pathWithoutQuery = path.split('?')[0];
+		if (pathWithoutQuery === this._currentPath) return;
+		history.replaceState({ path: pathWithoutQuery }, '', path);
 		this.handleRoute(path);
 	},
 
-	async handleRoute(path: string): Promise<void> {
-		this._currentPath = path;
+	getQueryParams(path: string): Record<string, string> {
+		const query: Record<string, string> = {};
+		const queryString = path.split('?')[1];
+		if (queryString) {
+			const pairs = queryString.split('&');
+			for (const pair of pairs) {
+				const [key, value] = pair.split('=');
+				if (key) {
+					query[decodeURIComponent(key)] = value
+						? decodeURIComponent(value)
+						: '';
+				}
+			}
+		}
+		return query;
+	},
 
-		const route = getRoute(path);
+	async handleRoute(fullPath: string): Promise<void> {
+		const pathWithoutQuery = fullPath.split('?')[0];
+		const queryParams = this.getQueryParams(fullPath);
+
+		this._currentPath = pathWithoutQuery;
+		this._pendingQuery = queryParams;
+
+		const route = getRoute(pathWithoutQuery);
 		if (!route) return;
 
 		if (route.redirect) {
-			if (route.redirect !== path) {
+			if (route.redirect !== pathWithoutQuery) {
 				this.replace(route.redirect);
 			}
 			return;
@@ -100,7 +124,7 @@ export const router = {
 				}
 			} catch (err) {
 				console.warn('Error handling auth route:', err);
-				if (path !== '*') {
+				if (pathWithoutQuery !== '*') {
 					this.replace('*');
 				}
 			}
@@ -116,7 +140,8 @@ export const router = {
 		}
 
 		if (route.protected && !session.isAuthenticated) {
-			this.replace('/signin');
+			const redirectUrl = `/signin?redirect=${encodeURIComponent(fullPath)}`;
+			this.replace(redirectUrl);
 			return;
 		}
 
@@ -146,14 +171,16 @@ export const router = {
 						await this._currentLayout.init(false);
 					}
 
-					await this._currentLayout.setPage(initFn, route.data);
+					await this._currentLayout.setPage(initFn, {
+						query: this._pendingQuery,
+					});
 				}
 			} else {
 				throw new Error(`Module not found for ${route.component}`);
 			}
 		} catch (err) {
 			console.warn('Error handling main route:', err);
-			if (path !== '*' && path !== '/signin') {
+			if (pathWithoutQuery !== '*' && pathWithoutQuery !== '/signin') {
 				this.replace('*');
 			}
 		}

@@ -93,7 +93,8 @@ export const noteService = {
 				const data = await client.get<GetNoteResponse>(`/notes/${noteID}`);
 				const serverNote = data.note;
 				const serverBlocks = data.blocks || [];
-				await db.notesPut({
+
+				const note: Note = {
 					ID: serverNote.id,
 					title: serverNote.title,
 					icon: null,
@@ -101,7 +102,23 @@ export const noteService = {
 					blocks: serverBlocks,
 					updatedAt: serverNote.updated_at,
 					is_public: serverNote.is_public || false,
-				});
+				};
+
+				await db.notesPut(note);
+
+				// ДОБАВЛЯЕМ ЗАМЕТКУ В STORE.NOTES
+				const currentNotes = store.getNotes();
+				const existingIndex = currentNotes.findIndex((n) => n.ID === note.ID);
+				let updatedNotes;
+				if (existingIndex === -1) {
+					updatedNotes = [note, ...currentNotes];
+				} else {
+					updatedNotes = [...currentNotes];
+					updatedNotes[existingIndex] = note;
+				}
+				store.setNotes(updatedNotes);
+				console.log('[noteService] Added note to store.notes:', note.ID);
+
 				for (const block of serverBlocks) {
 					if (block.formatting && block.formatting.ranges) {
 						await db.formattingPut({
@@ -113,6 +130,7 @@ export const noteService = {
 						});
 					}
 				}
+
 				const activeNote = {
 					ID: serverNote.id,
 					title: serverNote.title,
@@ -124,6 +142,7 @@ export const noteService = {
 				store.setActiveBlocks(serverBlocks);
 				await db.settingsSet('activeNoteId', noteID);
 				await store.addToRecentNotes(serverNote.id, serverNote.title);
+
 				return {
 					note: serverNote,
 					blocks: serverBlocks,
@@ -133,8 +152,23 @@ export const noteService = {
 				handleAuthError(error);
 			}
 		}
+
 		const cachedNote = await db.notesGet(noteID);
 		if (cachedNote) {
+			// Также добавляем кэшированную заметку в store.notes
+			const currentNotes = store.getNotes();
+			const existingIndex = currentNotes.findIndex(
+				(n) => n.ID === cachedNote.ID,
+			);
+			let updatedNotes;
+			if (existingIndex === -1) {
+				updatedNotes = [cachedNote, ...currentNotes];
+			} else {
+				updatedNotes = [...currentNotes];
+				updatedNotes[existingIndex] = cachedNote;
+			}
+			store.setNotes(updatedNotes);
+
 			const blocks = Array.isArray(cachedNote.blocks) ? cachedNote.blocks : [];
 			const formattingMap = await db.formattingGetByNoteId(noteID);
 			const blocksWithFormatting: Block[] = blocks.map((block) => ({

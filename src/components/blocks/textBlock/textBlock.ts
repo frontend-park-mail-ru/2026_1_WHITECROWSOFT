@@ -186,12 +186,49 @@ export default class TextBlock extends Component {
 		const blockId = String(this.block.id);
 
 		if (e.inputType === 'insertText' && e.data) {
+			const newContent =
+				this.block.content.slice(0, cursorPosition) +
+				e.data +
+				this.block.content.slice(cursorPosition);
+			this.block.content = newContent;
+
+			const blocks = store.getActiveBlocks();
+			const blockIndex = blocks.findIndex((b) => b.id === this.block.id);
+			if (blockIndex !== -1) {
+				blocks[blockIndex] = { ...blocks[blockIndex], content: newContent };
+				store.setActiveBlocks([...blocks]);
+			}
+
 			collabManager.sendInsertChar(blockId, cursorPosition, e.data);
 		} else if (e.inputType === 'deleteContentBackward') {
 			if (cursorPosition > 0) {
+				const newContent =
+					this.block.content.slice(0, cursorPosition - 1) +
+					this.block.content.slice(cursorPosition);
+				this.block.content = newContent;
+
+				const blocks = store.getActiveBlocks();
+				const blockIndex = blocks.findIndex((b) => b.id === this.block.id);
+				if (blockIndex !== -1) {
+					blocks[blockIndex] = { ...blocks[blockIndex], content: newContent };
+					store.setActiveBlocks([...blocks]);
+				}
+
 				collabManager.sendDeleteChar(blockId, cursorPosition - 1);
 			}
 		} else if (e.inputType === 'deleteContentForward') {
+			const newContent =
+				this.block.content.slice(0, cursorPosition) +
+				this.block.content.slice(cursorPosition + 1);
+			this.block.content = newContent;
+
+			const blocks = store.getActiveBlocks();
+			const blockIndex = blocks.findIndex((b) => b.id === this.block.id);
+			if (blockIndex !== -1) {
+				blocks[blockIndex] = { ...blocks[blockIndex], content: newContent };
+				store.setActiveBlocks([...blocks]);
+			}
+
 			collabManager.sendDeleteChar(blockId, cursorPosition);
 		}
 	}
