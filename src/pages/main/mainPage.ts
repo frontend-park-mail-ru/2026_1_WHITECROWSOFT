@@ -20,6 +20,8 @@ let noteHeader: NoteHeader | null = null;
 let noteBody: NoteBody | null = null;
 let refreshNoteBodyHandler: ((e: Event) => void) | null = null;
 let cursorsRenderer: CollaborativeCursorsRenderer | null = null;
+let currentNoteId: string | number | null = null;
+let isInitializing = false;
 
 export async function initMainPage(container: HTMLElement): Promise<void> {
 	await cleanupMainPage();
@@ -81,19 +83,6 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 		noteBody.getElement()?.addEventListener('addBlock', ((e: CustomEvent) => {
 			handleAddBlock(e.detail.afterBlockId);
 		}) as EventListener);
-
-		const noteBodyElement = noteBody.getElement();
-		if (noteBodyElement) {
-			const activeNoteId = store.getActiveNoteId();
-			const note = store.getNotes().find((n) => n.ID === activeNoteId);
-			const isPublic = note?.is_public === true;
-			if (isPublic) {
-				cursorsRenderer = new CollaborativeCursorsRenderer(noteBodyElement);
-			} else {
-				cursorsRenderer?.cleanup();
-				cursorsRenderer = null;
-			}
-		}
 	}
 
 	function setVisibility(hasNote: boolean): void {
@@ -105,36 +94,39 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 	const unsubActiveNoteId = store.subscribe(
 		'activeNoteId',
 		async (noteId: string | number | null) => {
-			if (noteId && noteId !== store.getActiveNote()?.ID) {
-				try {
-					await noteService.getNote(noteId);
-					const activeNoteData = store.getActiveNote();
-					setVisibility(!!activeNoteData);
-					if (activeNoteData) {
-						const note = store.getNotes().find((n: Note) => n.ID === noteId);
-						const isPublic = note?.is_public === true;
-						console.log('Active note changed. Public:', isPublic);
-						if (isPublic) {
-							try {
-								await collabManager.startCollab(String(noteId));
-							} catch (error) {
-								console.warn(
-									'[MainPage] Failed to start collaborative editing:',
-									error,
-								);
-							}
-						} else {
-							collabManager.stopCollab();
-						}
+			if (!noteId) return;
+			if (noteId === currentNoteId) return;
+			if (isInitializing) return;
+
+			currentNoteId = noteId;
+
+			try {
+				collabManager.stopCollab();
+				cursorsRenderer?.cleanup();
+				cursorsRenderer = null;
+
+				await noteService.getNote(noteId);
+				const activeNoteData = store.getActiveNote();
+				setVisibility(!!activeNoteData);
+
+				if (activeNoteData) {
+					const note = store.getNotes().find((n: Note) => n.ID === noteId);
+					const isPublic = note?.is_public === true;
+
+					const noteBodyElement = noteBody?.getElement();
+					if (noteBodyElement && isPublic) {
+						cursorsRenderer = new CollaborativeCursorsRenderer(noteBodyElement);
+						await collabManager.startCollab(String(noteId));
 					}
-				} catch (error) {
-					if (handleAuthError(error)) return;
-					console.error('Failed to load note:', error);
 				}
+			} catch (error) {
+				if (handleAuthError(error)) return;
+				console.error('Failed to load note:', error);
 			}
 		},
 	);
 	unsubscribeFunctions.push(unsubActiveNoteId);
+
 	const unsubActiveNote = store.subscribe(
 		'activeNote',
 		(activeNoteData: ActiveNote | null) => {
@@ -143,10 +135,33 @@ export async function initMainPage(container: HTMLElement): Promise<void> {
 		},
 	);
 	unsubscribeFunctions.push(unsubActiveNote);
+
 	setVisibility(!!store.getActiveNote());
+
+	isInitializing = true;
+	const initialNoteId = store.getActiveNoteId();
+	if (initialNoteId) {
+		currentNoteId = initialNoteId;
+		const note = store.getNotes().find((n: Note) => n.ID === initialNoteId);
+		const isPublic = note?.is_public === true;
+
+		const noteBodyElement = noteBody?.getElement();
+		if (noteBodyElement && isPublic) {
+			cursorsRenderer = new CollaborativeCursorsRenderer(noteBodyElement);
+			await collabManager.startCollab(String(initialNoteId)).catch((err) => {
+				console.warn(
+					'[MainPage] Failed to start collaborative editing on init:',
+					err,
+				);
+			});
+		}
+	}
+	isInitializing = false;
+
 	window.addEventListener('beforeunload', async () => {
 		await noteBody?.saveAllBlocks();
 	});
+
 	document.addEventListener('visibilitychange', () => {
 		if (document.visibilityState === 'hidden') {
 			noteBody?.saveAllBlocks();
@@ -203,4 +218,6 @@ export async function cleanupMainPage(): Promise<void> {
 		currentContainer.innerHTML = '';
 		currentContainer = null;
 	}
+	currentNoteId = null;
+	isInitializing = false;
 }

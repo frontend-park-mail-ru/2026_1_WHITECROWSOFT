@@ -4,6 +4,7 @@ import { sidebarService } from '../../services/sidebarService.js';
 import { subnoteService } from '../../services/subnoteService.js';
 import { store } from '../../store.js';
 import type { User } from '../../types.js';
+import { collabManager } from '../../utils/collaborativeManager.js';
 import Component from '../component.js';
 import NotePopup from '../popups/notePopup/notePopup.js';
 import PublicNotePopup from '../popups/publicPopup/publicPopup.js';
@@ -157,11 +158,17 @@ export default class Sidebar extends Component {
 	private async openPublicNote(noteId: string): Promise<void> {
 		try {
 			await noteService.getNote(noteId);
-			store.setActiveNoteId(noteId);
 			const note = store.getNotes().find((n) => n.ID === noteId);
+
+			store.setActiveNoteId(noteId);
+
 			if (note) {
 				await store.addToRecentNotes(noteId, note.title);
+				if (note.is_public) {
+					await collabManager.startCollab(String(noteId));
+				}
 			}
+
 			router.push('/');
 		} catch (error) {
 			console.error('Failed to open public note:', error);
@@ -178,10 +185,19 @@ export default class Sidebar extends Component {
 		});
 		this.unsubscribeActiveNoteId = store.subscribe(
 			'activeNoteId',
-			(noteId: string | number | null) => {
+			async (noteId: string | number | null) => {
 				this.recentSection?.updateActiveNote(noteId);
 				this.personalSection?.updateActiveNote(noteId);
 				this.sharedSection?.updateActiveNote(noteId);
+
+				if (noteId) {
+					const note = store.getNotes().find((n) => n.ID === noteId);
+					if (note?.is_public) {
+						await collabManager.startCollab(String(noteId));
+					} else {
+						collabManager.stopCollab();
+					}
+				}
 			},
 		);
 		this.unsubscribeUser = store.subscribe('user', (user: User | null) => {
@@ -235,7 +251,10 @@ export default class Sidebar extends Component {
 			noteId,
 			anchorElement: anchor,
 			titleElement: titleElement,
-			onRenameComplete: async () => {},
+			onRenameComplete: async () => {
+				this.updatePersonalNotes();
+				this.updateRecentNotes();
+			},
 		});
 		this.currentPopup.renderTo(document.body);
 	};
@@ -246,51 +265,6 @@ export default class Sidebar extends Component {
 	): void => {
 		console.log('Double click disabled for note:', noteId, element);
 	};
-
-	/*
-    // Временно отключено
-    private async startInlineEdit(noteId: string | number, element: HTMLElement): Promise<void> {
-        const currentTitle = element.textContent || '';
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = currentTitle;
-        input.className = 'inline-edit-input';
-        
-        const save = async () => {
-            const newTitle = input.value.trim();
-            if (newTitle && newTitle !== currentTitle) {
-                try {
-                    await noteService.updateNote(noteId, { title: newTitle });
-                    element.textContent = newTitle;
-                } catch (error) {
-                    console.error('Failed to rename note:', error);
-                    element.textContent = currentTitle;
-                }
-            }
-            element.style.display = '';
-            input.remove();
-        };
-        
-        const cancel = () => {
-            element.textContent = currentTitle;
-            element.style.display = '';
-            input.remove();
-        };
-        
-        element.style.display = 'none';
-        element.parentNode?.insertBefore(input, element);
-        input.focus();
-        
-        input.addEventListener('blur', save);
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                save();
-            } else if (e.key === 'Escape') {
-                cancel();
-            }
-        });
-    }
-    */
 
 	destroy(): void {
 		this.unsubscribeNotes?.();

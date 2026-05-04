@@ -19,31 +19,40 @@ import type {
 export class CollaborativeManager {
 	private noteId: string | null = null;
 	private unsubscribeWs: (() => void) | null = null;
+	private isStarting = false;
 
 	/**
 	 * Запускает совместное редактирование для заметки
 	 * Очищает предыдущих участников и подключается к новому WebSocket
 	 */
 	async startCollab(noteId: string): Promise<void> {
+		if (this.isStarting) {
+			console.log('[CollaborativeManager] Already starting, skipping');
+			return;
+		}
+		if (this.noteId === noteId) {
+			console.log(
+				'[CollaborativeManager] Already connected to this note, skipping',
+			);
+			return;
+		}
+		this.isStarting = true;
 		this.noteId = noteId;
-
 		if (this.unsubscribeWs) {
 			this.unsubscribeWs();
 		}
-
 		store.clearCollaborativeUsers();
-
 		try {
 			await wsService.connect(noteId);
-
 			this.unsubscribeWs = wsService.onMessage((message) => {
 				this.handleMessage(message);
 			});
-
 			console.log('[CollaborativeManager] Started for note:', noteId);
 		} catch (error) {
 			console.error('[CollaborativeManager] Failed to start:', error);
 			throw error;
+		} finally {
+			this.isStarting = false;
 		}
 	}
 

@@ -124,12 +124,8 @@ export default class NotePopup extends Component {
 		}
 
 		if (shareBtn) {
-			this.boundHandlers.onShare = () => {
-				const result = noteService.updateNote(this.noteId, {
-					is_public: true,
-					title: this.titleElement?.textContent,
-				});
-				console.log(result);
+			this.boundHandlers.onShare = async () => {
+				await this.handleShare();
 			};
 			shareBtn.addEventListener('click', this.boundHandlers.onShare);
 		}
@@ -139,6 +135,7 @@ export default class NotePopup extends Component {
 		const deleteBtn = this.domElement?.querySelector('[data-action="delete"]');
 		const renameBtn = this.domElement?.querySelector('[data-action="rename"]');
 		const pinBtn = this.domElement?.querySelector('[data-action="pin"]');
+		const shareBtn = this.domElement?.querySelector('[data-action="share"]');
 
 		if (deleteBtn && this.boundHandlers.onDelete) {
 			deleteBtn.removeEventListener('click', this.boundHandlers.onDelete);
@@ -148,6 +145,9 @@ export default class NotePopup extends Component {
 		}
 		if (pinBtn && this.boundHandlers.onPin) {
 			pinBtn.removeEventListener('click', this.boundHandlers.onPin);
+		}
+		if (shareBtn && this.boundHandlers.onShare) {
+			shareBtn.removeEventListener('click', this.boundHandlers.onShare);
 		}
 	}
 
@@ -160,6 +160,25 @@ export default class NotePopup extends Component {
 			this.close();
 		} catch (error) {
 			console.error('Error deleting note:', error);
+		}
+	}
+
+	private async handleShare(): Promise<void> {
+		try {
+			await noteService.updateNote(this.noteId, {
+				is_public: true,
+				title: this.titleElement?.textContent,
+			});
+
+			const noteIdStr = String(this.noteId);
+			await navigator.clipboard.writeText(noteIdStr);
+
+			alert('Заметка стала публичной. ID заметки скопирован в буфер обмена');
+
+			this.close();
+		} catch (error) {
+			console.error('Failed to share note:', error);
+			alert('Не удалось сделать заметку публичной');
 		}
 	}
 

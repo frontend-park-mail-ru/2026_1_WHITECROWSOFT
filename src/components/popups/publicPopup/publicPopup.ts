@@ -123,7 +123,7 @@ export default class PublicNotePopup extends Component {
 			cancelBtn.addEventListener('click', () => this.close());
 		}
 
-		input?.addEventListener('keydown', (e) => {
+		input?.addEventListener('keydown', async (e) => {
 			if (e.key === 'Enter') {
 				e.preventDefault();
 				const noteId = input.value.trim();
