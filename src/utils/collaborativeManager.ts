@@ -636,6 +636,8 @@ export class CollaborativeManager {
 			blockIndex < blocks.length - 1 ? blocks[blockIndex + 1].id : null;
 		const blockToFocus = prevBlockId || nextBlockId;
 
+		const focusBlockId = blockToFocus;
+
 		blocks.splice(blockIndex, 1);
 		blocks.forEach((b, i) => {
 			b.position = i;
@@ -662,10 +664,29 @@ export class CollaborativeManager {
 				detail: {
 					blockId: blockId,
 					userId: message.userId,
-					focusBlockId: blockToFocus,
+					focusBlockId: focusBlockId,
 				},
 			}),
 		);
+
+		if (focusBlockId) {
+			const blockElement = document.querySelector(
+				`.note__block[data-block-id="${focusBlockId}"]`,
+			);
+			if (blockElement) {
+				const textLength = blockElement.textContent?.length || 0;
+				collabManager.sendCursorMove(String(focusBlockId), textLength);
+				window.dispatchEvent(
+					new CustomEvent('collaborativeFocusBlock', {
+						detail: {
+							blockId: focusBlockId,
+							position: 'end',
+							userId: message.userId,
+						},
+					}),
+				);
+			}
+		}
 	}
 
 	/**

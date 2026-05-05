@@ -63,7 +63,6 @@ export const authService = {
 	},
 
 	async logOut(): Promise<void> {
-		console.log('logout');
 		try {
 			await client.post('/logout', {});
 		} catch (error) {

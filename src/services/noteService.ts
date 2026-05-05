@@ -140,8 +140,6 @@ export const noteService = {
 				store.setActiveNoteId(noteID);
 				store.setActiveBlocks(serverBlocks);
 				await db.settingsSet('activeNoteId', noteID);
-				await store.addToRecentNotes(serverNote.id, serverNote.title);
-
 				return {
 					note: serverNote,
 					blocks: serverBlocks,
@@ -183,7 +181,6 @@ export const noteService = {
 			};
 			await this._setActiveNoteState(activeNote);
 			store.setActiveBlocks(blocksWithFormatting);
-			await store.addToRecentNotes(cachedNote.ID, cachedNote.title);
 			return {
 				note: {
 					id: cachedNote.ID,
@@ -343,11 +340,9 @@ export const noteService = {
 		await db.notesDelete(noteID);
 		await db.imagesDeleteByNoteId?.(noteID);
 		await db.formattingDeleteByNoteId?.(noteID);
-		await db.recentNotesDelete(noteID);
 		const currentNotes = store.getNotes();
 		const remainingNotes = currentNotes.filter((note) => note.ID !== noteID);
 		store.setNotes(remainingNotes);
-		store.loadRecentNotes();
 		const activeNoteId = store.getActiveNoteId();
 		if (activeNoteId === noteID) {
 			if (remainingNotes.length > 0) {
@@ -381,9 +376,6 @@ export const noteService = {
 	): Promise<Note | null> {
 		const isOnline = store.getOnline();
 		const isLocal = this._isLocalNote(noteID);
-		const oldNote = store.getNotes().find((n) => n.ID === noteID);
-		const oldTitle = oldNote?.title || '';
-
 		if (isOnline && !isLocal) {
 			try {
 				const result = await client.put<NoteApiResponse>(
@@ -406,9 +398,6 @@ export const noteService = {
 					n.ID === noteID ? note : n,
 				);
 				store.setNotes(updatedNotes);
-				if (data.title && data.title !== oldTitle) {
-					await this.updateRecentNotesTitle(noteID, data.title);
-				}
 				if (store.getActiveNoteId() === noteID) {
 					const activeNote = {
 						ID: note.ID,
@@ -452,9 +441,6 @@ export const noteService = {
 			const updatedNotes = [...currentNotes];
 			updatedNotes[noteIndex] = updatedNote;
 			store.setNotes(updatedNotes);
-			if (data.title && data.title !== oldTitle) {
-				await this.updateRecentNotesTitle(noteID, data.title);
-			}
 			if (store.getActiveNoteId() === noteID) {
 				const activeNote = {
 					ID: updatedNote.ID,
@@ -468,20 +454,6 @@ export const noteService = {
 			return updatedNote;
 		}
 		return null;
-	},
-
-	async updateRecentNotesTitle(
-		subnoteId: string | number,
-		newTitle: string,
-	): Promise<void> {
-		const recentNotes = await db.recentNotesGetAll();
-		const updatedRecent = recentNotes.map((item) =>
-			item.noteId === subnoteId ? { ...item, title: newTitle } : item,
-		);
-		for (const item of updatedRecent) {
-			await db.recentNotesPut(item);
-		}
-		await store.loadRecentNotes();
 	},
 
 	async getBlocks(noteID: string | number): Promise<Block[]> {

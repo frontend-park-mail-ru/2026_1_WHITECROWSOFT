@@ -45,7 +45,6 @@ export async function initMainPage(
 		}
 	}
 
-	// Получаем ID из query параметров
 	const sharedNoteId = data?.query?.note;
 	let savedNoteId = await db.settingsGet<string | number>('activeNoteId');
 

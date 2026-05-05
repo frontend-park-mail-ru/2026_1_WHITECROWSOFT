@@ -259,7 +259,7 @@ export interface StoreState {
 		blockId: string | number | null;
 		offset: number | 'start' | 'end' | null;
 	};
-	collaborativeUsers: Map<string, CollaborativeUser>; // Пользователи, редактирующие заметку совместно
+	collaborativeUsers: Map<string, CollaborativeUser>;
 }
 
 export interface ApiResponse<T = unknown> {

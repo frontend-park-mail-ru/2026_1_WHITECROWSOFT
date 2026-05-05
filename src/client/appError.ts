@@ -21,7 +21,6 @@ export class AppError<T = unknown> extends Error {
 		this.cause = cause;
 		this.name = 'AppError';
 
-		// Сохраняем стек вызовов (для корректной работы в TypeScript)
 		Object.setPrototypeOf(this, AppError.prototype);
 	}
 }

@@ -100,10 +100,6 @@ export default class BlockWrapper extends Component {
 				block: this.block,
 				onDelete: this.onDelete,
 				onOpen: (subnoteId: string | number) => {
-					const note = store.getNotes().find((n) => n.ID === subnoteId);
-					if (note) {
-						store.addToRecentNotes(subnoteId, note.title);
-					}
 					store.setActiveNoteId(subnoteId);
 					router.push('/');
 				},

@@ -147,34 +147,4 @@ export const sidebarService = {
 		const allNotes = store.getNotes();
 		return allNotes.filter((note) => note.parent_id === noteId).length;
 	},
-
-	async getRecentNotes(): Promise<SidebarNote[]> {
-		const recentNotes = store.getRecentNotes();
-		const allNotes = store.getNotes();
-		const noteMap = new Map(allNotes.map((n) => [n.ID, n]));
-		const recentSidebarNotes: SidebarNote[] = [];
-		for (const recent of recentNotes) {
-			const note = noteMap.get(recent.noteId);
-			if (note) {
-				recentSidebarNotes.push({
-					id: note.ID,
-					title: note.title,
-					parentId: note.parent_id || null,
-					children: [],
-					isExpanded: false,
-					isActive: store.getActiveNoteId() === note.ID,
-					level: 0,
-				});
-			}
-		}
-		return recentSidebarNotes
-			.sort((a, b) => {
-				const aTime =
-					recentNotes.find((r) => r.noteId === a.id)?.lastOpenedAt || 0;
-				const bTime =
-					recentNotes.find((r) => r.noteId === b.id)?.lastOpenedAt || 0;
-				return bTime - aTime;
-			})
-			.slice(0, 5);
-	},
 };

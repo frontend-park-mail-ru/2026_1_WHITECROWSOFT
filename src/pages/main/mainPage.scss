@@ -259,19 +259,16 @@
 	}
 }
 
-// Header container
 .note__header-container {
 	width: 100%;
 	max-width: 740px;
 	margin: 0 auto;
 }
 
-// Body container
 .note__body-container {
 	width: 100%;
 }
 
-// Empty state
 .empty-state {
 	display: flex;
 	flex-direction: column;
@@ -291,7 +288,6 @@
 	}
 }
 
-// Note container
 .note-container {
 	width: 100%;
 	height: 100%;
@@ -299,7 +295,6 @@
 	flex-direction: column;
 }
 
-// Formatted range styles
 .formatted-range {
 	border-radius: 2px;
 
@@ -316,7 +311,6 @@
 	}
 }
 
-// Empty state for blocks
 .note__empty-state {
 	display: flex;
 	justify-content: center;
@@ -349,7 +343,6 @@
 	}
 }
 
-// Стили для отображения курсоров других пользователей
 .collaborative-cursor {
 	position: absolute;
 	width: 2px;
@@ -378,7 +371,6 @@
 }
 
 @keyframes blink {
-	// Анимация мигания курсора для привлечения внимания к активным пользователям
 	0%,
 	49% {
 		opacity: 1;

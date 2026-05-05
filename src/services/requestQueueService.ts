@@ -318,27 +318,24 @@ export const queueService = {
 
 		console.log(`[Queue] Migrating local note ${localId} -> ${newNoteId}`);
 
-		// 🔑 1. Обновляем noteId во всех связанных изображениях
 		const images = await db.imagesGetByNoteId(localId);
 		for (const img of images) {
 			await db.imagesDelete(img.id);
 			await db.imagesPut({
 				...img,
-				noteId: newNoteId, // 🔑 Заменяем локальный ID на реальный
+				noteId: newNoteId,
 			});
 		}
 
-		// 🔑 2. Обновляем noteId в записях очереди файлов
 		const queueFiles = await db.queueFileGetByNoteId(localId);
 		for (const file of queueFiles) {
 			await db.queueFileDelete(file.id);
 			await db.queueFilePut({
 				...file,
-				noteId: newNoteId, // 🔑 Заменяем локальный ID на реальный
+				noteId: newNoteId,
 			});
 		}
 
-		// 🔑 3. Обновляем блоки заметки
 		const updatedBlocks = (localNote.blocks || []).map((block) => ({
 			...block,
 			note_id: newNoteId,
@@ -358,7 +355,6 @@ export const queueService = {
 		await db.notesDelete(localId);
 		await db.notesPut(newNote);
 
-		// 🔑 4. Обновляем все запросы в очереди
 		const pendingRequests = await db.getQueuedRequests();
 		for (const req of pendingRequests) {
 			let needUpdate = false;
@@ -397,7 +393,6 @@ export const queueService = {
 			}
 		}
 
-		// 🔑 5. Обновляем store
 		const notes = store
 			.getNotes()
 			.map((note) => (note.ID === localId ? newNote : note));
@@ -495,7 +490,6 @@ export const queueService = {
 			syncedAt: Date.now(),
 		};
 
-		// Обновляем изображение в БД
 		await db.imagesDelete(localId);
 		await db.imagesPut(updatedImage);
 		await db.queueFileDelete(localId);
@@ -508,7 +502,6 @@ export const queueService = {
 			attachmentId: newImageId,
 		});
 
-		// Важно: используем актуальные ID заметки и блока
 		const noteId = image.noteId;
 		const blockId = image.blockId;
 
@@ -517,12 +510,10 @@ export const queueService = {
 		);
 
 		try {
-			// Обновляем контент блока на сервере
 			await client.put(`/notes/${noteId}/blocks/${blockId}/content`, {
 				content: newImageContent,
 			});
 
-			// Обновляем кэш
 			const cachedNote = await db.notesGet(noteId);
 			if (cachedNote && cachedNote.blocks) {
 				const updatedBlocks = cachedNote.blocks.map((b) =>
@@ -533,7 +524,6 @@ export const queueService = {
 				await db.notesPut({ ...cachedNote, blocks: updatedBlocks });
 			}
 
-			// Обновляем store
 			const blocks = store.getActiveBlocks();
 			const updatedBlocks = blocks.map((b) =>
 				String(b.id) === String(blockId)
