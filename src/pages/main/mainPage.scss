@@ -66,6 +66,7 @@
 		border: none;
 		outline: none;
 		color: var(--text);
+		text-overflow: ellipsis;
 
 		&:focus {
 			outline: none;

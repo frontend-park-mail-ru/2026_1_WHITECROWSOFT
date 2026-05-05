@@ -12,6 +12,8 @@ export class Layout {
 	private sidebar: Sidebar | null = null;
 	private mainContainer: HTMLElement | null = null;
 	private sidebarContainer: HTMLElement | null = null;
+	private layoutContainer: HTMLElement | null = null;
+	private sidebarToggle: HTMLElement | null = null;
 	private _unsubscribeNotes: (() => void) | null = null;
 	private _unsubscribeActiveNoteId: (() => void) | null = null;
 	private _unsubscribeUser: (() => void) | null = null;
@@ -37,6 +39,8 @@ export class Layout {
 		app.innerHTML = template({});
 		this.sidebarContainer = document.getElementById('sidebarContainer');
 		this.mainContainer = document.getElementById('mainContainer');
+		this.layoutContainer = document.getElementById('appLayout');
+		this.sidebarToggle = document.getElementById('sidebarToggle');
 	}
 
 	private _renderAuth(): void {
@@ -51,6 +55,29 @@ export class Layout {
 		if (!this.sidebarContainer) return;
 		this.sidebar = new Sidebar();
 		this.sidebar.renderTo(this.sidebarContainer);
+		this.sidebarContainer.style.display = 'block';
+		await this._toggleSidebar();
+		this.sidebarToggle?.addEventListener('click', async () => {
+			await this._toggleSidebar();
+		});
+		this.sidebar.setSidebarToggle(async () => {
+			await this._toggleSidebar();
+		});
+	}
+
+	private async _toggleSidebar(): Promise<void> {
+		if (!this.sidebarContainer) return;
+		this.sidebarContainer.style.display =
+			this.sidebarContainer.style.display === 'none' ? 'block' : 'none';
+		if (this.layoutContainer) {
+			this.layoutContainer.style.gridTemplateColumns =
+				this.layoutContainer.style.gridTemplateColumns === '250px 1fr'
+					? '0px 1fr'
+					: '250px 1fr';
+		}
+		// if (this.sidebarToggle) {
+		// 	this.sidebarToggle.style.display = this.sidebarToggle.style.display === 'none' ? 'block' : 'none';
+		// }
 	}
 
 	destroy(): void {

@@ -7,7 +7,6 @@ import type { User } from '../../types.js';
 import { collabManager } from '../../utils/collaborativeManager.js';
 import Component from '../component.js';
 import NotePopup from '../popups/notePopup/notePopup.js';
-import PublicNotePopup from '../popups/publicPopup/publicPopup.js';
 import NoteSection from './noteSection/noteSection.js';
 import templateString from './sidebar.hbs?raw';
 import './sidebar.scss';
@@ -19,12 +18,12 @@ export default class Sidebar extends Component {
 	private personalSection: NoteSection | null = null;
 	private sharedSection: NoteSection | null = null;
 	private currentPopup: NotePopup | null = null;
-	private currentPublicPopup: PublicNotePopup | null = null;
-	private expandedState: Map<string | number, boolean> = new Map();
 	private unsubscribeNotes: (() => void) | null = null;
 	private unsubscribeRecentNotes: (() => void) | null = null;
 	private unsubscribeActiveNoteId: (() => void) | null = null;
 	private unsubscribeUser: (() => void) | null = null;
+
+	private sidebarToggle: (() => void) | null = null;
 
 	protected getTemplateData() {
 		const user = store.getUser();
@@ -114,6 +113,9 @@ export default class Sidebar extends Component {
 		const profileBtn = this.domElement.querySelector('[data-action="profile"]');
 		const homeBtn = this.domElement.querySelector('[data-action="home"]');
 		const newNoteBtn = this.domElement.querySelector('[data-action="newNote"]');
+		const toggleSidebarBtn = this.domElement.querySelector(
+			'[data-action="toggleSidebar"]',
+		);
 
 		profileBtn?.addEventListener('click', (e) => {
 			e.preventDefault();
@@ -134,6 +136,10 @@ export default class Sidebar extends Component {
 				});
 				delete btn.dataset.pending;
 			}
+		});
+		toggleSidebarBtn?.addEventListener('click', (e) => {
+			e.preventDefault();
+			this.sidebarToggle?.();
 		});
 	}
 
@@ -225,6 +231,10 @@ export default class Sidebar extends Component {
 		element: HTMLElement,
 	): void => {
 		console.log('Double click disabled for note:', noteId, element);
+	};
+
+	setSidebarToggle = (callback: () => void): void => {
+		this.sidebarToggle = callback;
 	};
 
 	destroy(): void {
