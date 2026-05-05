@@ -175,7 +175,9 @@ export default class NotePopup extends Component {
 			const shareUrl = `${window.location.origin}/?note=${noteIdStr}`;
 			await navigator.clipboard.writeText(shareUrl);
 			collabManager.startCollab(noteIdStr);
-			alert('Заметка стала публичной. ID заметки скопирован в буфер обмена');
+			alert(
+				'Заметка стала публичной. Ссылка на заметку скопирована в буфер обмена',
+			);
 
 			this.close();
 		} catch (error) {
