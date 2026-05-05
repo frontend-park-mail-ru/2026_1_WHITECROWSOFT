@@ -1,3 +1,7 @@
+.main-page {
+	width: 100%;
+}
+
 .note {
 	flex: 1;
 	display: flex;
@@ -8,14 +12,18 @@
 	overflow-y: auto;
 	background-color: var(--background);
 
-	-webkit-mask-image: linear-gradient(to bottom,
-			black 0%,
-			black calc(100% - 80px),
-			transparent 100%);
-	mask-image: linear-gradient(to bottom,
-			black 0%,
-			black calc(100% - 80px),
-			transparent 100%);
+	-webkit-mask-image: linear-gradient(
+		to bottom,
+		black 0%,
+		black calc(100% - 80px),
+		transparent 100%
+	);
+	mask-image: linear-gradient(
+		to bottom,
+		black 0%,
+		black calc(100% - 80px),
+		transparent 100%
+	);
 
 	&__content {
 		width: 100%;
@@ -195,7 +203,10 @@
 		gap: 6px;
 		opacity: 0;
 		visibility: hidden;
-		transition: opacity 0.15s ease, visibility 0.15s ease, transform 0.15s ease;
+		transition:
+			opacity 0.15s ease,
+			visibility 0.15s ease,
+			transform 0.15s ease;
 		z-index: 10;
 
 		button {
@@ -238,7 +249,8 @@
 					background-color: rgba(220, 53, 69, 0.1);
 
 					.icon {
-						filter: invert(27%) sepia(51%) saturate(2878%) hue-rotate(346deg) brightness(104%) contrast(97%);
+						filter: invert(27%) sepia(51%) saturate(2878%) hue-rotate(346deg)
+							brightness(104%) contrast(97%);
 					}
 				}
 			}
@@ -365,7 +377,6 @@
 }
 
 @keyframes blink {
-
 	// Анимация мигания курсора для привлечения внимания к активным пользователям
 	0%,
 	49% {
