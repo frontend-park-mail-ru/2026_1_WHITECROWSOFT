@@ -114,9 +114,6 @@ export default class Sidebar extends Component {
 		const profileBtn = this.domElement.querySelector('[data-action="profile"]');
 		const homeBtn = this.domElement.querySelector('[data-action="home"]');
 		const newNoteBtn = this.domElement.querySelector('[data-action="newNote"]');
-		const publicNoteBtn = this.domElement.querySelector(
-			'[data-action="publicNotes"]',
-		);
 
 		profileBtn?.addEventListener('click', (e) => {
 			e.preventDefault();
@@ -138,42 +135,6 @@ export default class Sidebar extends Component {
 				delete btn.dataset.pending;
 			}
 		});
-		publicNoteBtn?.addEventListener('click', (e) => {
-			e.preventDefault();
-			this.openPublicNotePopup(e.currentTarget as HTMLElement);
-		});
-	}
-
-	private openPublicNotePopup(anchor: HTMLElement): void {
-		this.currentPublicPopup?.close();
-		this.currentPublicPopup = new PublicNotePopup({
-			anchorElement: anchor,
-			onOpenNote: async (noteId: string) => {
-				await this.openPublicNote(noteId);
-			},
-		});
-		this.currentPublicPopup.open();
-	}
-
-	private async openPublicNote(noteId: string): Promise<void> {
-		try {
-			await noteService.getNote(noteId);
-			const note = store.getNotes().find((n) => n.ID === noteId);
-
-			store.setActiveNoteId(noteId);
-
-			if (note) {
-				await store.addToRecentNotes(noteId, note.title);
-				if (note.is_public) {
-					await collabManager.startCollab(String(noteId));
-				}
-			}
-
-			router.push('/');
-		} catch (error) {
-			console.error('Failed to open public note:', error);
-			alert('Не удалось открыть заметку. Проверьте ID и наличие доступа.');
-		}
 	}
 
 	private subscribeToStore(): void {
