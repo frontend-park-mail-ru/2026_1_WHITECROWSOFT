@@ -109,8 +109,6 @@ export async function initMainPage(
 			if (noteId === currentNoteId) return;
 			if (isInitializing) return;
 
-			console.log('[MainPage] activeNoteId changed to:', noteId);
-
 			currentNoteId = noteId;
 
 			try {
@@ -125,14 +123,6 @@ export async function initMainPage(
 				if (activeNoteData) {
 					const note = store.getNotes().find((n: Note) => n.ID === noteId);
 					const isPublic = note?.is_public === true;
-
-					console.log(
-						'[MainPage] Note is public:',
-						isPublic,
-						'noteId:',
-						noteId,
-					);
-
 					const noteBodyElement = noteBody?.getElement();
 					if (noteBodyElement && isPublic) {
 						cursorsRenderer = new CollaborativeCursorsRenderer(noteBodyElement);
@@ -172,14 +162,6 @@ export async function initMainPage(
 		currentNoteId = targetNoteId;
 		const note = store.getNotes().find((n: Note) => n.ID === targetNoteId);
 		const isPublic = note?.is_public === true;
-
-		console.log(
-			'[MainPage] Initial note setup - isPublic:',
-			isPublic,
-			'noteId:',
-			targetNoteId,
-		);
-
 		const noteBodyElement = noteBody?.getElement();
 		if (noteBodyElement && isPublic) {
 			cursorsRenderer = new CollaborativeCursorsRenderer(noteBodyElement);

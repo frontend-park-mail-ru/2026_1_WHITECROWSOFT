@@ -157,7 +157,7 @@ export default class NotePopup extends Component {
 		if (!confirmed) return;
 
 		try {
-			await noteService.deleteNoteRecursive(this.noteId);
+			await noteService.deleteNote(this.noteId);
 			this.close();
 		} catch (error) {
 			console.error('Error deleting note:', error);

@@ -156,14 +156,10 @@ export default class Sidebar extends Component {
 
 	private handleAddSubnote = async (noteId: string | number): Promise<void> => {
 		try {
-			const subnote = await subnoteService.createSubnote(noteId, {
-				title: 'Новая подзаметка',
-				parent_id: noteId,
-			});
-			await subnoteService.createSubnoteBlock(
+			await subnoteService.createSubnoteWithBlock(
 				noteId,
-				subnote.ID,
-				subnote.title,
+				'Новая подзаметка',
+				null
 			);
 			sidebarService.setExpanded(noteId, true);
 			this.updatePersonalNotes();

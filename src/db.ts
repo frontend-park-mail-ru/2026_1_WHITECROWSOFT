@@ -369,8 +369,19 @@ class Database {
 		return all.filter((video) => video.noteId === noteId);
 	}
 
+	async videosDeleteByNoteId(noteId: string | number): Promise<void> {
+		const videos = await this.videosGetByNoteId(noteId);
+		for (const video of videos) {
+			await this.videosDelete(video.id);
+		}
+	}
+
 	async videosDelete(id: string | number): Promise<void> {
 		return this._delete('videos', id);
+	}
+
+	async videosClear(): Promise<void> {
+		return this._clear('videos');
 	}
 
 	async queueFilePut(file: QueueFile): Promise<void> {
@@ -395,17 +406,15 @@ class Database {
 		return all.filter((file) => file.noteId === noteId);
 	}
 
-	async clearQueueFiles(): Promise<void> {
-		return this._clear('queueFiles');
+	async queueFileDeleteByNoteId(noteId: string | number): Promise<void> {
+		const files = await this.queueFileGetByNoteId(noteId);
+		for (const file of files) {
+			await this.queueFileDelete(file.id);
+		}
 	}
 
-	async clear(): Promise<void[]> {
-		return Promise.all([
-			this.notesClear(),
-			this.formattingClear(),
-			this.imagesClear(),
-			this.clearQueueFiles(),
-		]);
+	async clearQueueFiles(): Promise<void> {
+		return this._clear('queueFiles');
 	}
 
 	private _getAll<T>(storeName: string): Promise<T[]> {
@@ -477,6 +486,18 @@ class Database {
 			request.onsuccess = () => resolve();
 			request.onerror = () => reject(request.error);
 		});
+	}
+
+	async clearAllUserData(): Promise<void> {
+		await this.notesClear();
+		await this.formattingClear();
+		await this.imagesClear();
+		await this.audiosClear();
+		await this.videosClear();
+		await this.clearQueueFiles();
+		await this.clearQueuedRequests();
+		await this.settingsClear();
+		await this.recentNotesClear();
 	}
 }
 

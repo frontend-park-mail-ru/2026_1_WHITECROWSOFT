@@ -267,18 +267,10 @@ export default class AttachPopup extends Component {
 					return;
 				}
 				try {
-					const newSubnote = await subnoteService.createSubnote(activeNoteId, {
-						title: 'Новая подзаметка',
-						parent_id: activeNoteId,
-					});
-					if (!newSubnote || !newSubnote.ID) {
-						throw new Error('Failed to create subnote');
-					}
-					await subnoteService.createSubnoteBlock(
+					await subnoteService.createSubnoteWithBlock(
 						activeNoteId,
-						newSubnote.ID,
-						newSubnote.title,
-						this.afterBlockId,
+						'Новая подзаметка',
+						null
 					);
 				} catch (error) {
 					console.error('Error creating subnote:', error);

@@ -44,11 +44,6 @@ export const queueService = {
 		};
 
 		const id = await db.queueRequest(queuedRequest);
-		console.log(
-			'[Queue] Enqueued:',
-			request.type || request.method,
-			request.endpoint,
-		);
 		return id;
 	},
 
@@ -316,8 +311,6 @@ export const queueService = {
 			return;
 		}
 
-		console.log(`[Queue] Migrating local note ${localId} -> ${newNoteId}`);
-
 		const images = await db.imagesGetByNoteId(localId);
 		for (const img of images) {
 			await db.imagesDelete(img.id);
@@ -389,7 +382,6 @@ export const queueService = {
 					body: newBody,
 					queuedAt: Date.now(),
 				});
-				console.log(`[Queue] Updated request to use new note ID: ${newNoteId}`);
 			}
 		}
 
@@ -410,10 +402,6 @@ export const queueService = {
 			store.setActiveNoteId(newNoteId);
 			store.setActiveBlocksSilently(updatedBlocks);
 		}
-
-		console.log(
-			`[Queue] Note migrated, ${images.length} images updated, ${pendingRequests.length} requests updated`,
-		);
 	},
 
 	async _commitLocalBlockId(
@@ -478,10 +466,6 @@ export const queueService = {
 			'/minio',
 		);
 
-		console.log(
-			`[Queue] Syncing image ${localId} -> ${newImageId} for block ${image.blockId}`,
-		);
-
 		const updatedImage = {
 			...image,
 			id: newImageId,
@@ -505,10 +489,6 @@ export const queueService = {
 		const noteId = image.noteId;
 		const blockId = image.blockId;
 
-		console.log(
-			`[Queue] Updating block content for note ${noteId}, block ${blockId}`,
-		);
-
 		try {
 			await client.put(`/notes/${noteId}/blocks/${blockId}/content`, {
 				content: newImageContent,
@@ -531,8 +511,6 @@ export const queueService = {
 					: b,
 			);
 			store.setActiveBlocksSilently(updatedBlocks);
-
-			console.log(`[Queue] Image synced successfully for block ${blockId}`);
 		} catch (error) {
 			console.error('[Queue] Failed to update block content:', error);
 			throw error;

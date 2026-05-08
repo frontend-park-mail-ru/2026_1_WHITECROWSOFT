@@ -29,20 +29,16 @@ export class WebSocketService {
 				const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 				const wsUrl = `${protocol}//${window.location.host}/ws/notes/${noteId}`;
 
-				console.log('[WebSocket] Connecting to:', wsUrl);
-
 				this.ws = new WebSocket(wsUrl);
 				this.shouldReconnect = true;
 
 				this.ws.onopen = () => {
-					console.log('[WebSocket] Connected successfully to note:', noteId);
 					this.reconnectAttempts = 0;
 					this.setupHeartbeat();
 					resolve();
 				};
 
 				this.ws.onmessage = (event) => {
-					console.log('[WebSocket] Message received');
 					try {
 						const message: WebSocketMessage = JSON.parse(event.data);
 						this.notifyHandlers(message);
@@ -57,12 +53,10 @@ export class WebSocketService {
 				};
 
 				this.ws.onclose = (event) => {
-					console.log('[WebSocket] Disconnected, code:', event.code);
 					this.clearHeartbeat();
 					if (this.shouldReconnect) {
 						this.attemptReconnect(noteId);
 					} else {
-						console.log('[WebSocket] Auto-reconnect disabled');
 					}
 				};
 			} catch (error) {
@@ -174,7 +168,6 @@ export class WebSocketService {
 	 */
 	private attemptReconnect(noteId: string): void {
 		if (!this.shouldReconnect) {
-			console.log('[WebSocket] Reconnect disabled, not attempting');
 			return;
 		}
 
@@ -185,10 +178,6 @@ export class WebSocketService {
 
 		this.reconnectAttempts++;
 		const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-
-		console.log(
-			`[WebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`,
-		);
 
 		setTimeout(() => {
 			this.connect(noteId).catch((error) => {

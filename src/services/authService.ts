@@ -75,12 +75,7 @@ export const authService = {
 			store.setActiveBlocks([]);
 			store.setOnline(navigator.onLine);
 
-			await db.notesClear();
-			await db.formattingClear();
-			await db.imagesClear();
-			await db.clearQueueFiles();
-			await db.clearQueuedRequests();
-			await db.settingsClear();
+			await db.clearAllUserData();
 		}
 	},
 
@@ -108,7 +103,6 @@ export const authService = {
 			try {
 				const avatar =
 					await client.get<AvatarUploadResponse>('/profile/avatar');
-				console.log('[AuthService] Avatar response:', avatar);
 				if (avatar?.AvatarURL) {
 					avatarUrl = avatar.AvatarURL;
 					avatarUrl = avatarUrl.replace('http://minio:9000', '/minio');
@@ -168,7 +162,6 @@ export const authService = {
 				...(result as Partial<User>),
 				id: currentUser.id,
 			};
-			console.log(updatedUser);
 			await db.settingsSet('user', updatedUser);
 			store.setUser(updatedUser);
 		}
@@ -191,7 +184,6 @@ export const authService = {
 			};
 			await db.settingsSet('user', updatedUser);
 			store.setUser(updatedUser);
-			console.log(store.getUser());
 		}
 		return result;
 	},

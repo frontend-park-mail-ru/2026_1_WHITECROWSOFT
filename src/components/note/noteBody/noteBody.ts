@@ -1,3 +1,4 @@
+import { db } from '../../../db.js';
 import { attachmentService } from '../../../services/attachmentService.js';
 import { noteService } from '../../../services/noteService.js';
 import { store } from '../../../store.js';
@@ -85,14 +86,7 @@ export default class NoteBody extends Component {
 		const handleBlockDelete = ((e: CustomEvent) => {
 			const { blockId, userId, focusBlockId } = e.detail;
 			const currentUserId = store.getUser()?.id;
-			console.log('[NoteBody] Received collaborativeBlockDelete:', {
-				blockId,
-				userId,
-				currentUserId,
-				isOwnEvent: userId === currentUserId,
-			});
 			if (userId === currentUserId) {
-				console.log('[NoteBody] Skipping own block deletion');
 				return;
 			}
 			const blocks = store.getActiveBlocks();
@@ -100,10 +94,6 @@ export default class NoteBody extends Component {
 			updatedBlocks.forEach((block, idx) => {
 				block.position = idx;
 			});
-			console.log(
-				'[NoteBody] Updating blocks after deletion, removed blockId:',
-				blockId,
-			);
 			store.setActiveBlocks(updatedBlocks);
 			store.setPendingFocus(focusBlockId, 'end');
 		}) as EventListener;
@@ -191,29 +181,7 @@ export default class NoteBody extends Component {
 			}
 		} finally {
 			this.isRendering = false;
-			if (this.needsRender) {
-				this.needsRender = false;
-				await this.renderBlocks();
-			}
 		}
-	}
-
-	private async appendBlock(
-		block: Block,
-		container: HTMLElement,
-	): Promise<void> {
-		const wrapper = new BlockWrapper({
-			block: block,
-			onContentChange: this.handleContentChange.bind(this),
-			onDelete: this.handleDeleteBlock.bind(this),
-			onSplit: this.handleSplitBlock.bind(this),
-			onJoin: this.handleJoinBlocks.bind(this),
-			onAddBlock: this.handleAddBlock.bind(this),
-			onDragStart: this.handleDragStart.bind(this),
-			onFocusBlock: this.handleFocusBlock.bind(this),
-		});
-		wrapper.renderTo(container);
-		this.blockWrappers.set(String(block.id), wrapper);
 	}
 
 	private async insertBlockAt(
@@ -252,31 +220,17 @@ export default class NoteBody extends Component {
 	private async createFirstBlock(): Promise<void> {
 		const activeNoteId = store.getActiveNoteId();
 		if (!activeNoteId) return;
+		const noteExists = store.getNotes().some((n) => n.ID === activeNoteId);
+		if (!noteExists) return;
 		try {
-			const newBlock = await noteService.createBlock(activeNoteId, {
+			await noteService.createBlock(activeNoteId, {
 				note_id: activeNoteId,
 				block_type_id: 1,
 				position: 0,
 				content: '',
 			});
-			if (newBlock && newBlock.id) {
-				store.setPendingFocus(newBlock.id, 'start');
-			}
 		} catch (error) {
 			console.error('Failed to create first block:', error);
-		}
-	}
-
-	private handleFocusBlock(blockId: string): void {
-		for (const [id, wrapper] of this.blockWrappers) {
-			const el = wrapper.getElement();
-			if (el) {
-				if (id === blockId) {
-					el.classList.add('note__block-wrapper--focused');
-				} else {
-					el.classList.remove('note__block-wrapper--focused');
-				}
-			}
 		}
 	}
 
@@ -310,38 +264,14 @@ export default class NoteBody extends Component {
 			);
 			if (!confirmed) return;
 			try {
-				await noteService.deleteBlock(activeNoteId, blockId);
-				await noteService.deleteNoteRecursive(subnoteId);
-				const currentNotes = store.getNotes();
-				const updatedNotes = currentNotes.filter((n) => n.ID !== subnoteId);
-				store.setNotes(updatedNotes);
-				if (store.getActiveNoteId() === subnoteId) {
-					if (updatedNotes.length > 0) {
-						await noteService.getNote(updatedNotes[0].ID);
-					} else {
-						store.setActiveNote(null);
-						store.setActiveBlocks([]);
-						store.setActiveNoteId(null);
-					}
-				}
-				const currentIndex = blocks.findIndex((b) => String(b.id) === blockId);
-				const prevBlockId =
-					currentIndex > 0 ? String(blocks[currentIndex - 1].id) : null;
-				const nextBlockId =
-					currentIndex < blocks.length - 1
-						? String(blocks[currentIndex + 1].id)
-						: null;
-				const blockToFocus = prevBlockId || nextBlockId;
-				if (blockToFocus) {
-					store.setPendingFocus(blockToFocus, 'end');
-				}
+				await noteService.deleteNote(subnoteId);
 			} catch (error) {
 				console.error('Failed to delete subnote:', error);
 			}
 			return;
 		}
 
-		if (block.block_type_id === 2 && block.content) {
+		if ([2, 6, 7].includes(block.block_type_id) && block.content) {
 			try {
 				await attachmentService.deleteAttachment(activeNoteId, blockId);
 			} catch (error) {
@@ -374,22 +304,15 @@ export default class NoteBody extends Component {
 
 	private async handleSplitBlock(
 		blockId: string,
-		beforeContent: string,
 		afterContent: string,
 	): Promise<void> {
 		const activeNoteId = store.getActiveNoteId();
 		if (!activeNoteId) return;
-		const newBlock = await noteService.createBlockAfter(
+		await noteService.createBlockAfter(
 			activeNoteId,
 			{ note_id: activeNoteId, block_type_id: 1, content: afterContent },
 			blockId,
 		);
-		await noteService.updateBlockContent(
-			activeNoteId,
-			newBlock.id,
-			afterContent,
-		);
-		store.setPendingFocus(newBlock.id, 'start');
 	}
 
 	private async handleJoinBlocks(

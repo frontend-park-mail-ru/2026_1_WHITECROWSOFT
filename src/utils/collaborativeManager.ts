@@ -30,29 +30,17 @@ export class CollaborativeManager {
 		// Проверяем, является ли заметка публичной
 		const note = store.getNotes().find((n) => String(n.ID) === noteId);
 		if (!note || !note.is_public) {
-			console.log(
-				'[CollaborativeManager] Note not public, skipping collab:',
-				noteId,
-			);
 			return;
 		}
 
 		if (this.isStarting) {
-			console.log('[CollaborativeManager] Already starting, skipping');
 			return;
 		}
 
 		if (this.isConnected && this.noteId === noteId) {
-			console.log(
-				'[CollaborativeManager] Already connected to this note, skipping',
-			);
 			return;
 		}
 
-		console.log(
-			'[CollaborativeManager] Starting collab for public note:',
-			noteId,
-		);
 		this.isStarting = true;
 
 		if (this.isConnected || this.unsubscribeWs) {
@@ -68,9 +56,7 @@ export class CollaborativeManager {
 			this.unsubscribeWs = wsService.onMessage((message) => {
 				this.handleMessage(message);
 			});
-			console.log('[CollaborativeManager] Started for note:', noteId);
 		} catch (error) {
-			console.error('[CollaborativeManager] Failed to start:', error);
 			this.noteId = null;
 			this.isConnected = false;
 			throw error;
@@ -84,7 +70,6 @@ export class CollaborativeManager {
 	 * Закрывает соединение и очищает список подключенных пользователей
 	 */
 	stopCollab(): void {
-		console.log('[CollaborativeManager] stopCollab called');
 
 		if (this.unsubscribeWs) {
 			this.unsubscribeWs();
@@ -95,8 +80,6 @@ export class CollaborativeManager {
 		store.clearCollaborativeUsers();
 		this.noteId = null;
 		this.isConnected = false;
-
-		console.log('[CollaborativeManager] Stopped');
 	}
 
 	/**
@@ -364,7 +347,6 @@ export class CollaborativeManager {
 		};
 
 		store.updateCollaborativeUser(message.userId, user);
-		console.log('[CollaborativeManager] User joined:', message.userName);
 	}
 
 	/**
@@ -375,7 +357,6 @@ export class CollaborativeManager {
 		if (!message.userId) return;
 
 		store.removeCollaborativeUser(message.userId);
-		console.log('[CollaborativeManager] User left:', message.userId);
 	}
 
 	/**
@@ -433,17 +414,6 @@ export class CollaborativeManager {
 		block.content = newContent;
 		store.setActiveBlocks([...blocks]);
 
-		console.log(
-			'[CollaborativeManager] Dispatching collaborativeBlockUpdate:',
-			{
-				blockId: msg.blockId,
-				userId: message.userId,
-				isLocal: message.is_local,
-				position,
-				newContent,
-			},
-		);
-
 		window.dispatchEvent(
 			new CustomEvent('collaborativeBlockUpdate', {
 				detail: {
@@ -492,17 +462,7 @@ export class CollaborativeManager {
 
 		block.content = newContent;
 		store.setActiveBlocks([...blocks]);
-
-		console.log(
-			'[CollaborativeManager] Dispatching collaborativeBlockUpdate (delete):',
-			{
-				blockId: msg.blockId,
-				userId: message.userId,
-				position,
-				newContent,
-			},
-		);
-
+		
 		window.dispatchEvent(
 			new CustomEvent('collaborativeBlockUpdate', {
 				detail: {
@@ -776,8 +736,6 @@ export class CollaborativeManager {
 			});
 			store.setCollaborativeUsers(users);
 		}
-
-		console.log('[CollaborativeManager] Synced state');
 	}
 
 	/**
