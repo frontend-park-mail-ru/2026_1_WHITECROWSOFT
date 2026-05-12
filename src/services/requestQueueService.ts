@@ -1,7 +1,7 @@
 import { client } from '../client/client.js';
 import { db } from '../db.js';
 import { store } from '../store.js';
-import type { Note, QueuedRequest } from '../types.js';
+import type { Note, Block, QueuedRequest } from '../types.js';
 
 const QUEUEABLE_METHODS = ['POST', 'PUT', 'DELETE', 'PATCH'];
 
@@ -12,7 +12,6 @@ interface EnqueueRequestOptions {
 	formData?: FormData | null;
 	localId?: string | null;
 	type?: string | null;
-	silent?: boolean;
 }
 
 interface AttachmentApiResponse {
@@ -40,7 +39,6 @@ export const queueService = {
 			formData: request.formData || null,
 			localId: request.localId || null,
 			type: request.type || null,
-			silent: request.silent || false,
 			queuedAt: Date.now(),
 			retryCount: 0,
 		};

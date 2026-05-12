@@ -128,6 +128,10 @@ class Store {
 		this._notify('activeNoteId', noteId);
 	}
 
+	setActiveNoteIdSilently(noteId: string | number | null): void {
+		this.state.activeNoteId = noteId;
+	}
+
 	setActiveNote(note: ActiveNote | null): void {
 		this.state.activeNote = note ? { ...note } : null;
 		this._notify('activeNote', this.state.activeNote);
