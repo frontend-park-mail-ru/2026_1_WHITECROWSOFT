@@ -12,6 +12,7 @@ interface EnqueueRequestOptions {
 	formData?: FormData | null;
 	localId?: string | null;
 	type?: string | null;
+	silent?: boolean;
 }
 
 interface AttachmentApiResponse {
@@ -39,6 +40,7 @@ export const queueService = {
 			formData: request.formData || null,
 			localId: request.localId || null,
 			type: request.type || null,
+			silent: request.silent || false,
 			queuedAt: Date.now(),
 			retryCount: 0,
 		};
@@ -68,6 +70,8 @@ export const queueService = {
 		if (!queue.length) {
 			return [];
 		}
+
+		await this._ensureValidCsrfToken();
 
 		const results: Array<{
 			id: number;
@@ -106,7 +110,8 @@ export const queueService = {
 							id: string | number;
 							block_id?: string | number;
 						};
-						await this._commitLocalBlockId(requestItem.localId, resp);
+						const noteId = (requestItem.body as { note_id?: string | number })?.note_id;
+						await this._commitLocalBlockId(requestItem.localId, resp, noteId);
 						const newId = resp.id || resp.block_id;
 						if (newId) {
 							queue = await this._updateQueueArrayForBlock(
@@ -119,6 +124,31 @@ export const queueService = {
 						await this._commitLocalImageId(
 							requestItem.localId,
 							response as AttachmentApiResponse,
+						);
+					} else if (requestItem.type === 'AUDIO_UPLOAD') {
+						await this._commitLocalAudioId(
+							requestItem.localId,
+							response as AttachmentApiResponse,
+						);
+					} else if (requestItem.type === 'VIDEO_UPLOAD') {
+						await this._commitLocalVideoId(
+							requestItem.localId,
+							response as AttachmentApiResponse,
+						);
+					} else if (requestItem.type === 'SUBNOTE_CREATE') {
+						const resp = response as {
+							id: string | number;
+							title?: string;
+							updated_at?: string;
+						};
+						await this._commitLocalSubnoteId(
+							requestItem.localId, 
+							resp,
+						);
+						queue = await this._updateQueueArray(
+							queue,
+							requestItem.localId,
+							String(resp.id),
 						);
 					}
 				}
@@ -167,11 +197,49 @@ export const queueService = {
 		oldNoteId: string,
 		newNoteId: string,
 	): Promise<QueuedRequest[]> {
+		const allNotes = await db.notesGetAll();
+		for (const note of allNotes) {
+			let noteUpdated = false;
+			const updatedBlocks = (note.blocks || []).map(block => {
+				if (block.block_type_id === 5) {
+					let blockUpdated = false;
+					const newBlock = { ...block };
+					if (block.content === String(oldNoteId)) {
+						newBlock.content = String(newNoteId);
+						blockUpdated = true;
+					}
+					if (block.subnote_id === oldNoteId) {
+						newBlock.subnote_id = newNoteId;
+						blockUpdated = true;
+					}
+					
+					if (blockUpdated) {
+						noteUpdated = true;
+						return newBlock;
+					}
+				}
+				return block;
+			});
+			
+			if (noteUpdated) {
+				const updatedNote = { ...note, blocks: updatedBlocks };
+				await db.notesPut(updatedNote);
+				const storeNotes = store.getNotes();
+				const updatedStoreNotes = storeNotes.map(n =>
+					n.ID === note.ID ? updatedNote : n
+				);
+				store.setNotesSilently(updatedStoreNotes);
+				if (store.getActiveNoteId() === note.ID) {
+					store.setActiveBlocks(updatedBlocks);
+				}
+			}
+		}
 		const updatedQueue: QueuedRequest[] = [];
 		for (const req of queue) {
 			let newEndpoint = req.endpoint;
 			let newBody = req.body;
 			let needUpdate = false;
+			
 			if (req.endpoint && req.endpoint.includes(oldNoteId)) {
 				newEndpoint = req.endpoint.replace(
 					new RegExp(oldNoteId, 'g'),
@@ -179,23 +247,61 @@ export const queueService = {
 				);
 				needUpdate = true;
 			}
+			
 			if (req.body) {
 				const body = req.body as Record<string, unknown>;
+				let bodyChanged = false;
+				let updatedBody = { ...body };
+				
 				if (body.note_id === oldNoteId) {
-					newBody = { ...body, note_id: newNoteId };
-					needUpdate = true;
+					updatedBody.note_id = newNoteId;
+					bodyChanged = true;
 				}
+				
 				if (body.noteId === oldNoteId) {
-					newBody = { ...body, noteId: newNoteId };
+					updatedBody.noteId = newNoteId;
+					bodyChanged = true;
+				}
+				
+				if (body.parent_id === oldNoteId) {
+					updatedBody.parent_id = newNoteId;
+					bodyChanged = true;
+				}
+				
+				if (body.content === oldNoteId) {
+					updatedBody.content = String(newNoteId);
+					bodyChanged = true;
+				}
+				
+				if (body.subnote_id === oldNoteId) {
+					updatedBody.subnote_id = newNoteId;
+					bodyChanged = true;
+				}
+				
+				if (bodyChanged) {
+					newBody = updatedBody;
 					needUpdate = true;
 				}
 			}
+			
+			let newLocalId = req.localId;
+			if (req.localId === oldNoteId) {
+				newLocalId = newNoteId;
+				needUpdate = true;
+			}
+			
 			if (needUpdate) {
-				updatedQueue.push({ ...req, endpoint: newEndpoint, body: newBody });
+				updatedQueue.push({ 
+					...req, 
+					endpoint: newEndpoint, 
+					body: newBody,
+					localId: newLocalId
+				});
 			} else {
 				updatedQueue.push(req);
 			}
 		}
+		
 		return updatedQueue;
 	},
 
@@ -233,16 +339,17 @@ export const queueService = {
 				updatedQueue.push(req);
 			}
 		}
+		console.log(updatedQueue);
 		return updatedQueue;
 	},
 
 	async _executeRequest(requestItem: QueuedRequest): Promise<unknown> {
 		const { method, endpoint, body, formData, type } = requestItem;
 
-		if (type === 'IMAGE_UPLOAD') {
+		if (type === 'IMAGE_UPLOAD' || type === 'AUDIO_UPLOAD' || type === 'VIDEO_UPLOAD') {
 			const fileId = (body as { fileId?: string })?.fileId;
 			if (!fileId) {
-				throw new Error('No fileId for IMAGE_UPLOAD');
+				throw new Error('No fileId');
 			}
 
 			const fileData = await db.queueFileGet(fileId);
@@ -311,11 +418,41 @@ export const queueService = {
 			return;
 		}
 
+		const childNotes = await db.notesGetByParentId(localId);
+		for (const childNote of childNotes) {
+			const updatedChild = { ...childNote, parent_id: newNoteId };
+			await db.notesDelete(childNote.ID);
+			await db.notesPut(updatedChild);
+			const storeNotes = store.getNotes();
+			const updatedStoreNotes = storeNotes.map(n =>
+				n.ID === childNote.ID ? updatedChild : n
+			);
+			store.setNotes(updatedStoreNotes);
+		}
+
 		const images = await db.imagesGetByNoteId(localId);
 		for (const img of images) {
 			await db.imagesDelete(img.id);
 			await db.imagesPut({
 				...img,
+				noteId: newNoteId,
+			});
+		}
+
+		const audios = await db.audiosGetByNoteId(localId);
+		for (const audio of audios) {
+			await db.audiosDelete(audio.id);
+			await db.audiosPut({
+				...audio,
+				noteId: newNoteId,
+			});
+		}
+
+		const videos = await db.videosGetByNoteId(localId);
+		for (const video of videos) {
+			await db.videosDelete(video.id);
+			await db.videosPut({
+				...video,
 				noteId: newNoteId,
 			});
 		}
@@ -337,7 +474,7 @@ export const queueService = {
 		const newNote: Note = {
 			...localNote,
 			ID: newNoteId,
-			title: serverData.title || localNote.title,
+			title: localNote.title,
 			updatedAt:
 				serverData.updated_at ?? serverData.updatedAt ?? localNote.updatedAt,
 			icon: localNote.icon || null,
@@ -347,6 +484,25 @@ export const queueService = {
 
 		await db.notesDelete(localId);
 		await db.notesPut(newNote);
+		await db.settingsSet('activeNoteId', newNoteId);
+		const allNotes = store.getNotes();
+		const updatedAllNotes = allNotes.map(note => 
+			note.ID === localId ? newNote : note
+		);
+		store.setNotes(updatedAllNotes);
+
+		if (store.getActiveNoteId() === localId) {
+			const activeNote = store.getActiveNote();
+			if (activeNote) {
+				store.setActiveNote({
+					...activeNote,
+					ID: newNoteId,
+					title: newNote.title,
+				});
+			}
+			store.setActiveNoteId(newNoteId);
+			store.setActiveBlocks(updatedBlocks);
+		}
 
 		const pendingRequests = await db.getQueuedRequests();
 		for (const req of pendingRequests) {
@@ -384,29 +540,12 @@ export const queueService = {
 				});
 			}
 		}
-
-		const notes = store
-			.getNotes()
-			.map((note) => (note.ID === localId ? newNote : note));
-		store.setNotes(notes);
-
-		if (store.getActiveNoteId() === localId) {
-			const activeNote = store.getActiveNote();
-			if (activeNote) {
-				store.setActiveNote({
-					...activeNote,
-					ID: newNoteId,
-					title: newNote.title,
-				});
-			}
-			store.setActiveNoteId(newNoteId);
-			store.setActiveBlocksSilently(updatedBlocks);
-		}
 	},
 
 	async _commitLocalBlockId(
 		localId: string,
 		serverData: ServerResponseWithId,
+		noteId?: string | number,
 	): Promise<void> {
 		const newBlockId = serverData.id || serverData.block_id;
 		if (!newBlockId) {
@@ -424,24 +563,51 @@ export const queueService = {
 			console.warn('[Queue] Failed to update images for block:', error);
 		}
 
-		const activeBlocks = store.getActiveBlocks();
-		const updatedActiveBlocks = activeBlocks.map((block) =>
-			block.id === localId
-				? { ...block, id: newBlockId, isLocal: false }
-				: block,
-		);
-		store.setActiveBlocksSilently(updatedActiveBlocks);
+		try {
+			const audiosToUpdate = await db.audiosGetByBlockId(localId);
+			for (const audio of audiosToUpdate) {
+				await db.audiosDelete(audio.id);
+				await db.audiosPut({ ...audio, id: audio.id, blockId: newBlockId });
+			}
+		} catch (error) {
+			console.warn('[Queue] Failed to update audios for block:', error);
+		}
 
-		const activeNoteId = store.getActiveNoteId();
-		if (activeNoteId) {
-			const activeNote = await db.notesGet(activeNoteId);
-			if (activeNote && activeNote.blocks) {
-				const updatedBlocks = activeNote.blocks.map((block) =>
-					block.id === localId
-						? { ...block, id: newBlockId, isLocal: false }
-						: block,
-				);
-				await db.notesPut({ ...activeNote, blocks: updatedBlocks });
+		try {
+			const videosToUpdate = await db.videosGetByBlockId(localId);
+			for (const video of videosToUpdate) {
+				await db.videosDelete(video.id);
+				await db.videosPut({ ...video, id: video.id, blockId: newBlockId });
+			}
+		} catch (error) {
+			console.warn('[Queue] Failed to update videos for block:', error);
+		}
+
+		if (noteId) {
+			const note = await db.notesGet(noteId);
+			if (note && note.blocks) {
+				const blockIndex = note.blocks.findIndex(b => String(b.id) === localId);
+				if (blockIndex !== -1) {
+					const updatedBlocks = [...note.blocks];
+					updatedBlocks[blockIndex] = {
+						...updatedBlocks[blockIndex],
+						id: newBlockId,
+						isLocal: false,
+					};
+					const updatedNote = { ...note, blocks: updatedBlocks };
+					await db.notesPut(updatedNote);
+					const storeNotes = store.getNotes();
+					const updatedStoreNotes = storeNotes.map(n =>
+						n.ID === noteId ? updatedNote : n
+					);
+					store.setNotes(updatedStoreNotes);
+					if (store.getActiveNoteId() === noteId) {
+						const activeBlocks = store.getActiveBlocks().map(b =>
+							String(b.id) === localId ? { ...b, id: newBlockId, isLocal: false } : b
+						);
+						store.setActiveBlocks(activeBlocks);
+					}
+				}
 			}
 		}
 	},
@@ -516,6 +682,179 @@ export const queueService = {
 			throw error;
 		}
 	},
+
+	async _commitLocalAudioId(
+		localId: string,
+		serverData: AttachmentApiResponse,
+	): Promise<void> {
+		let audio = await db.audiosGet(localId);
+		if (!audio) {
+			const audiosByUrl = await db.audiosGetByUrl(`local://${localId}`);
+			audio = audiosByUrl[0];
+		}
+		if (!audio) {
+			console.warn('[Queue] Audio not found for localId:', localId);
+			return;
+		}
+
+		const newAudioId = serverData.id;
+		const newAudioUrl = serverData.attach_url.replace(
+			'http://minio:9000',
+			'/minio',
+		);
+
+		const updatedAudio = {
+			...audio,
+			id: newAudioId,
+			url: newAudioUrl,
+			status: 'synced' as const,
+			syncedAt: Date.now(),
+		};
+
+		await db.audiosDelete(localId);
+		await db.audiosPut(updatedAudio);
+		await db.queueFileDelete(localId);
+
+		const newAudioContent = JSON.stringify({
+			url: newAudioUrl,
+			filename: serverData.minio_key || audio.filename,
+			size: audio.size,
+			mimeType: audio.mimeType,
+			attachmentId: newAudioId,
+		});
+
+		const noteId = audio.noteId;
+		const blockId = audio.blockId;
+
+		try {
+			await client.put(`/notes/${noteId}/blocks/${blockId}/content`, {
+				content: newAudioContent,
+			});
+
+			const cachedNote = await db.notesGet(noteId);
+			if (cachedNote && cachedNote.blocks) {
+				const updatedBlocks = cachedNote.blocks.map((b) =>
+					String(b.id) === String(blockId)
+						? { ...b, content: newAudioContent }
+						: b,
+				);
+				await db.notesPut({ ...cachedNote, blocks: updatedBlocks });
+			}
+
+			const blocks = store.getActiveBlocks();
+			const updatedBlocks = blocks.map((b) =>
+				String(b.id) === String(blockId)
+					? { ...b, content: newAudioContent }
+					: b,
+			);
+			store.setActiveBlocksSilently(updatedBlocks);
+		} catch (error) {
+			console.error('[Queue] Failed to update block content:', error);
+			throw error;
+		}
+	},
+
+	async _commitLocalVideoId(
+		localId: string,
+		serverData: AttachmentApiResponse,
+	): Promise<void> {
+		let video = await db.videosGet(localId);
+		if (!video) {
+			const videosByUrl = await db.videosGetByUrl(`local://${localId}`);
+			video = videosByUrl[0];
+		}
+		if (!video) {
+			console.warn('[Queue] Video not found for localId:', localId);
+			return;
+		}
+
+		const newVideoId = serverData.id;
+		const newVideoUrl = serverData.attach_url.replace(
+			'http://minio:9000',
+			'/minio',
+		);
+
+		const updatedVideo = {
+			...video,
+			id: newVideoId,
+			url: newVideoUrl,
+			status: 'synced' as const,
+			syncedAt: Date.now(),
+		};
+
+		await db.videosDelete(localId);
+		await db.videosPut(updatedVideo);
+		await db.queueFileDelete(localId);
+
+		const newVideoContent = JSON.stringify({
+			url: newVideoUrl,
+			filename: serverData.minio_key || video.filename,
+			size: video.size,
+			mimeType: video.mimeType,
+			attachmentId: newVideoId,
+		});
+
+		const noteId = video.noteId;
+		const blockId = video.blockId;
+
+		try {
+			await client.put(`/notes/${noteId}/blocks/${blockId}/content`, {
+				content: newVideoContent,
+			});
+
+			const cachedNote = await db.notesGet(noteId);
+			if (cachedNote && cachedNote.blocks) {
+				const updatedBlocks = cachedNote.blocks.map((b) =>
+					String(b.id) === String(blockId)
+						? { ...b, content: newVideoContent }
+						: b,
+				);
+				await db.notesPut({ ...cachedNote, blocks: updatedBlocks });
+			}
+
+			const blocks = store.getActiveBlocks();
+			const updatedBlocks = blocks.map((b) =>
+				String(b.id) === String(blockId)
+					? { ...b, content: newVideoContent }
+					: b,
+			);
+			store.setActiveBlocksSilently(updatedBlocks);
+		} catch (error) {
+			console.error('[Queue] Failed to update block content:', error);
+			throw error;
+		}
+	},
+
+	async _commitLocalSubnoteId(
+		localId: string,
+		serverData: { id: string | number; title?: string; updated_at?: string },
+	): Promise<void> {
+		await this._commitLocalNoteId(localId, serverData);
+		const newSubnoteId = serverData.id;
+		if (!newSubnoteId) return;
+		const pendingRequests = await db.getQueuedRequests();
+		for (const req of pendingRequests) {
+			let needUpdate = false;
+			let newBody = req.body;
+			if (req.body) {
+				const body = req.body as Record<string, unknown>;
+				if ((body.content === localId || body.subnote_id === localId) && 
+					req.endpoint?.includes('/blocks')) {
+					newBody = { ...body, content: String(newSubnoteId), subnote_id: newSubnoteId };
+					needUpdate = true;
+				}
+			}
+			if (needUpdate && req.id) {
+				await db.deleteQueuedRequest(req.id);
+				await db.queueRequest({
+					...req,
+					body: newBody,
+					queuedAt: Date.now(),
+				});
+			}
+		}
+	},
+
 	async clearQueue(): Promise<void> {
 		await db.clearQueuedRequests();
 	},
@@ -538,5 +877,13 @@ export const queueService = {
 					? Math.min(...requests.map((r) => r.queuedAt))
 					: null,
 		};
+	},
+
+	async _ensureValidCsrfToken(): Promise<void> {
+		try {
+			await client.fetchCsrfToken();
+		} catch (error) {
+			console.warn('[Queue] Failed to refresh CSRF token:', error);
+		}
 	},
 };

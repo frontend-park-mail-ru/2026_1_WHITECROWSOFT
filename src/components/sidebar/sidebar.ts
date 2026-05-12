@@ -3,6 +3,7 @@ import { noteService } from '../../services/noteService.js';
 import { sidebarService } from '../../services/sidebarService.js';
 import { subnoteService } from '../../services/subnoteService.js';
 import { store } from '../../store.js';
+import { db } from '../../db.js';
 import type { User } from '../../types.js';
 import { collabManager } from '../../utils/collaborativeManager.js';
 import Component from '../component.js';
@@ -146,6 +147,7 @@ export default class Sidebar extends Component {
 
 	private handleNoteClick = async (noteId: string | number): Promise<void> => {
 		store.setActiveNoteId(noteId);
+		db.settingsSet('activeNoteId', noteId);
 		router.push('/');
 	};
 

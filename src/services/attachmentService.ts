@@ -175,6 +175,7 @@ export const attachmentService = {
 		}
 		updatedBlocks.sort((a, b) => a.position - b.position);
 		store.setActiveBlocks(updatedBlocks);
+		await db.notesUpdateBlocks(noteId, updatedBlocks);
 
 		return finalBlock;
 	},
@@ -256,6 +257,7 @@ export const attachmentService = {
 		}
 		updatedBlocks.sort((a, b) => a.position - b.position);
 		store.setActiveBlocks(updatedBlocks);
+		await db.notesUpdateBlocks(noteId, updatedBlocks);
 		
 		return finalBlock;
 	},
@@ -317,6 +319,7 @@ export const attachmentService = {
 		}
 		updatedBlocks.sort((a, b) => a.position - b.position);
 		store.setActiveBlocks(updatedBlocks);
+		await db.notesUpdateBlocks(noteId, updatedBlocks);
 
 		return finalBlock;
 	},
@@ -398,6 +401,7 @@ export const attachmentService = {
 		}
 		updatedBlocks.sort((a, b) => a.position - b.position);
 		store.setActiveBlocks(updatedBlocks);
+		await db.notesUpdateBlocks(noteId, updatedBlocks);
 		
 		return finalBlock;
 	},
@@ -459,6 +463,7 @@ export const attachmentService = {
 		}
 		updatedBlocks.sort((a, b) => a.position - b.position);
 		store.setActiveBlocks(updatedBlocks);
+		await db.notesUpdateBlocks(noteId, updatedBlocks);
 
 		return finalBlock;
 	},
@@ -540,6 +545,7 @@ export const attachmentService = {
 		}
 		updatedBlocks.sort((a, b) => a.position - b.position);
 		store.setActiveBlocks(updatedBlocks);
+		await db.notesUpdateBlocks(noteId, updatedBlocks);
 		
 		return finalBlock;
 	},

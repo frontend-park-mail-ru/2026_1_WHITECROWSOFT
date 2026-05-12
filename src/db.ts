@@ -4,6 +4,7 @@ import type {
 	FormattingRange,
 	ImageAttachment,
 	Note,
+	Block,
 	QueueFile,
 	QueuedRequest,
 	VideoAttachment,
@@ -165,6 +166,76 @@ class Database {
 
 	async notesDelete(noteID: string | number): Promise<void> {
 		return this._delete('notes', noteID);
+	}
+
+	async notesUpdateBlocks(noteId: string | number, blocks: Block[]): Promise<void> {
+		const note = await this.notesGet(noteId);
+		if (!note) {
+			return;
+		}
+		await this.notesPut({ ...note, blocks });
+	}
+
+	async notesAddBlock(noteId: string | number, block: Block): Promise<void> {
+		const note = await this.notesGet(noteId);
+		if (!note) {
+			return;
+		}
+		const updatedBlocks = [...(note.blocks || []), block];
+		updatedBlocks.sort((a, b) => a.position - b.position);
+		await this.notesPut({ ...note, blocks: updatedBlocks });
+	}
+
+	async notesUpdateBlock(noteId: string | number, blockId: string | number, updatedBlock: Block): Promise<void> {
+		const note = await this.notesGet(noteId);
+		if (!note) return;
+		
+		const updatedBlocks = (note.blocks || []).map(block => 
+			String(block.id) === String(blockId) ? updatedBlock : block
+		);
+		await this.notesPut({ ...note, blocks: updatedBlocks });
+	}
+
+	async notesDeleteBlock(noteId: string | number, blockId: string | number): Promise<void> {
+		const note = await this.notesGet(noteId);
+		if (!note) return;
+		
+		const updatedBlocks = (note.blocks || []).filter(block => String(block.id) !== String(blockId));
+		updatedBlocks.forEach((block, idx) => {
+			block.position = idx;
+		});
+		await this.notesPut({ ...note, blocks: updatedBlocks });
+	}
+
+	async notesReorderBlocks(noteId: string | number, blocks: Block[]): Promise<void> {
+		const note = await this.notesGet(noteId);
+		if (!note) return;
+		
+		blocks.forEach((block, idx) => {
+			block.position = idx;
+		});
+		await this.notesPut({ ...note, blocks });
+	}
+
+	async notesUpdateBlockFormatting(
+		noteId: string | number,
+		blockId: string | number,
+		ranges: FormattingRange[],
+	): Promise<void> {
+		const note = await this.notesGet(noteId);
+		if (!note) return;
+		
+		const updatedBlocks = (note.blocks || []).map((block) => {
+			if (String(block.id) === String(blockId)) {
+				return {
+					...block,
+					formatting: { ranges },
+				};
+			}
+			return block;
+		});
+		
+		await this.notesPut({ ...note, blocks: updatedBlocks });
 	}
 
 	async notesClear(): Promise<void> {
@@ -374,6 +445,18 @@ class Database {
 		for (const video of videos) {
 			await this.videosDelete(video.id);
 		}
+	}
+
+	async videosGetByBlockId(
+		blockId: string | number,
+	): Promise<VideoAttachment[]> {
+		const all = await this._getAll<VideoAttachment>('videos');
+		return all.filter((video) => video.blockId === blockId);
+	}
+
+	async videosGetByUrl(url: string): Promise<VideoAttachment[]> {
+		const all = await this._getAll<VideoAttachment>('videos');
+		return all.filter((video) => video.url === url);
 	}
 
 	async videosDelete(id: string | number): Promise<void> {

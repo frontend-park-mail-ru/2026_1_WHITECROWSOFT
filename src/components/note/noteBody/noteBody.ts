@@ -50,6 +50,7 @@ export default class NoteBody extends Component {
 
 	private subscribeToStore(): void {
 		this.unsubscribeActiveBlocks = store.subscribe('activeBlocks', () => {
+			console.log('render')
 			this.renderBlocks();
 		});
 	}
@@ -132,6 +133,7 @@ export default class NoteBody extends Component {
 	}
 
 	private async renderBlocks(): Promise<void> {
+		console.log(store.getActiveBlocks())
 		if (this.isRendering) {
 			this.needsRender = true;
 			return;
@@ -144,15 +146,6 @@ export default class NoteBody extends Component {
 			if (!container) return;
 
 			const blocks = store.getActiveBlocks();
-			if (blocks.length === 0) {
-				if (this.blockWrappers.size === 0) {
-					await this.createFirstBlock();
-					return;
-				}
-				this.clearBlocks(container);
-				await this.createFirstBlock();
-				return;
-			}
 			const nextIds = blocks.map((block) => String(block.id));
 			for (const [id, wrapper] of this.blockWrappers.entries()) {
 				if (!nextIds.includes(id)) {
@@ -217,23 +210,6 @@ export default class NoteBody extends Component {
 		container.innerHTML = '';
 	}
 
-	private async createFirstBlock(): Promise<void> {
-		const activeNoteId = store.getActiveNoteId();
-		if (!activeNoteId) return;
-		const noteExists = store.getNotes().some((n) => n.ID === activeNoteId);
-		if (!noteExists) return;
-		try {
-			await noteService.createBlock(activeNoteId, {
-				note_id: activeNoteId,
-				block_type_id: 1,
-				position: 0,
-				content: '',
-			});
-		} catch (error) {
-			console.error('Failed to create first block:', error);
-		}
-	}
-
 	private async handleContentChange(
 		blockId: string,
 		content: string,
@@ -252,6 +228,7 @@ export default class NoteBody extends Component {
 		if (!activeNoteId) return;
 		const blocks = store.getActiveBlocks();
 		const block = blocks.find((b) => String(b.id) === blockId);
+		console.log(block, blockId, blocks);
 		if (!block) return;
 
 		if (block.block_type_id === 5 && block.content) {
@@ -304,13 +281,13 @@ export default class NoteBody extends Component {
 
 	private async handleSplitBlock(
 		blockId: string,
-		afterContent: string,
 	): Promise<void> {
 		const activeNoteId = store.getActiveNoteId();
 		if (!activeNoteId) return;
+		console.log(activeNoteId);
 		await noteService.createBlockAfter(
 			activeNoteId,
-			{ note_id: activeNoteId, block_type_id: 1, content: afterContent },
+			{ note_id: activeNoteId, block_type_id: 1 },
 			blockId,
 		);
 	}

@@ -21,7 +21,7 @@
 		"src/**/*.d.ts",
 		"vite.config.ts",
 		"src/layout.js",
-		"src/public/service-worker.js",
+		"src/public/service-worker.js", "src/app.js",
 	],
 	"exclude": ["node_modules", "dist"],
 }

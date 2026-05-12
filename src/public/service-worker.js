@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'noterian-v1';
+const CACHE_VERSION = 'noterian-v6';
 const CACHE_NAME = `noterian-static-${CACHE_VERSION}`;
 const ASSETS_TO_CACHE = [
 	'/',
@@ -9,6 +9,8 @@ const ASSETS_TO_CACHE = [
 	'/icons/attach_picture.svg',
 	'/icons/attach_table.svg',
 	'/icons/attach_text.svg',
+	'/icons/attach_music.svg',
+	'/icons/attach_video.svg',
 	'/icons/block_add.svg',
 	'/icons/block_drag.svg',
 	'/icons/bookmark.svg',

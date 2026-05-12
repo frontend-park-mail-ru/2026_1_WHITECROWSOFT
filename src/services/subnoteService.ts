@@ -1,7 +1,7 @@
 import { client } from '../client/client.js';
 import { db } from '../db.js';
 import { store } from '../store.js';
-import type { Block, Note } from '../types.js';
+import type { Block, Note, BlockApiResponse } from '../types.js';
 import { handleAuthError } from '../utils/handleAuthError.js';
 import { noteService } from './noteService.js';
 import { queueService } from './requestQueueService.js';
@@ -14,6 +14,12 @@ interface SubnoteResponse {
 	is_public: boolean;
 	created_at: string;
 	updated_at: string;
+}
+
+interface CreateBlockData {
+	note_id: string | number;
+	block_type_id: number;
+	position: number;
 }
 
 export const subnoteService = {
@@ -49,12 +55,12 @@ export const subnoteService = {
 			updatedAt: subnoteResult.updated_at || Date.now(),
 			blocks: [],
 		};
-		const createdBlock = await noteService.createBlock(subnote.ID, {
+		const blockData: CreateBlockData = {
 			note_id: subnote.ID,
 			block_type_id: 1,
 			position: 0,
-			content: '',
-		});
+		};
+		const createdBlock = await client.post<BlockApiResponse>(`/notes/${subnote.ID}/blocks`, blockData);
 		const updatedNote = { ...subnote, blocks: [createdBlock] };
 		await db.notesPut(updatedNote);
 		const storeNotes = store.getNotes();
@@ -66,7 +72,6 @@ export const subnoteService = {
 			text: '',
 		};
 		await noteService._setActiveNoteState(activeNote);
-		store.setActiveBlocks([createdBlock]);
 		store.setPendingFocus(createdBlock.id, 'start');
 		this._createParentBlockInBackground(parentNoteId, subnote.ID, afterBlockId);
 		return { subnote, block: null };
@@ -139,7 +144,7 @@ export const subnoteService = {
 		title: string,
 		afterBlockId: string | null = null,
 	): Promise<{ subnote: Note; block: Block | null }> {
-		const localSubnoteId = `local-subnote-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+		const localSubnoteId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 		const localSubnote: Note = {
 			ID: localSubnoteId,
 			title: title,
@@ -150,21 +155,98 @@ export const subnoteService = {
 			isLocal: true,
 		};
 		await db.notesPut(localSubnote);
-		const currentNotes = store.getNotes();
-		store.setNotes([localSubnote, ...currentNotes]);
-		store.setActiveNoteId(localSubnote.ID);
+		const currentnotes = store.getNotes();
+		store.setNotes([localSubnote, ...currentnotes]);
+		
+		const parentNote = store.getNotes().find(n => n.ID === parentNoteId);
+		let subnoteBlock = null;
+		if (parentNote) {
+			const currentBlocks = parentNote.blocks || [];
+			const sortedBlocks = [...currentBlocks].sort((a, b) => a.position - b.position);
+			
+			let insertIndex: number;
+			if (afterBlockId) {
+				const afterIndex = sortedBlocks.findIndex((b) => String(b.id) === afterBlockId);
+				insertIndex = afterIndex + 1;
+			} else {
+				insertIndex = sortedBlocks.length;
+			}
+			
+			const localBlockId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+			const newBlock: Block = {
+				id: localBlockId,
+				note_id: parentNoteId,
+				block_type_id: 5,
+				position: insertIndex,
+				content: String(localSubnoteId),
+				subnote_id: localSubnoteId,
+				formatting: { ranges: [] },
+				isLocal: true,
+			};
+			subnoteBlock = newBlock;
+			
+			const updatedParentBlocks = [...sortedBlocks, newBlock];
+			updatedParentBlocks.sort((a, b) => a.position - b.position);
+			const updatedParentNote = { ...parentNote, blocks: updatedParentBlocks };
+			const updatedNotes = store.getNotes().map(n =>
+				n.ID === parentNoteId ? updatedParentNote : n
+			);
+			store.setNotesSilently(updatedNotes);
+			await db.notesPut(updatedParentNote);
+			
+			await queueService.enqueueRequest({
+				method: 'POST',
+				endpoint: `/notes/${parentNoteId}/blocks`,
+				body: {
+					note_id: parentNoteId,
+					block_type_id: 5,
+					position: insertIndex,
+					content: String(localSubnoteId),
+					subnote_id: localSubnoteId,
+				},
+				localId: localBlockId,
+			});
+		}
+		
+		const activeNote = {
+			ID: localSubnoteId,
+			title: localSubnote.title,
+			breadcrumb: localSubnote.title,
+			text: '',
+		};
+		await noteService._setActiveNoteState(activeNote);
+		store.setActiveBlocks([]);
+		
 		await queueService.enqueueRequest({
 			method: 'POST',
 			endpoint: `/notes/${parentNoteId}/subnote`,
 			localId: localSubnoteId,
-			type: 'SUBNOTE_WITH_BLOCK_CREATE',
+			type: 'SUBNOTE_CREATE',
 			body: {
 				title,
 				parent_id: parentNoteId,
 				afterBlockId,
 			},
 		});
-		return { subnote: localSubnote, block: null };
+
+		if (subnoteBlock) {
+			await queueService.enqueueRequest({
+				method: 'PUT',
+				endpoint: `/notes/${parentNoteId}/blocks/${subnoteBlock.id}/content`,
+				body: {
+					content:  String(localSubnoteId)
+				},
+			});
+		}
+
+		const blockSubnote = await noteService.createBlock(localSubnoteId, {
+			note_id: localSubnoteId,
+			block_type_id: 1,
+			position: 0,
+		});
+		store.setActiveBlocks([blockSubnote]);
+		
+		return { subnote: localSubnote, block: blockSubnote };
 	},
 
 	async updateSubnoteTitle(subnoteId: string | number, newTitle: string): Promise<void> {

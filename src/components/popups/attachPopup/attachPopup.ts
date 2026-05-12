@@ -137,7 +137,6 @@ export default class AttachPopup extends Component {
 						{
 							note_id: activeNoteId,
 							block_type_id: 1,
-							content: '',
 						},
 						this.afterBlockId,
 					);
