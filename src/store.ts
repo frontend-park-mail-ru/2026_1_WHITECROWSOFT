@@ -137,6 +137,10 @@ class Store {
 		this._notify('activeNote', this.state.activeNote);
 	}
 
+	setActiveNoteSilently(note: ActiveNote | null): void {
+		this.state.activeNote = note ? { ...note } : null;
+	}
+
 	setActiveBlocksSilently(blocks: Block[]): void {
 		this.state.activeBlocks = blocks;
 	}

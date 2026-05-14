@@ -130,6 +130,11 @@ export default class SubnoteBlock extends Component {
 		}
 	}
 
+	updateBlockId(newBlockId: string | number): void {
+		this.block.id = newBlockId;
+		this.domElement?.setAttribute('data-block-id', String(newBlockId));
+	}
+
 	setCursorAtStart(): void {}
 	setCursorAtOffset(): void {}
 

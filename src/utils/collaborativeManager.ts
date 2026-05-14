@@ -70,7 +70,6 @@ export class CollaborativeManager {
 	 * Закрывает соединение и очищает список подключенных пользователей
 	 */
 	stopCollab(): void {
-
 		if (this.unsubscribeWs) {
 			this.unsubscribeWs();
 			this.unsubscribeWs = null;
@@ -462,7 +461,7 @@ export class CollaborativeManager {
 
 		block.content = newContent;
 		store.setActiveBlocks([...blocks]);
-		
+
 		window.dispatchEvent(
 			new CustomEvent('collaborativeBlockUpdate', {
 				detail: {

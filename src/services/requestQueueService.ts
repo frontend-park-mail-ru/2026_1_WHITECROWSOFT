@@ -1,7 +1,7 @@
 import { client } from '../client/client.js';
 import { db } from '../db.js';
 import { store } from '../store.js';
-import type { Note, Block, QueuedRequest } from '../types.js';
+import type { Note, QueuedRequest } from '../types.js';
 
 const QUEUEABLE_METHODS = ['POST', 'PUT', 'DELETE', 'PATCH'];
 
@@ -94,6 +94,14 @@ export const queueService = {
 							updated_at?: string;
 							updatedAt?: string;
 						};
+						window.dispatchEvent(
+							new CustomEvent('syncNoteId', {
+								detail: {
+									serverId: resp.id,
+									localId: requestItem.localId,
+								},
+							}),
+						);
 						await this._commitLocalNoteId(requestItem.localId, resp);
 						queue = await this._updateQueueArray(
 							queue,
@@ -108,7 +116,16 @@ export const queueService = {
 							id: string | number;
 							block_id?: string | number;
 						};
-						const noteId = (requestItem.body as { note_id?: string | number })?.note_id;
+						window.dispatchEvent(
+							new CustomEvent('syncBlockId', {
+								detail: {
+									serverId: resp.id,
+									localId: requestItem.localId,
+								},
+							}),
+						);
+						const noteId = (requestItem.body as { note_id?: string | number })
+							?.note_id;
 						await this._commitLocalBlockId(requestItem.localId, resp, noteId);
 						const newId = resp.id || resp.block_id;
 						if (newId) {
@@ -139,10 +156,7 @@ export const queueService = {
 							title?: string;
 							updated_at?: string;
 						};
-						await this._commitLocalSubnoteId(
-							requestItem.localId, 
-							resp,
-						);
+						await this._commitLocalSubnoteId(requestItem.localId, resp);
 						queue = await this._updateQueueArray(
 							queue,
 							requestItem.localId,
@@ -198,7 +212,7 @@ export const queueService = {
 		const allNotes = await db.notesGetAll();
 		for (const note of allNotes) {
 			let noteUpdated = false;
-			const updatedBlocks = (note.blocks || []).map(block => {
+			const updatedBlocks = (note.blocks || []).map((block) => {
 				if (block.block_type_id === 5) {
 					let blockUpdated = false;
 					const newBlock = { ...block };
@@ -210,7 +224,7 @@ export const queueService = {
 						newBlock.subnote_id = newNoteId;
 						blockUpdated = true;
 					}
-					
+
 					if (blockUpdated) {
 						noteUpdated = true;
 						return newBlock;
@@ -218,13 +232,13 @@ export const queueService = {
 				}
 				return block;
 			});
-			
+
 			if (noteUpdated) {
 				const updatedNote = { ...note, blocks: updatedBlocks };
 				await db.notesPut(updatedNote);
 				const storeNotes = store.getNotes();
-				const updatedStoreNotes = storeNotes.map(n =>
-					n.ID === note.ID ? updatedNote : n
+				const updatedStoreNotes = storeNotes.map((n) =>
+					n.ID === note.ID ? updatedNote : n,
 				);
 				store.setNotesSilently(updatedStoreNotes);
 				if (store.getActiveNoteId() === note.ID) {
@@ -237,7 +251,7 @@ export const queueService = {
 			let newEndpoint = req.endpoint;
 			let newBody = req.body;
 			let needUpdate = false;
-			
+
 			if (req.endpoint && req.endpoint.includes(oldNoteId)) {
 				newEndpoint = req.endpoint.replace(
 					new RegExp(oldNoteId, 'g'),
@@ -245,61 +259,61 @@ export const queueService = {
 				);
 				needUpdate = true;
 			}
-			
+
 			if (req.body) {
 				const body = req.body as Record<string, unknown>;
 				let bodyChanged = false;
-				let updatedBody = { ...body };
-				
+				const updatedBody = { ...body };
+
 				if (body.note_id === oldNoteId) {
 					updatedBody.note_id = newNoteId;
 					bodyChanged = true;
 				}
-				
+
 				if (body.noteId === oldNoteId) {
 					updatedBody.noteId = newNoteId;
 					bodyChanged = true;
 				}
-				
+
 				if (body.parent_id === oldNoteId) {
 					updatedBody.parent_id = newNoteId;
 					bodyChanged = true;
 				}
-				
+
 				if (body.content === oldNoteId) {
 					updatedBody.content = String(newNoteId);
 					bodyChanged = true;
 				}
-				
+
 				if (body.subnote_id === oldNoteId) {
 					updatedBody.subnote_id = newNoteId;
 					bodyChanged = true;
 				}
-				
+
 				if (bodyChanged) {
 					newBody = updatedBody;
 					needUpdate = true;
 				}
 			}
-			
+
 			let newLocalId = req.localId;
 			if (req.localId === oldNoteId) {
 				newLocalId = newNoteId;
 				needUpdate = true;
 			}
-			
+
 			if (needUpdate) {
-				updatedQueue.push({ 
-					...req, 
-					endpoint: newEndpoint, 
+				updatedQueue.push({
+					...req,
+					endpoint: newEndpoint,
 					body: newBody,
-					localId: newLocalId
+					localId: newLocalId,
 				});
 			} else {
 				updatedQueue.push(req);
 			}
 		}
-		
+
 		return updatedQueue;
 	},
 
@@ -344,7 +358,11 @@ export const queueService = {
 	async _executeRequest(requestItem: QueuedRequest): Promise<unknown> {
 		const { method, endpoint, body, formData, type } = requestItem;
 
-		if (type === 'IMAGE_UPLOAD' || type === 'AUDIO_UPLOAD' || type === 'VIDEO_UPLOAD') {
+		if (
+			type === 'IMAGE_UPLOAD' ||
+			type === 'AUDIO_UPLOAD' ||
+			type === 'VIDEO_UPLOAD'
+		) {
 			const fileId = (body as { fileId?: string })?.fileId;
 			if (!fileId) {
 				throw new Error('No fileId');
@@ -422,10 +440,10 @@ export const queueService = {
 			await db.notesDelete(childNote.ID);
 			await db.notesPut(updatedChild);
 			const storeNotes = store.getNotes();
-			const updatedStoreNotes = storeNotes.map(n =>
-				n.ID === childNote.ID ? updatedChild : n
+			const updatedStoreNotes = storeNotes.map((n) =>
+				n.ID === childNote.ID ? updatedChild : n,
 			);
-			store.setNotes(updatedStoreNotes);
+			store.setNotesSilently(updatedStoreNotes);
 		}
 
 		const images = await db.imagesGetByNoteId(localId);
@@ -484,22 +502,22 @@ export const queueService = {
 		await db.notesPut(newNote);
 		await db.settingsSet('activeNoteId', newNoteId);
 		const allNotes = store.getNotes();
-		const updatedAllNotes = allNotes.map(note => 
-			note.ID === localId ? newNote : note
+		const updatedAllNotes = allNotes.map((note) =>
+			note.ID === localId ? newNote : note,
 		);
-		store.setNotes(updatedAllNotes);
+		store.setNotesSilently(updatedAllNotes);
 
 		if (store.getActiveNoteId() === localId) {
 			const activeNote = store.getActiveNote();
 			if (activeNote) {
-				store.setActiveNote({
+				store.setActiveNoteSilently({
 					...activeNote,
 					ID: newNoteId,
 					title: newNote.title,
 				});
 			}
-			store.setActiveNoteId(newNoteId);
-			store.setActiveBlocks(updatedBlocks);
+			store.setActiveNoteIdSilently(newNoteId);
+			store.setActiveBlocksSilently(updatedBlocks);
 		}
 
 		const pendingRequests = await db.getQueuedRequests();
@@ -584,7 +602,9 @@ export const queueService = {
 		if (noteId) {
 			const note = await db.notesGet(noteId);
 			if (note && note.blocks) {
-				const blockIndex = note.blocks.findIndex(b => String(b.id) === localId);
+				const blockIndex = note.blocks.findIndex(
+					(b) => String(b.id) === localId,
+				);
 				if (blockIndex !== -1) {
 					const updatedBlocks = [...note.blocks];
 					updatedBlocks[blockIndex] = {
@@ -595,15 +615,19 @@ export const queueService = {
 					const updatedNote = { ...note, blocks: updatedBlocks };
 					await db.notesPut(updatedNote);
 					const storeNotes = store.getNotes();
-					const updatedStoreNotes = storeNotes.map(n =>
-						n.ID === noteId ? updatedNote : n
+					const updatedStoreNotes = storeNotes.map((n) =>
+						n.ID === noteId ? updatedNote : n,
 					);
-					store.setNotes(updatedStoreNotes);
+					store.setNotesSilently(updatedStoreNotes);
 					if (store.getActiveNoteId() === noteId) {
-						const activeBlocks = store.getActiveBlocks().map(b =>
-							String(b.id) === localId ? { ...b, id: newBlockId, isLocal: false } : b
-						);
-						store.setActiveBlocks(activeBlocks);
+						const activeBlocks = store
+							.getActiveBlocks()
+							.map((b) =>
+								String(b.id) === localId
+									? { ...b, id: newBlockId, isLocal: false }
+									: b,
+							);
+						store.setActiveBlocksSilently(activeBlocks);
 					}
 				}
 			}
@@ -836,9 +860,15 @@ export const queueService = {
 			let newBody = req.body;
 			if (req.body) {
 				const body = req.body as Record<string, unknown>;
-				if ((body.content === localId || body.subnote_id === localId) && 
-					req.endpoint?.includes('/blocks')) {
-					newBody = { ...body, content: String(newSubnoteId), subnote_id: newSubnoteId };
+				if (
+					(body.content === localId || body.subnote_id === localId) &&
+					req.endpoint?.includes('/blocks')
+				) {
+					newBody = {
+						...body,
+						content: String(newSubnoteId),
+						subnote_id: newSubnoteId,
+					};
 					needUpdate = true;
 				}
 			}

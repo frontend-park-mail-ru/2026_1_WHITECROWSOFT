@@ -391,6 +391,11 @@ export default class TextBlock extends Component {
 		}
 	}
 
+	updateBlockId(newBlockId: string | number): void {
+		this.block.id = newBlockId;
+		this.domElement?.setAttribute('data-block-id', String(newBlockId));
+	}
+
 	setCursorAtStart(): void {
 		const blockEl = this.domElement;
 		if (!blockEl) return;

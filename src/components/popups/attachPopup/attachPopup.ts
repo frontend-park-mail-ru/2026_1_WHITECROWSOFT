@@ -269,7 +269,7 @@ export default class AttachPopup extends Component {
 					await subnoteService.createSubnoteWithBlock(
 						activeNoteId,
 						'Новая подзаметка',
-						null
+						null,
 					);
 				} catch (error) {
 					console.error('Error creating subnote:', error);

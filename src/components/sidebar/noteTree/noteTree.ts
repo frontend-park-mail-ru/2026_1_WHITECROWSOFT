@@ -78,6 +78,20 @@ export default class NoteTree extends Component {
 		updateRecursive(this.options.notes);
 	}
 
+	updateNoteId(localId: string | number, serverId: string | number): void {
+		const updateInArray = (notes: SidebarNote[]): void => {
+			for (const note of notes) {
+				if (String(note.id) === String(localId)) {
+					note.id = serverId;
+					return;
+				}
+				updateInArray(note.children);
+			}
+		};
+		updateInArray(this.options.notes);
+		this.nodeComponents.get(localId)?.updateNoteId(localId, serverId);
+	}
+
 	getNoteTitleElementById(noteId: string | number): HTMLElement | null {
 		const component = this.nodeComponents.get(noteId);
 		return component?.getTitleElement() || null;

@@ -323,3 +323,8 @@ export type FormAction =
 	| { type: 'VALIDATION_ERROR'; payload: Record<string, string> }
 	| { type: 'CLEAR_ERROR'; payload: string }
 	| { type: 'TOGGLE_PASSWORD'; payload: 'password' | 'passwordConfirm' };
+
+export enum RequestEvents {
+	NOTE_CREATE = 'NOTE_CREATE',
+	BLOCK_CREATE = 'BLOCK_CREATE',
+}

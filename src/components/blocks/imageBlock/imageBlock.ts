@@ -98,6 +98,11 @@ export default class ImageBlock extends Component {
 		void this.loadImage();
 	}
 
+	updateBlockId(newBlockId: string | number): void {
+		this.block.id = newBlockId;
+		this.domElement?.setAttribute('data-block-id', String(newBlockId));
+	}
+
 	private bindEvents(): void {
 		const blockEl = this.domElement;
 		if (!blockEl) return;

@@ -53,6 +53,7 @@ export default class NoteSection extends Component {
 
 	updateNotes(notes: SidebarNote[]): void {
 		this.options.notes = notes;
+		console.log('render sidebar:', notes);
 		if (this.noteTree) {
 			this.noteTree.updateNotes(notes);
 		} else if (notes.length > 0) {
@@ -81,6 +82,20 @@ export default class NoteSection extends Component {
 
 	updateActiveNote(noteId: string | number | null): void {
 		this.noteTree?.updateActiveNote(noteId);
+	}
+
+	updateNoteId(localId: string | number, serverId: string | number): void {
+		const updateInArray = (notes: SidebarNote[]): void => {
+			for (const note of notes) {
+				if (String(note.id) === String(localId)) {
+					note.id = serverId;
+					return;
+				}
+				updateInArray(note.children);
+			}
+		};
+		updateInArray(this.options.notes);
+		this.noteTree?.updateNoteId(localId, serverId);
 	}
 
 	getNoteTitleElementById(noteId: string | number): HTMLElement | null {

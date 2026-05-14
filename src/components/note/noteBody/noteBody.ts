@@ -1,4 +1,3 @@
-import { db } from '../../../db.js';
 import { attachmentService } from '../../../services/attachmentService.js';
 import { noteService } from '../../../services/noteService.js';
 import { store } from '../../../store.js';
@@ -20,6 +19,7 @@ export default class NoteBody extends Component {
 	private isRendering = false;
 	private needsRender = false;
 	private unsubscribeActiveBlocks: (() => void) | null = null;
+	private unsubscribeSyncBlockId: (() => void) | null = null;
 	private unsubscribePendingFocus: (() => void) | null = null;
 	private unsubscribeCollaborativeCreate: (() => void) | null = null;
 	private unsubscribeCollaborativeDelete: (() => void) | null = null;
@@ -44,13 +44,13 @@ export default class NoteBody extends Component {
 		this.subscribeToPendingFocus();
 		this.subscribeToCollaborativeCreate();
 		this.subscribeToCollaborativeDelete();
+		this.subscribeToSyncBlockId();
 		await this.renderBlocks();
 		this.bindEvents();
 	}
 
 	private subscribeToStore(): void {
 		this.unsubscribeActiveBlocks = store.subscribe('activeBlocks', () => {
-			console.log('render')
 			this.renderBlocks();
 		});
 	}
@@ -104,6 +104,22 @@ export default class NoteBody extends Component {
 		};
 	}
 
+	private subscribeToSyncBlockId(): void {
+		const handleSync = ((e: CustomEvent) => {
+			const { serverId, localId } = e.detail;
+			const oldWrapper = this.blockWrappers.get(localId);
+			if (oldWrapper) {
+				this.blockWrappers.delete(localId);
+				oldWrapper.updateBlockId(serverId);
+				this.blockWrappers.set(serverId, oldWrapper);
+			}
+		}) as EventListener;
+		window.addEventListener('syncBlockId', handleSync);
+		this.unsubscribeSyncBlockId = () => {
+			window.removeEventListener('syncBlockId', handleSync);
+		};
+	}
+
 	private applyPendingFocus(
 		blockId: string | number,
 		offset: number | 'start' | 'end' | null,
@@ -133,7 +149,7 @@ export default class NoteBody extends Component {
 	}
 
 	private async renderBlocks(): Promise<void> {
-		console.log(store.getActiveBlocks())
+		console.log('render body:', store.getActiveBlocks());
 		if (this.isRendering) {
 			this.needsRender = true;
 			return;
@@ -279,9 +295,7 @@ export default class NoteBody extends Component {
 		}
 	}
 
-	private async handleSplitBlock(
-		blockId: string,
-	): Promise<void> {
+	private async handleSplitBlock(blockId: string): Promise<void> {
 		const activeNoteId = store.getActiveNoteId();
 		if (!activeNoteId) return;
 		console.log(activeNoteId);
@@ -536,5 +550,6 @@ export default class NoteBody extends Component {
 		this.unsubscribePendingFocus?.();
 		this.unsubscribeCollaborativeCreate?.();
 		this.unsubscribeCollaborativeDelete?.();
+		this.unsubscribeSyncBlockId?.();
 	}
 }

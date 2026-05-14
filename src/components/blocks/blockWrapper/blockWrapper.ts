@@ -162,6 +162,12 @@ export default class BlockWrapper extends Component {
 		this.renderBlockContent();
 	}
 
+	updateBlockId(newBlockId: string | number): void {
+		this.block.id = newBlockId;
+		this.domElement?.setAttribute('data-block-id', String(newBlockId));
+		this.blockComponent?.updateBlockId(newBlockId);
+	}
+
 	private bindEvents(): void {
 		const addBtn = this.domElement?.querySelector('[data-action="add"]');
 		const dragBtn = this.domElement?.querySelector('[data-action="drag"]');

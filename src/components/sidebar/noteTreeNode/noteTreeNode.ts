@@ -137,6 +137,11 @@ export default class NoteTreeNode extends Component {
 		this.renderChildren();
 	}
 
+	updateNoteId(localId: string | number, serverId: string | number): void {
+		this.domElement?.setAttribute('data-note-id', String(serverId));
+		this.contentElement?.setAttribute('data-note-id', String(serverId));
+	}
+
 	getTitleElement(): HTMLElement | null {
 		return this.titleElement;
 	}

@@ -23,7 +23,7 @@ async function bootstrap() {
 			await queueService.flushQueue();
 		});
 
-		window.addEventListener('offline', () => { 
+		window.addEventListener('offline', () => {
 			store.setOnline(false);
 		});
 
@@ -32,7 +32,7 @@ async function bootstrap() {
 			const notesWithFormatting = [];
 			for (const note of cachedNotes) {
 				const formattingMap = await db.formattingGetByNoteId(note.ID);
-				const blocksWithFormatting = (note.blocks || []).map(block => ({
+				const blocksWithFormatting = (note.blocks || []).map((block) => ({
 					...block,
 					formatting: formattingMap[block.id]
 						? { ranges: formattingMap[block.id] }
@@ -43,7 +43,7 @@ async function bootstrap() {
 					blocks: blocksWithFormatting,
 				});
 			}
-			store.setNotes(notesWithFormatting);
+			store.setNotesSilently(notesWithFormatting);
 			for (const note of notesWithFormatting) {
 				await db.notesPut(note);
 			}
@@ -55,7 +55,7 @@ async function bootstrap() {
 			const activeNote = await db.notesGet(activeNodeId);
 			if (activeNote && activeNote.blocks && activeNote.blocks.length > 0) {
 				const formattingMap = await db.formattingGetByNoteId(activeNodeId);
-				const blocksWithFormatting = activeNote.blocks.map(block => ({
+				const blocksWithFormatting = activeNote.blocks.map((block) => ({
 					...block,
 					formatting: formattingMap[block.id]
 						? { ranges: formattingMap[block.id] }

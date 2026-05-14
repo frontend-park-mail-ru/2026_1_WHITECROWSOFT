@@ -122,6 +122,11 @@ export default class VideoBlock extends Component {
 		void this.loadVideo();
 	}
 
+	updateBlockId(newBlockId: string | number): void {
+		this.block.id = newBlockId;
+		this.domElement?.setAttribute('data-block-id', String(newBlockId));
+	}
+
 	focus(): void {
 		const blockEl = this.domElement;
 		if (blockEl) {

@@ -1,9 +1,9 @@
+import { db } from '../../db.js';
 import { router } from '../../route/router.js';
 import { noteService } from '../../services/noteService.js';
 import { sidebarService } from '../../services/sidebarService.js';
 import { subnoteService } from '../../services/subnoteService.js';
 import { store } from '../../store.js';
-import { db } from '../../db.js';
 import type { User } from '../../types.js';
 import { collabManager } from '../../utils/collaborativeManager.js';
 import Component from '../component.js';
@@ -36,6 +36,7 @@ export default class Sidebar extends Component {
 		this.renderSections();
 		this.bindNavigationEvents();
 		this.subscribeToStore();
+		this.subscribeToSyncEvents();
 		this.updatePersonalNotes();
 	}
 
@@ -145,6 +146,14 @@ export default class Sidebar extends Component {
 		});
 	}
 
+	private subscribeToSyncEvents(): void {
+		window.addEventListener('syncNoteId', ((e: CustomEvent) => {
+			const { serverId, localId } = e.detail;
+			this.personalSection?.updateNoteId(localId, serverId);
+			this.sharedSection?.updateNoteId(localId, serverId);
+		}) as EventListener);
+	}
+
 	private handleNoteClick = async (noteId: string | number): Promise<void> => {
 		store.setActiveNoteId(noteId);
 		db.settingsSet('activeNoteId', noteId);
@@ -161,7 +170,7 @@ export default class Sidebar extends Component {
 			await subnoteService.createSubnoteWithBlock(
 				noteId,
 				'Новая подзаметка',
-				null
+				null,
 			);
 			sidebarService.setExpanded(noteId, true);
 			this.updatePersonalNotes();

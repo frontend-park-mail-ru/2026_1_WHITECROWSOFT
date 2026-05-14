@@ -52,11 +52,10 @@ export class WebSocketService {
 					reject(new Error('WebSocket connection failed'));
 				};
 
-				this.ws.onclose = (event) => {
+				this.ws.onclose = () => {
 					this.clearHeartbeat();
 					if (this.shouldReconnect) {
 						this.attemptReconnect(noteId);
-					} else {
 					}
 				};
 			} catch (error) {
