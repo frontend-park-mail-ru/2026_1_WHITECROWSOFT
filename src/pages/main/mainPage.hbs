@@ -1,22 +1,12 @@
-<div class="mainContainer">
-	<div id="sidebarContainer"></div>
-
-	<main class="mainContent">
-		{{#if activeNote}}
-		<div class="notePath">
-			<span class="pathItem">Библиотека</span>
-			<span class="pathSeparator">/</span>
-			<span class="pathItem currentItem">{{activeNote.title}}</span>
-		</div>
-
-		<article class="noteContent">
-			<h1 class="noteTitle">{{activeNote.title}}</h1>
-			<div class="noteBody">{{activeNote.text}}</div>
-		</article>
-		{{else}}
-		<div class="emptyState">
-			<p>Выберите заметку из списка</p>
-		</div>
-		{{/if}}
-	</main>
+<div class="main-page">
+    <div class="empty-state" style="display: none;">
+        <div class="empty-state__content">
+            <p>Нет активной заметки</p>
+        </div>
+    </div>
+    
+    <div class="note-container" style="display: none;">
+        <div class="note__header-container"></div>
+        <div class="note__body-container"></div>
+    </div>
 </div>

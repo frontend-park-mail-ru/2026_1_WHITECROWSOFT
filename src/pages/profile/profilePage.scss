@@ -1,0 +1,146 @@
+.profile {
+	display: flex;
+	gap: 28px;
+	flex-direction: column;
+
+	&__content {
+		display: flex;
+		flex-direction: row;
+		gap: 120px;
+	}
+	&__main {
+		display: flex;
+		flex-direction: column;
+		gap: 40px;
+		max-width: 480px;
+	}
+	&__block {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		&--horizontal {
+			flex-direction: row;
+			gap: 20px;
+		}
+	}
+
+	&__description {
+		color: var(--faint-b);
+		font-size: 14px;
+		&--small {
+			font-size: 12px;
+			max-width: 285px;
+		}
+	}
+
+	&__title {
+		font-size: 2rem;
+		font-weight: 800;
+		width: 100%;
+		text-align: left;
+	}
+	&__subtitle {
+		font-weight: 800;
+		text-align: left;
+		font-size: 20px;
+	}
+
+	&__button {
+		height: 35px;
+		width: 100%;
+		max-width: 140px;
+		border-radius: 10px;
+		border: 2px solid var(--oceanic);
+		background: none;
+		color: var(--oceanic);
+		font-size: 16px;
+		font-weight: 600;
+		cursor: pointer;
+
+		display: inline-flex;
+		align-items: center;
+		justify-content: space-around;
+		&:hover {
+			border: 2px solid var(--cornflower);
+			color: var(--cornflower);
+			background-color: var(--highlight);
+		}
+
+		&--subtle {
+			border: 2px solid var(--faint-b);
+			color: var(--faint-b);
+			&:hover {
+				border: 2px solid var(--faint-b);
+				color: var(--faint-b);
+			}
+			&:active {
+				background-color: #a4a7ac60;
+				color: var(--faint-b);
+			}
+		}
+		&--dangerAlt {
+			max-width: 180px; /* bad bad bad */
+			border: 2px solid var(--danger-red);
+			color: var(--danger-red);
+			&:hover {
+				color: var(--danger-red);
+				border: 2px solid var(--danger-red);
+				background-color: rgba(215, 45, 45, 0.25);
+			}
+			&:active {
+				color: var(--danger-red);
+				border: 2px solid var(--danger-red);
+				background-color: rgba(215, 45, 45, 0.6);
+			}
+		}
+		&--danger {
+			background: var(--danger-red);
+			border: none;
+			color: var(--background);
+			&:hover {
+				border: none;
+				color: var(--background);
+				background-color: var(--coral-red);
+			}
+			&:active {
+				border: none;
+				color: var(--background);
+				background-color: var(--clown-red);
+			}
+		}
+	}
+}
+
+.profile-avatar {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	&__image {
+		border-radius: 50%;
+		width: 115px;
+		height: 115px;
+		border: 2px solid var(--faint-a);
+		overflow: hidden;
+	}
+	&__actions {
+		display: flex;
+		flex-direction: row;
+		gap: 16px;
+	}
+}
+
+.profile-form {
+	display: flex;
+	flex-direction: row;
+	gap: 20px;
+	align-items: end;
+	&__controls {
+		display: flex;
+		gap: 16px;
+		align-items: center;
+		width: 100%;
+		.form__input {
+			width: 100%;
+		}
+	}
+}

@@ -1,0 +1,34 @@
+<div class="formInput formInputFile">
+    {{#if label}}
+        <label for="{{name}}" class="formLabel">{{label}}</label>
+    {{/if}}
+    
+    <div class="fileInput">
+        <input
+            type="file"
+            name="{{name}}"
+            id="{{name}}"
+            accept="{{accept}}"
+            class="fileInputNative"
+        />
+        
+        {{#if avatar}}
+        <div class="fileInputPreview">
+            <img src="{{avatar}}" alt="Avatar preview" class="fileInputImage" />
+            <button type="button" class="fileInputRemove" title="Удалить" data-remove-avatar>
+                 <img src="/icons/logout.svg" alt="Удалить" class="fileInputRemoveIcon"/>
+            </button>
+        </div>
+        {{/if}}
+
+        <div class="fileInputWrapper">
+            <label for="{{name}}" class="fileInputBtn btn btn--secondary">
+                {{buttonText}}
+            </label>
+        </div>
+        
+        {{#if (eq witherror "true")}}
+            <span class="fieldError" data-field-error="{{name}}" style="visibility: hidden" role="alert"></span>
+        {{/if}}
+    </div>
+</div>

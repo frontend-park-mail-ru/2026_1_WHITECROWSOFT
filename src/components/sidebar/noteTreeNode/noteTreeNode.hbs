@@ -1,0 +1,30 @@
+<div class="note-tree-node" data-note-id="{{id}}">
+    <div class="note-tree-node__content {{#if isActive}}note-tree-node__content--active{{/if}}">
+        <div class="note-tree-node__indent" style="width: {{level}}px;"></div>
+        {{#if hasChildren}}
+            <button class="note-tree-node__toggle" data-action="toggle">
+                <img src="/icons/expand.svg" class="icon {{#if isExpanded}}rotated{{/if}}">
+            </button>
+            <img src="/icons/document.svg" class="note-tree-node__icon">
+        {{else}}
+            <img src="/icons/document.svg" class="icon">
+        {{/if}}
+        
+        <span class="note-tree-node__title" data-name="noteTitle">{{title}}</span>
+        <div class="note-tree-node__actions">
+            <button class="note-tree-node__action" data-action="addSubnote" title="Добавить подзаметку">
+                <img src="/icons/add.svg" class="icon">
+            </button>
+            <button class="note-tree-node__action" data-action="settings" title="Настройки">
+                <img src="/icons/more.svg" class="icon">
+            </button>
+        </div>
+    </div>
+    {{#if hasChildren}}
+        <div class="note-tree-node__children" data-children-container style="display: {{#if isExpanded}}block{{else}}none{{/if}};">
+            {{#each children}}
+                <div data-child-node="{{id}}"></div>
+            {{/each}}
+        </div>
+    {{/if}}
+</div>

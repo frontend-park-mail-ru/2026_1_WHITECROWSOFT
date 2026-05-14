@@ -1,0 +1,29 @@
+<div class="profile">
+    <div class="profile__header">
+        <h1 class="profile__title">Профиль</h1>
+        <p class="profile__description">Вы можете загрузить фотографию или изменить имя пользователя</p>
+    </div>
+    <div class="profile__content">
+        <div class="profile__main">
+            <div class="profile__block">
+                <h2 class="profile__subtitle">Аккаунт</h2>
+                 <div data-username-form></div>
+            </div>
+           
+            <div class="profile__block">
+                <h2 class="profile__subtitle">Безопасность</h2>
+                <p class="profile__description">Добавьте почту, чтобы восстановить через нее пароль в случае, если Вы его потеряете или забудете.</p>
+                <div data-email-form></div>
+                <div data-password-form></div>
+            </div>
+            <div class="profile__block profile__block--horizontal">
+                <button type="button" class="profile__button profile__button--danger logoutButton">Выйти</button>
+                <button type="button" class="profile__button profile__button--dangerAlt" data-action="deleteAccount">Удалить аккаунт</button>
+            </div>
+        </div>
+        <div class="profile__block">
+            <h2 class="profile__subtitle">Фотография</h2>
+            <div data-avatar-container></div>
+        </div>
+    </div>
+</div>

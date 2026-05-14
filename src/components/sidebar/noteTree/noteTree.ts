@@ -1,0 +1,90 @@
+import type { SidebarNote } from '../../../types.js';
+import Component from '../../component.js';
+import NoteTreeNode from '../noteTreeNode/noteTreeNode.js';
+import templateString from './noteTree.hbs?raw';
+interface NoteTreeOptions {
+	notes: SidebarNote[];
+	onNoteClick: (noteId: string | number) => void;
+	onToggle: (noteId: string | number) => void;
+	onAddSubnote: (noteId: string | number) => void;
+	onSettingsClick: (
+		noteId: string | number,
+		anchor: HTMLElement,
+		titleElement: HTMLElement,
+	) => void;
+	onTitleDoubleClick: (noteId: string | number, element: HTMLElement) => void;
+}
+
+export default class NoteTree extends Component {
+	protected templateString = templateString;
+	private nodeComponents: Map<string | number, NoteTreeNode> = new Map();
+	private container: HTMLElement | null = null;
+
+	constructor(private options: NoteTreeOptions) {
+		super();
+	}
+
+	protected getTemplateData() {
+		return {
+			notes: this.options.notes,
+			hasNotes: this.options.notes.length > 0,
+		};
+	}
+
+	onRender(): void {
+		this.container =
+			this.domElement?.querySelector('[data-tree-container]') || null;
+		this.renderNodes();
+	}
+
+	private renderNodes(): void {
+		if (!this.container) return;
+		this.container.innerHTML = '';
+		this.nodeComponents.clear();
+		for (const note of this.options.notes) {
+			const container = document.createElement('div');
+			container.setAttribute('data-tree-node', String(note.id));
+			this.container.appendChild(container);
+			const nodeComponent = new NoteTreeNode({
+				note,
+				onNoteClick: this.options.onNoteClick,
+				onToggle: this.options.onToggle,
+				onAddSubnote: this.options.onAddSubnote,
+				onSettingsClick: this.options.onSettingsClick,
+				onTitleDoubleClick: this.options.onTitleDoubleClick,
+			});
+			nodeComponent.renderTo(container);
+			this.nodeComponents.set(note.id, nodeComponent);
+		}
+	}
+
+	updateNotes(notes: SidebarNote[]): void {
+		this.options.notes = notes;
+		this.renderNodes();
+	}
+
+	updateActiveNote(noteId: string | number | null): void {
+		const updateRecursive = (notes: SidebarNote[]): void => {
+			for (const note of notes) {
+				const isActive = String(note.id) === String(noteId);
+				note.isActive = isActive;
+				const component = this.nodeComponents.get(note.id);
+				if (component) {
+					component.updateNote(note);
+				}
+				updateRecursive(note.children);
+			}
+		};
+		updateRecursive(this.options.notes);
+	}
+
+	getNoteTitleElementById(noteId: string | number): HTMLElement | null {
+		const component = this.nodeComponents.get(noteId);
+		return component?.getTitleElement() || null;
+	}
+
+	destroy(): void {
+		this.nodeComponents.forEach((component) => component.destroy());
+		this.nodeComponents.clear();
+	}
+}

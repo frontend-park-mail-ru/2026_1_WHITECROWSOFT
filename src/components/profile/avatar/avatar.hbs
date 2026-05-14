@@ -1,0 +1,21 @@
+<div class="profile-avatar">
+    <img src="{{avatarUrl}}" alt="Avatar" class="profile-avatar__image" data-avatar-image>
+    <div class="profile-avatar__actions">
+        <input type="file"
+               data-action="avatar-input"
+               accept=".png,.jpg,.jpeg,.webp"
+               style="display: none;">
+        <button type="button" class="profile__button" data-action="upload-avatar">
+            Загрузить
+        </button>
+        <button type="button" class="profile__button profile__button--subtle" data-action="delete-avatar" {{#unless hasAvatar}}style="display: none;"{{/unless}}>
+            Удалить
+        </button>
+    </div>
+    <div class="profile__description profile__description--small">
+        Размер фотографии не должен превышать 5МБ.
+        Допустимые расширения: .png, .jpg, .webp.
+        Соотношение сторон: 1:1.
+    </div>
+    <div class="profile-avatar__error" data-error></div>
+</div>

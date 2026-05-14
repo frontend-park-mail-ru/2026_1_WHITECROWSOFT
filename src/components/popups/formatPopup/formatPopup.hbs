@@ -1,0 +1,38 @@
+<div class="formattingPopup">
+    <div class="formattingPopup__row">
+        <input type="text" class="formattingPopup__input" value="{{font}}" placeholder="Inter" readonly>
+        <button class="formattingPopup__button formattingPopup__button--disabled" data-action="fontDropdown" disabled>
+            <img src="/icons/expand.svg" class="formattingPopup__icon"/>
+        </button>
+        <button class="formattingPopup__button {{#if isBold}}formattingPopup__button--active{{/if}}" data-action="bold">
+            <img src="/icons/text_bold.svg" class="formattingPopup__icon"/>
+        </button>
+        <button class="formattingPopup__button {{#if isItalic}}formattingPopup__button--active{{/if}}" data-action="italic">
+            <img src="/icons/text_italica.svg" class="formattingPopup__icon"/>
+        </button>
+        <button class="formattingPopup__button {{#if isUnderline}}formattingPopup__button--active{{/if}}" data-action="underline">
+            <img src="/icons/text_underscore.svg" class="formattingPopup__icon"/>
+        </button>
+        <button class="formattingPopup__button {{#if isStrike}}formattingPopup__button--active{{/if}} formattingPopup__button--disabled" disabled data-action="strike">
+            <img src="/icons/text_cross.svg" class="formattingPopup__icon"/>
+        </button>
+    </div>
+    <div class="formattingPopup__row">
+        <input type="number" class="formattingPopup__input" min="8" max="96" value="{{fontSize}}" placeholder="14" readonly>
+        <button class="formattingPopup__button formattingPopup__button--disabled" disabled data-action="sizeDropdown">
+            <img src="/icons/expand.svg" class="formattingPopup__icon"/>
+        </button>
+        <button class="formattingPopup__button formattingPopup__button--disabled" disabled data-action="color">
+            <img src="/icons/text_color.svg" class="formattingPopup__icon"/>
+        </button>
+        <button class="formattingPopup__button formattingPopup__button--disabled" disabled data-action="link">
+            <img src="/icons/text_link.svg" class="formattingPopup__icon"/>
+        </button>
+        <button class="formattingPopup__button formattingPopup__button--disabled" disabled data-action="code">
+            <img src="/icons/text_code.svg" class="formattingPopup__icon"/>
+        </button>
+        <button class="formattingPopup__button formattingPopup__button--disabled" disabled data-action="formula">
+            <img src="/icons/text_formula.svg" class="formattingPopup__icon"/>
+        </button>
+    </div>
+</div>

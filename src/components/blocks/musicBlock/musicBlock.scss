@@ -1,0 +1,27 @@
+.note__musicBlock {
+    margin: 8px 0;
+    border-radius: 12px;
+    background: #f5f5f5;
+    padding: 12px;
+
+    &-audio {
+        width: 100%;
+        outline: none;
+        border-radius: 8px;
+    }
+
+    &-error {
+        text-align: center;
+        color: #e74c3c;
+        font-size: 14px;
+        padding: 8px;
+    }
+}
+
+.note__block-wrapper--focused {
+    .note__musicBlock {
+        background: #ebf3ff;
+        outline: 2px solid #4a90e2;
+        outline-offset: 2px;
+    }
+}
