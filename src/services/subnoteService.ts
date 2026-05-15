@@ -165,7 +165,7 @@ export const subnoteService = {
 		};
 		await db.notesPut(localSubnote);
 		const currentnotes = store.getNotes();
-		store.setNotes([localSubnote, ...currentnotes]);
+		store.setNotesSilently([localSubnote, ...currentnotes]);
 
 		const parentNote = store.getNotes().find((n) => n.ID === parentNoteId);
 		let subnoteBlock = null;
@@ -228,7 +228,7 @@ export const subnoteService = {
 			text: '',
 		};
 		await noteService._setActiveNoteState(activeNote);
-		store.setActiveBlocks([]);
+		store.setActiveBlocksSilently([]);
 
 		await queueService.enqueueRequest({
 			method: 'POST',
@@ -257,7 +257,7 @@ export const subnoteService = {
 			block_type_id: 1,
 			position: 0,
 		});
-		store.setActiveBlocks([blockSubnote]);
+		store.setActiveBlocksSilently([blockSubnote]);
 
 		return { subnote: localSubnote, block: blockSubnote };
 	},

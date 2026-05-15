@@ -15,9 +15,11 @@ interface EnqueueRequestOptions {
 }
 
 interface AttachmentApiResponse {
-	id: string | number;
+	id: string;
+	block_id: string;
 	attach_url: string;
 	minio_key?: string;
+	created_at: string;
 }
 
 interface ServerResponseWithId {
@@ -156,6 +158,14 @@ export const queueService = {
 							title?: string;
 							updated_at?: string;
 						};
+						window.dispatchEvent(
+							new CustomEvent('syncNoteId', {
+								detail: {
+									serverId: resp.id,
+									localId: requestItem.localId,
+								},
+							}),
+						);
 						await this._commitLocalSubnoteId(requestItem.localId, resp);
 						queue = await this._updateQueueArray(
 							queue,
@@ -649,6 +659,7 @@ export const queueService = {
 		}
 
 		const newImageId = serverData.id;
+		const newBlockId = serverData.block_id;
 		const newImageUrl = serverData.attach_url.replace(
 			'http://minio:9000',
 			'/minio',
@@ -657,6 +668,7 @@ export const queueService = {
 		const updatedImage = {
 			...image,
 			id: newImageId,
+			blockId: newBlockId,
 			url: newImageUrl,
 			status: 'synced' as const,
 			syncedAt: Date.now(),
@@ -666,42 +678,50 @@ export const queueService = {
 		await db.imagesPut(updatedImage);
 		await db.queueFileDelete(localId);
 
-		const newImageContent = JSON.stringify({
-			url: newImageUrl,
-			filename: serverData.minio_key || image.filename,
-			size: image.size,
-			mimeType: image.mimeType,
-			attachmentId: newImageId,
-		});
-
 		const noteId = image.noteId;
-		const blockId = image.blockId;
+		const localBlockId = image.blockId;
 
-		try {
-			await client.put(`/notes/${noteId}/blocks/${blockId}/content`, {
-				content: newImageContent,
-			});
-
-			const cachedNote = await db.notesGet(noteId);
-			if (cachedNote && cachedNote.blocks) {
-				const updatedBlocks = cachedNote.blocks.map((b) =>
-					String(b.id) === String(blockId)
-						? { ...b, content: newImageContent }
-						: b,
-				);
-				await db.notesPut({ ...cachedNote, blocks: updatedBlocks });
-			}
-
-			const blocks = store.getActiveBlocks();
-			const updatedBlocks = blocks.map((b) =>
-				String(b.id) === String(blockId)
-					? { ...b, content: newImageContent }
-					: b,
+		const note = await db.notesGet(noteId);
+		if (note && note.blocks) {
+			const blockIndex = note.blocks.findIndex(
+				(b) => String(b.id) === String(localBlockId),
 			);
-			store.setActiveBlocksSilently(updatedBlocks);
-		} catch (error) {
-			console.error('[Queue] Failed to update block content:', error);
-			throw error;
+			if (blockIndex !== -1) {
+				const updatedBlocks = [...note.blocks];
+				updatedBlocks[blockIndex] = {
+					...updatedBlocks[blockIndex],
+					id: newBlockId,
+					isLocal: false,
+				};
+				const updatedNote = { ...note, blocks: updatedBlocks };
+				await db.notesPut(updatedNote);
+
+				const storeNotes = store.getNotes();
+				const updatedStoreNotes = storeNotes.map((n) =>
+					n.ID === noteId ? updatedNote : n,
+				);
+				store.setNotesSilently(updatedStoreNotes);
+
+				if (store.getActiveNoteId() === noteId) {
+					const activeBlocks = store
+						.getActiveBlocks()
+						.map((b) =>
+							String(b.id) === String(localBlockId)
+								? { ...b, id: newBlockId, isLocal: false }
+								: b,
+						);
+					store.setActiveBlocksSilently(activeBlocks);
+				}
+
+				window.dispatchEvent(
+					new CustomEvent('syncBlockId', {
+						detail: {
+							serverId: newBlockId,
+							localId: localBlockId,
+						},
+					}),
+				);
+			}
 		}
 	},
 
@@ -720,6 +740,7 @@ export const queueService = {
 		}
 
 		const newAudioId = serverData.id;
+		const newBlockId = serverData.block_id;
 		const newAudioUrl = serverData.attach_url.replace(
 			'http://minio:9000',
 			'/minio',
@@ -728,6 +749,7 @@ export const queueService = {
 		const updatedAudio = {
 			...audio,
 			id: newAudioId,
+			blockId: newBlockId,
 			url: newAudioUrl,
 			status: 'synced' as const,
 			syncedAt: Date.now(),
@@ -737,42 +759,50 @@ export const queueService = {
 		await db.audiosPut(updatedAudio);
 		await db.queueFileDelete(localId);
 
-		const newAudioContent = JSON.stringify({
-			url: newAudioUrl,
-			filename: serverData.minio_key || audio.filename,
-			size: audio.size,
-			mimeType: audio.mimeType,
-			attachmentId: newAudioId,
-		});
-
 		const noteId = audio.noteId;
-		const blockId = audio.blockId;
+		const localBlockId = audio.blockId;
 
-		try {
-			await client.put(`/notes/${noteId}/blocks/${blockId}/content`, {
-				content: newAudioContent,
-			});
-
-			const cachedNote = await db.notesGet(noteId);
-			if (cachedNote && cachedNote.blocks) {
-				const updatedBlocks = cachedNote.blocks.map((b) =>
-					String(b.id) === String(blockId)
-						? { ...b, content: newAudioContent }
-						: b,
-				);
-				await db.notesPut({ ...cachedNote, blocks: updatedBlocks });
-			}
-
-			const blocks = store.getActiveBlocks();
-			const updatedBlocks = blocks.map((b) =>
-				String(b.id) === String(blockId)
-					? { ...b, content: newAudioContent }
-					: b,
+		const note = await db.notesGet(noteId);
+		if (note && note.blocks) {
+			const blockIndex = note.blocks.findIndex(
+				(b) => String(b.id) === String(localBlockId),
 			);
-			store.setActiveBlocksSilently(updatedBlocks);
-		} catch (error) {
-			console.error('[Queue] Failed to update block content:', error);
-			throw error;
+			if (blockIndex !== -1) {
+				const updatedBlocks = [...note.blocks];
+				updatedBlocks[blockIndex] = {
+					...updatedBlocks[blockIndex],
+					id: newBlockId,
+					isLocal: false,
+				};
+				const updatedNote = { ...note, blocks: updatedBlocks };
+				await db.notesPut(updatedNote);
+
+				const storeNotes = store.getNotes();
+				const updatedStoreNotes = storeNotes.map((n) =>
+					n.ID === noteId ? updatedNote : n,
+				);
+				store.setNotesSilently(updatedStoreNotes);
+
+				if (store.getActiveNoteId() === noteId) {
+					const activeBlocks = store
+						.getActiveBlocks()
+						.map((b) =>
+							String(b.id) === String(localBlockId)
+								? { ...b, id: newBlockId, isLocal: false }
+								: b,
+						);
+					store.setActiveBlocksSilently(activeBlocks);
+				}
+
+				window.dispatchEvent(
+					new CustomEvent('syncBlockId', {
+						detail: {
+							serverId: newBlockId,
+							localId: localBlockId,
+						},
+					}),
+				);
+			}
 		}
 	},
 
@@ -791,6 +821,7 @@ export const queueService = {
 		}
 
 		const newVideoId = serverData.id;
+		const newBlockId = serverData.block_id;
 		const newVideoUrl = serverData.attach_url.replace(
 			'http://minio:9000',
 			'/minio',
@@ -799,6 +830,7 @@ export const queueService = {
 		const updatedVideo = {
 			...video,
 			id: newVideoId,
+			blockId: newBlockId,
 			url: newVideoUrl,
 			status: 'synced' as const,
 			syncedAt: Date.now(),
@@ -808,42 +840,50 @@ export const queueService = {
 		await db.videosPut(updatedVideo);
 		await db.queueFileDelete(localId);
 
-		const newVideoContent = JSON.stringify({
-			url: newVideoUrl,
-			filename: serverData.minio_key || video.filename,
-			size: video.size,
-			mimeType: video.mimeType,
-			attachmentId: newVideoId,
-		});
-
 		const noteId = video.noteId;
-		const blockId = video.blockId;
+		const localBlockId = video.blockId;
 
-		try {
-			await client.put(`/notes/${noteId}/blocks/${blockId}/content`, {
-				content: newVideoContent,
-			});
-
-			const cachedNote = await db.notesGet(noteId);
-			if (cachedNote && cachedNote.blocks) {
-				const updatedBlocks = cachedNote.blocks.map((b) =>
-					String(b.id) === String(blockId)
-						? { ...b, content: newVideoContent }
-						: b,
-				);
-				await db.notesPut({ ...cachedNote, blocks: updatedBlocks });
-			}
-
-			const blocks = store.getActiveBlocks();
-			const updatedBlocks = blocks.map((b) =>
-				String(b.id) === String(blockId)
-					? { ...b, content: newVideoContent }
-					: b,
+		const note = await db.notesGet(noteId);
+		if (note && note.blocks) {
+			const blockIndex = note.blocks.findIndex(
+				(b) => String(b.id) === String(localBlockId),
 			);
-			store.setActiveBlocksSilently(updatedBlocks);
-		} catch (error) {
-			console.error('[Queue] Failed to update block content:', error);
-			throw error;
+			if (blockIndex !== -1) {
+				const updatedBlocks = [...note.blocks];
+				updatedBlocks[blockIndex] = {
+					...updatedBlocks[blockIndex],
+					id: newBlockId,
+					isLocal: false,
+				};
+				const updatedNote = { ...note, blocks: updatedBlocks };
+				await db.notesPut(updatedNote);
+
+				const storeNotes = store.getNotes();
+				const updatedStoreNotes = storeNotes.map((n) =>
+					n.ID === noteId ? updatedNote : n,
+				);
+				store.setNotesSilently(updatedStoreNotes);
+
+				if (store.getActiveNoteId() === noteId) {
+					const activeBlocks = store
+						.getActiveBlocks()
+						.map((b) =>
+							String(b.id) === String(localBlockId)
+								? { ...b, id: newBlockId, isLocal: false }
+								: b,
+						);
+					store.setActiveBlocksSilently(activeBlocks);
+				}
+
+				window.dispatchEvent(
+					new CustomEvent('syncBlockId', {
+						detail: {
+							serverId: newBlockId,
+							localId: localBlockId,
+						},
+					}),
+				);
+			}
 		}
 	},
 

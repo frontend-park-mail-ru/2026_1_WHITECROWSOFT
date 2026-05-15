@@ -28,18 +28,18 @@ services:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
     ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+      - "${MINIO_API_PORT}:9000"
+      - "${MINIO_CONSOLE_PORT}:9001"
     volumes:
       - minio_data:/data
-    command: server /data --console-address ":${MINIO_CONSOLE_PORT:-9001}"
+    command: server /data --console-address ":${MINIO_CONSOLE_PORT}"
     healthcheck:
       test:
         [
           "CMD",
           "curl",
           "-f",
-          "http://localhost:${MINIO_API_PORT:-9000}/minio/health/live",
+          "http://localhost:${MINIO_API_PORT}/minio/health/live",
         ]
       interval: 10s
       timeout: 5s
@@ -47,14 +47,14 @@ services:
     networks:
       - noterian_network
 
-  backend:
+  attachments:
     build:
-      context: ./../../Back/2026_1_WHITECROWSOFT
-      dockerfile: Dockerfile
+      context:  ./../../Back/2026_1_WHITECROWSOFT
+      dockerfile: ./../../Back/2026_1_WHITECROWSOFT/cmd/attachments/Dockerfile.attachments
     restart: unless-stopped
     env_file: ".env"
     expose:
-      - "${PORT}"
+      - "${ATTACHMENTS_PORT}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,6 +63,58 @@ services:
     networks:
       - noterian_network
 
+  notes:
+    build:
+      context:  ./../../Back/2026_1_WHITECROWSOFT
+      dockerfile: ./../../Back/2026_1_WHITECROWSOFT/cmd/notes/Dockerfile.notes
+    restart: unless-stopped
+    env_file: ".env"
+    expose:
+      - "${NOTES_PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - noterian_network
+
+  profiles:
+    build:
+      context:  ./../../Back/2026_1_WHITECROWSOFT
+      dockerfile: ./../../Back/2026_1_WHITECROWSOFT/cmd/profiles/Dockerfile.profiles
+    restart: unless-stopped
+    env_file: ".env"
+    expose:
+      - "${PROFILES_PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - noterian_network
+
+  main:
+    build:
+      context:  ./../../Back/2026_1_WHITECROWSOFT
+      dockerfile: ./../../Back/2026_1_WHITECROWSOFT/cmd/main/Dockerfile.main
+    restart: unless-stopped
+    env_file: ".env"
+    expose:
+      - "${SERVER_PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      attachments:
+        condition: service_started
+      notes:
+        condition: service_started
+      profiles:
+        condition: service_started
+    networks:
+      - noterian_network
+    
   frontend:
     build:
       context: ./
@@ -71,7 +123,10 @@ services:
     ports:
       - "${PORT}:80"
     depends_on:
-      - backend
+      - main
+      - attachments
+      - notes
+      - profiles
     networks:
       - noterian_network
 

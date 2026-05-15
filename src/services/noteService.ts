@@ -73,7 +73,7 @@ export const noteService = {
 						await db.notesPut(note);
 					}
 				}
-				store.setNotes(notes);
+				store.setNotesSilently(notes);
 				return notes;
 			} catch (error) {
 				handleAuthError(error);
@@ -330,7 +330,7 @@ export const noteService = {
 			block_type_id: 1,
 			position: 0,
 		});
-		store.setActiveBlocks([block]);
+		store.setActiveBlocksSilently([block]);
 		return localNote;
 	},
 
@@ -446,7 +446,6 @@ export const noteService = {
 				...data,
 				updatedAt: Date.now(),
 				parent_id: currentNotes[noteIndex].parent_id ?? null,
-				is_public: currentNotes[noteIndex].is_public ?? false,
 			};
 			await db.notesPut(updatedNote);
 			const updatedNotes = [...currentNotes];
@@ -530,6 +529,7 @@ export const noteService = {
 	async createBlock(
 		noteID: string | number,
 		blockData: CreateBlockData,
+		silence?: boolean,
 	): Promise<Block> {
 		const isOnline = store.getOnline();
 		const localBlock: Block = {
@@ -610,12 +610,14 @@ export const noteService = {
 			}
 			store.setPendingFocus(localBlock.id, 0);
 		}
-		await queueService.enqueueRequest({
-			method: 'POST',
-			endpoint: `/notes/${noteID}/blocks`,
-			body: blockData,
-			localId: localBlock.id as string,
-		});
+		if (!silence) {
+			await queueService.enqueueRequest({
+				method: 'POST',
+				endpoint: `/notes/${noteID}/blocks`,
+				body: blockData,
+				localId: localBlock.id as string,
+			});
+		}
 
 		return localBlock;
 	},

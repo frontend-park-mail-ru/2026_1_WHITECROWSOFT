@@ -79,6 +79,7 @@ export default class Sidebar extends Component {
 
 	private updatePersonalNotes(): void {
 		const tree = sidebarService.getTreeFromStore();
+		console.log('updatePersonalNotes');
 		this.personalSection?.updateNotes(tree);
 		this.sharedSection?.updateNotes([]);
 	}

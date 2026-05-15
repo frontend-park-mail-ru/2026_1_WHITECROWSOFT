@@ -287,11 +287,11 @@ export interface BlockApiResponse {
 }
 
 export interface AttachmentApiResponse {
-	id: string | number;
+	id: string;
+	block_id: string;
 	attach_url: string;
 	minio_key?: string;
-	size?: number;
-	mime_type?: string;
+	created_at: string;
 }
 
 export interface UserSession {

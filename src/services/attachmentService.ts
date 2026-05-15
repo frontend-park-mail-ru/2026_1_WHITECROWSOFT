@@ -6,15 +6,6 @@ import { handleAuthError } from '../utils/handleAuthError';
 import { noteService } from './noteService.js';
 import { queueService } from './requestQueueService.js';
 
-interface CreateBlockResponse {
-	id: string | number;
-	block_type_id: number;
-	content: string;
-	position: number;
-	created_at?: string;
-	updated_at?: string;
-}
-
 interface CreateBlockData {
 	note_id: string | number;
 	block_type_id: number;
@@ -138,39 +129,16 @@ export const attachmentService = {
 			await db.notesPut({ ...cachedNote, blocks: shiftedBlocks });
 		}
 
-		const blockData: CreateBlockData = {
-			note_id: noteId,
-			block_type_id: 7,
-			position: insertIndex,
-			content: '',
-		};
-		const createdBlock = await client.post<CreateBlockResponse>(
-			`/notes/${noteId}/blocks`,
-			blockData,
-		);
-		const blockId = createdBlock.id;
-
 		const formData = new FormData();
 		formData.append('file', file);
 		const attachmentResult = await client.postForm<AttachmentApiResponse>(
-			`/notes/${noteId}/blocks/${blockId}/attachments`,
+			`/notes/${noteId}/attachments`,
 			formData,
 		);
 
-		const videoContent = JSON.stringify({
-			url: attachmentResult.attach_url,
-			filename: attachmentResult.minio_key || file.name,
-			size: file.size,
-			mimeType: file.type,
-			attachmentId: attachmentResult.id,
-		});
-
-		await client.put(`/notes/${noteId}/blocks/${blockId}/content`, {
-			content: videoContent,
-		});
 		await this._saveToCache(
 			noteId,
-			blockId,
+			attachmentResult.block_id,
 			attachmentResult.id,
 			file,
 			attachmentResult.attach_url,
@@ -178,12 +146,12 @@ export const attachmentService = {
 		);
 
 		const finalBlock: Block = {
-			id: blockId,
+			id: attachmentResult.block_id,
 			note_id: noteId,
 			block_type_id: 7,
 			position: insertIndex,
-			content: videoContent,
-			created_at: createdBlock.created_at,
+			content: attachmentResult.id,
+			created_at: attachmentResult.created_at,
 			updated_at: new Date().toISOString(),
 			formatting: { ranges: [] },
 		};
@@ -218,24 +186,15 @@ export const attachmentService = {
 		}
 
 		const localAttachmentId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-		const videoContent = JSON.stringify({
-			url: `local://${localAttachmentId}`,
-			filename: file.name,
-			size: file.size,
-			mimeType: file.type,
-			attachmentId: localAttachmentId,
-			isLocal: true,
-			pendingSync: true,
-		});
 
 		const blockData: CreateBlockData = {
 			note_id: noteId,
 			block_type_id: 7,
 			position: insertIndex,
-			content: videoContent,
+			content: localAttachmentId,
 		};
 
-		const newBlock = await noteService.createBlock(noteId, blockData);
+		const newBlock = await noteService.createBlock(noteId, blockData, true);
 		const blob = await this._fileToBlob(file);
 
 		await db.videosPut({
@@ -264,7 +223,7 @@ export const attachmentService = {
 
 		await queueService.enqueueRequest({
 			method: 'POST',
-			endpoint: `/notes/${noteId}/blocks/${newBlock.id}/attachments`,
+			endpoint: `/notes/${noteId}/attachments`,
 			type: 'VIDEO_UPLOAD',
 			localId: localAttachmentId,
 			body: { fileId: localAttachmentId, noteId, blockId: newBlock.id },
@@ -272,7 +231,7 @@ export const attachmentService = {
 
 		const finalBlock: Block = {
 			...newBlock,
-			content: videoContent,
+			content: localAttachmentId,
 		};
 
 		const updatedBlocks = shiftedBlocks.map((block) =>
@@ -304,39 +263,16 @@ export const attachmentService = {
 			await db.notesPut({ ...cachedNote, blocks: shiftedBlocks });
 		}
 
-		const blockData: CreateBlockData = {
-			note_id: noteId,
-			block_type_id: 6,
-			position: insertIndex,
-			content: '',
-		};
-		const createdBlock = await client.post<CreateBlockResponse>(
-			`/notes/${noteId}/blocks`,
-			blockData,
-		);
-		const blockId = createdBlock.id;
-
 		const formData = new FormData();
 		formData.append('file', file);
 		const attachmentResult = await client.postForm<AttachmentApiResponse>(
-			`/notes/${noteId}/blocks/${blockId}/attachments`,
+			`/notes/${noteId}/attachments`,
 			formData,
 		);
 
-		const audioContent = JSON.stringify({
-			url: attachmentResult.attach_url,
-			filename: attachmentResult.minio_key || file.name,
-			size: file.size,
-			mimeType: file.type,
-			attachmentId: attachmentResult.id,
-		});
-
-		await client.put(`/notes/${noteId}/blocks/${blockId}/content`, {
-			content: audioContent,
-		});
 		await this._saveToCache(
 			noteId,
-			blockId,
+			attachmentResult.block_id,
 			attachmentResult.id,
 			file,
 			attachmentResult.attach_url,
@@ -344,12 +280,12 @@ export const attachmentService = {
 		);
 
 		const finalBlock: Block = {
-			id: blockId,
+			id: attachmentResult.block_id,
 			note_id: noteId,
 			block_type_id: 6,
 			position: insertIndex,
-			content: audioContent,
-			created_at: createdBlock.created_at,
+			content: attachmentResult.id,
+			created_at: attachmentResult.created_at,
 			updated_at: new Date().toISOString(),
 			formatting: { ranges: [] },
 		};
@@ -384,24 +320,15 @@ export const attachmentService = {
 		}
 
 		const localAttachmentId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-		const audioContent = JSON.stringify({
-			url: `local://${localAttachmentId}`,
-			filename: file.name,
-			size: file.size,
-			mimeType: file.type,
-			attachmentId: localAttachmentId,
-			isLocal: true,
-			pendingSync: true,
-		});
 
 		const blockData: CreateBlockData = {
 			note_id: noteId,
 			block_type_id: 6,
 			position: insertIndex,
-			content: audioContent,
+			content: localAttachmentId,
 		};
 
-		const newBlock = await noteService.createBlock(noteId, blockData);
+		const newBlock = await noteService.createBlock(noteId, blockData, true);
 		const blob = await this._fileToBlob(file);
 
 		await db.audiosPut({
@@ -430,7 +357,7 @@ export const attachmentService = {
 
 		await queueService.enqueueRequest({
 			method: 'POST',
-			endpoint: `/notes/${noteId}/blocks/${newBlock.id}/attachments`,
+			endpoint: `/notes/${noteId}/attachments`,
 			type: 'AUDIO_UPLOAD',
 			localId: localAttachmentId,
 			body: { fileId: localAttachmentId, noteId, blockId: newBlock.id },
@@ -438,7 +365,7 @@ export const attachmentService = {
 
 		const finalBlock: Block = {
 			...newBlock,
-			content: audioContent,
+			content: localAttachmentId,
 		};
 
 		const updatedBlocks = shiftedBlocks.map((block) =>
@@ -470,39 +397,16 @@ export const attachmentService = {
 			await db.notesPut({ ...cachedNote, blocks: shiftedBlocks });
 		}
 
-		const blockData: CreateBlockData = {
-			note_id: noteId,
-			block_type_id: 2,
-			position: insertIndex,
-			content: '',
-		};
-		const createdBlock = await client.post<CreateBlockResponse>(
-			`/notes/${noteId}/blocks`,
-			blockData,
-		);
-		const blockId = createdBlock.id;
-
 		const formData = new FormData();
 		formData.append('file', file);
 		const attachmentResult = await client.postForm<AttachmentApiResponse>(
-			`/notes/${noteId}/blocks/${blockId}/attachments`,
+			`/notes/${noteId}/attachments`,
 			formData,
 		);
 
-		const imageContent = JSON.stringify({
-			url: attachmentResult.attach_url,
-			filename: attachmentResult.minio_key || file.name,
-			size: file.size,
-			mimeType: file.type,
-			attachmentId: attachmentResult.id,
-		});
-
-		await client.put(`/notes/${noteId}/blocks/${blockId}/content`, {
-			content: imageContent,
-		});
 		await this._saveToCache(
 			noteId,
-			blockId,
+			attachmentResult.block_id,
 			attachmentResult.id,
 			file,
 			attachmentResult.attach_url,
@@ -510,14 +414,13 @@ export const attachmentService = {
 		);
 
 		const finalBlock: Block = {
-			id: blockId,
+			id: attachmentResult.block_id,
 			note_id: noteId,
 			block_type_id: 2,
 			position: insertIndex,
-			content: imageContent,
-			created_at: createdBlock.created_at,
+			content: attachmentResult.id,
+			created_at: attachmentResult.created_at,
 			updated_at: new Date().toISOString(),
-			formatting: { ranges: [] },
 		};
 
 		const updatedBlocks = shiftedBlocks.map((block) =>
@@ -550,24 +453,15 @@ export const attachmentService = {
 		}
 
 		const localAttachmentId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-		const imageContent = JSON.stringify({
-			url: `local://${localAttachmentId}`,
-			filename: file.name,
-			size: file.size,
-			mimeType: file.type,
-			attachmentId: localAttachmentId,
-			isLocal: true,
-			pendingSync: true,
-		});
 
 		const blockData: CreateBlockData = {
 			note_id: noteId,
 			block_type_id: 2,
 			position: insertIndex,
-			content: imageContent,
+			content: localAttachmentId,
 		};
 
-		const newBlock = await noteService.createBlock(noteId, blockData);
+		const newBlock = await noteService.createBlock(noteId, blockData, true);
 		const blob = await this._fileToBlob(file);
 
 		await db.imagesPut({
@@ -596,7 +490,7 @@ export const attachmentService = {
 
 		await queueService.enqueueRequest({
 			method: 'POST',
-			endpoint: `/notes/${noteId}/blocks/${newBlock.id}/attachments`,
+			endpoint: `/notes/${noteId}/attachments`,
 			type: 'IMAGE_UPLOAD',
 			localId: localAttachmentId,
 			body: { fileId: localAttachmentId, noteId, blockId: newBlock.id },
@@ -604,7 +498,7 @@ export const attachmentService = {
 
 		const finalBlock: Block = {
 			...newBlock,
-			content: imageContent,
+			content: localAttachmentId,
 		};
 
 		const updatedBlocks = shiftedBlocks.map((block) =>
@@ -757,17 +651,13 @@ export const attachmentService = {
 		noteId: string | number,
 		blockId: string | number,
 	): Promise<void> {
-		const isOnline = store.getOnline();
 		const blocks = store.getActiveBlocks();
 		const block = blocks.find((b) => b.id === blockId);
 		const blockType = block?.block_type_id;
 
 		if (block && block.content) {
 			try {
-				const attachmentData = JSON.parse(block.content) as {
-					attachmentId?: string | number;
-				};
-				const attachmentId = attachmentData.attachmentId;
+				const attachmentId = block.content;
 
 				if (attachmentId) {
 					if (blockType === 2) {
@@ -781,35 +671,6 @@ export const attachmentService = {
 			} catch (e) {
 				console.warn('[attachmentService] Failed to parse block content:', e);
 			}
-		}
-
-		if (isOnline) {
-			try {
-				await client.delete(`/notes/${noteId}/blocks/${blockId}/attachments`);
-			} catch (error) {
-				console.warn('[attachmentService] Failed to delete on server:', error);
-				await queueService.enqueueRequest({
-					method: 'DELETE',
-					endpoint: `/notes/${noteId}/blocks/${blockId}/attachments`,
-					type:
-						blockType === 2
-							? 'IMAGE_DELETE'
-							: blockType === 6
-								? 'AUDIO_DELETE'
-								: 'VIDEO_DELETE',
-				});
-			}
-		} else {
-			await queueService.enqueueRequest({
-				method: 'DELETE',
-				endpoint: `/notes/${noteId}/blocks/${blockId}/attachments`,
-				type:
-					blockType === 2
-						? 'IMAGE_DELETE'
-						: blockType === 6
-							? 'AUDIO_DELETE'
-							: 'VIDEO_DELETE',
-			});
 		}
 	},
 };

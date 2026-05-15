@@ -46,11 +46,7 @@ export default class VideoBlock extends Component {
 				this.block.content.trim() !== '' &&
 				this.block.content !== '{}'
 			) {
-				const videoData = JSON.parse(this.block.content) as {
-					attachmentId: string | number;
-					url?: string;
-				};
-				const attachmentId = videoData.attachmentId;
+				const attachmentId = this.block.content;
 				const noteId = this.block.note_id || store.getActiveNoteId();
 
 				if (noteId && attachmentId) {
