@@ -450,7 +450,7 @@ export const noteService = {
 			await db.notesPut(updatedNote);
 			const updatedNotes = [...currentNotes];
 			updatedNotes[noteIndex] = updatedNote;
-			store.setNotes(updatedNotes);
+			store.setNotesSilently(updatedNotes);
 
 			if (store.getActiveNoteId() === noteID) {
 				const activeNote = {
