@@ -1,5 +1,6 @@
 import { attachmentService } from '../../../services/attachmentService.js';
 import { noteService } from '../../../services/noteService.js';
+import { sidebarService } from '../../../services/sidebarService.js';
 import { subnoteService } from '../../../services/subnoteService.js';
 import { store } from '../../../store.js';
 import { Block } from '../../../types.js';
@@ -266,10 +267,12 @@ export default class AttachPopup extends Component {
 					return;
 				}
 				try {
+					sidebarService.setExpanded(activeNoteId, true);
 					await subnoteService.createSubnoteWithBlock(
 						activeNoteId,
 						'Новая подзаметка',
 						null,
+						false,
 					);
 				} catch (error) {
 					console.error('Error creating subnote:', error);

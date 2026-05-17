@@ -26,13 +26,24 @@ export const subnoteService = {
 		parentNoteId: string | number,
 		title: string,
 		afterBlockId: string | null = null,
+		silence?: boolean,
 	): Promise<{ subnote: Note; block: Block | null }> {
 		const isOnline = store.getOnline();
 
 		if (isOnline) {
-			return await this._createOnline(parentNoteId, title, afterBlockId);
+			return await this._createOnline(
+				parentNoteId,
+				title,
+				afterBlockId,
+				silence,
+			);
 		} else {
-			return await this._createOffline(parentNoteId, title, afterBlockId);
+			return await this._createOffline(
+				parentNoteId,
+				title,
+				afterBlockId,
+				silence,
+			);
 		}
 	},
 
@@ -40,12 +51,12 @@ export const subnoteService = {
 		parentNoteId: string | number,
 		title: string,
 		afterBlockId: string | null = null,
+		silence?: boolean,
 	): Promise<{ subnote: Note; block: Block | null }> {
 		const subnoteResult = await client.post<SubnoteResponse>(
 			`/notes/${parentNoteId}/subnote`,
 			{ title, parent_id: parentNoteId },
 		);
-
 		const subnote: Note = {
 			ID: subnoteResult.id,
 			title: subnoteResult.title,
@@ -53,6 +64,7 @@ export const subnoteService = {
 			icon: null,
 			updatedAt: subnoteResult.updated_at || Date.now(),
 			blocks: [],
+			section: 'personal',
 		};
 		const blockData: CreateBlockData = {
 			note_id: subnote.ID,
@@ -66,12 +78,17 @@ export const subnoteService = {
 		const updatedNote = { ...subnote, blocks: [createdBlock] };
 		await db.notesPut(updatedNote);
 		const storeNotes = store.getNotes();
-		store.setNotesSilently([updatedNote, ...storeNotes]);
+		if (silence === false) {
+			store.setNotes([updatedNote, ...storeNotes]);
+		} else {
+			store.setNotesSilently([updatedNote, ...storeNotes]);
+		}
 		const activeNote = {
 			ID: subnote.ID,
 			title: subnote.title,
 			breadcrumb: subnote.title,
 			text: '',
+			section: subnote.section,
 		};
 		await noteService._setActiveNoteState(activeNote);
 		store.setPendingFocus(createdBlock.id, 'start');
@@ -152,6 +169,7 @@ export const subnoteService = {
 		parentNoteId: string | number,
 		title: string,
 		afterBlockId: string | null = null,
+		silence?: boolean,
 	): Promise<{ subnote: Note; block: Block | null }> {
 		const localSubnoteId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 		const localSubnote: Note = {
@@ -162,6 +180,7 @@ export const subnoteService = {
 			updatedAt: Date.now(),
 			blocks: [],
 			isLocal: true,
+			section: 'personal',
 		};
 		await db.notesPut(localSubnote);
 		const currentnotes = store.getNotes();
@@ -204,7 +223,11 @@ export const subnoteService = {
 			const updatedNotes = store
 				.getNotes()
 				.map((n) => (n.ID === parentNoteId ? updatedParentNote : n));
-			store.setNotesSilently(updatedNotes);
+			if (silence === false) {
+				store.setNotes(updatedNotes);
+			} else {
+				store.setNotesSilently(updatedNotes);
+			}
 			await db.notesPut(updatedParentNote);
 
 			await queueService.enqueueRequest({
@@ -226,6 +249,7 @@ export const subnoteService = {
 			title: localSubnote.title,
 			breadcrumb: localSubnote.title,
 			text: '',
+			section: localSubnote.section,
 		};
 		await noteService._setActiveNoteState(activeNote);
 		store.setActiveBlocksSilently([]);

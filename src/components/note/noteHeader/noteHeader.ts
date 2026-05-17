@@ -1,4 +1,5 @@
 import { noteService } from '../../../services/noteService.js';
+import { sidebarService } from '../../../services/sidebarService.js';
 import { store } from '../../../store.js';
 import type { ActiveNote, Note } from '../../../types.js';
 import { collabManager } from '../../../utils/collaborativeManager.js';
@@ -19,7 +20,7 @@ export default class NoteHeader extends Component {
 	protected getTemplateData() {
 		return {
 			title: this.activeNote?.title || '',
-			breadcrumb: this.activeNote?.breadcrumb || '',
+			breadcrumb: sidebarService.getBreadcrumb(this.activeNote?.ID) || '',
 		};
 	}
 
@@ -58,15 +59,17 @@ export default class NoteHeader extends Component {
 		}
 		if (activeNoteId && newTitle !== this.savedTitle) {
 			try {
-				await noteService.updateNote(activeNoteId, { title: newTitle });
+				await noteService.updateNote(activeNoteId, { title: newTitle }, false);
 				const activeNote = store.getActiveNote();
 				if (activeNote) {
+					const breadcrumb = sidebarService.getBreadcrumb(activeNoteId);
 					store.setActiveNote({
 						...activeNote,
 						title: newTitle,
-						breadcrumb: newTitle,
+						breadcrumb: breadcrumb,
 					});
 				}
+				this.updateBreadcrumbDisplay();
 				const note = store.getNotes().find((n: Note) => n.ID === activeNoteId);
 				const isPublic = note?.is_public === true;
 				if (isPublic) {
@@ -79,6 +82,18 @@ export default class NoteHeader extends Component {
 		}
 	}
 
+	private updateBreadcrumbDisplay(): void {
+		const activeNoteId = store.getActiveNoteId();
+		if (!activeNoteId) return;
+		const breadcrumb = sidebarService.getBreadcrumb(activeNoteId);
+		const breadcrumbEl = this.domElement?.querySelector(
+			'.note__breadcrumbItem--current',
+		);
+		if (breadcrumbEl) {
+			breadcrumbEl.textContent = breadcrumb;
+		}
+	}
+
 	updateNote(activeNote: ActiveNote | null): void {
 		this.activeNote = activeNote;
 		const titleEl = this.domElement?.querySelector(
@@ -87,7 +102,8 @@ export default class NoteHeader extends Component {
 		const breadcrumbEl = this.domElement?.querySelector(
 			'.note__breadcrumbItem--current',
 		);
+		const breadcrumb = sidebarService.getBreadcrumb(activeNote?.ID);
 		if (titleEl) titleEl.value = activeNote?.title || '';
-		if (breadcrumbEl) breadcrumbEl.textContent = activeNote?.breadcrumb || '';
+		if (breadcrumbEl) breadcrumbEl.textContent = breadcrumb;
 	}
 }

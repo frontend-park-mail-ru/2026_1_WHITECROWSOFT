@@ -361,7 +361,6 @@ export const queueService = {
 				updatedQueue.push(req);
 			}
 		}
-		console.log(updatedQueue);
 		return updatedQueue;
 	},
 

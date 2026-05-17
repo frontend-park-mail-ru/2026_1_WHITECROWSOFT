@@ -178,16 +178,6 @@ export async function initMainPage(
 		}
 	}
 	isInitializing = false;
-
-	window.addEventListener('beforeunload', async () => {
-		await noteBody?.saveAllBlocks();
-	});
-
-	document.addEventListener('visibilitychange', () => {
-		if (document.visibilityState === 'hidden') {
-			noteBody?.saveAllBlocks();
-		}
-	});
 }
 
 async function handleAddBlock(afterBlockId: string): Promise<void> {

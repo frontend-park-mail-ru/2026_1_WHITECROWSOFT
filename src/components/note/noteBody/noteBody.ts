@@ -23,6 +23,7 @@ export default class NoteBody extends Component {
 	private unsubscribePendingFocus: (() => void) | null = null;
 	private unsubscribeCollaborativeCreate: (() => void) | null = null;
 	private unsubscribeCollaborativeDelete: (() => void) | null = null;
+	private beforeUnloadHandler: (() => void) | null = null;
 
 	constructor() {
 		super();
@@ -45,8 +46,10 @@ export default class NoteBody extends Component {
 		this.subscribeToCollaborativeCreate();
 		this.subscribeToCollaborativeDelete();
 		this.subscribeToSyncBlockId();
+		await this.restoreFromSessionStorage();
 		await this.renderBlocks();
 		this.bindEvents();
+		this.bindBeforeUnload();
 	}
 
 	private subscribeToStore(): void {
@@ -496,33 +499,60 @@ export default class NoteBody extends Component {
 		}
 	};
 
-	async saveAllBlocks(): Promise<void> {
-		const activeNoteId = store.getActiveNoteId();
-		if (!activeNoteId) return;
-		const blocks = store.getActiveBlocks();
-		const savePromises: Promise<Block | void>[] = [];
-		for (const block of blocks) {
-			if (block.block_type_id !== 2) {
-				const wrapper = this.blockWrappers.get(String(block.id));
-				const currentContent = wrapper?.getBlockComponent()?.getContent?.();
-				if (currentContent !== undefined && block.content !== currentContent) {
-					savePromises.push(
-						noteService
-							.updateBlockContent(
-								activeNoteId,
-								String(block.id),
-								currentContent,
-							)
-							.catch((error) => {
-								console.error('Failed to save block:', error);
-								return undefined;
-							}),
+	private bindBeforeUnload(): void {
+		this.beforeUnloadHandler = () => {
+			const activeNoteId = store.getActiveNoteId();
+			if (!activeNoteId) return;
+
+			const container = this.domElement?.querySelector('.note__body-container');
+			if (!container) return;
+
+			const blocks = store.getActiveBlocks();
+			for (const block of blocks) {
+				if (block.block_type_id !== 2) {
+					const blockElement = container.querySelector(
+						`.note__block-wrapper[data-block-id="${block.id}"] .note__block`,
 					);
+					if (blockElement) {
+						const currentContent = blockElement.innerHTML;
+						if (currentContent && block.content !== currentContent) {
+							sessionStorage.setItem(
+								`pending_block_${activeNoteId}_${block.id}`,
+								currentContent,
+							);
+						}
+					}
 				}
 			}
-		}
-		if (savePromises.length > 0) {
-			await Promise.all(savePromises);
+		};
+		window.addEventListener('beforeunload', this.beforeUnloadHandler);
+	}
+
+	private async restoreFromSessionStorage(): Promise<void> {
+		const activeNoteId = store.getActiveNoteId();
+		console.log(activeNoteId);
+		if (!activeNoteId) return;
+
+		const blocks = store.getActiveBlocks();
+		console.log(blocks);
+		for (const block of blocks) {
+			if (block.block_type_id !== 2) {
+				const key = `pending_block_${activeNoteId}_${block.id}`;
+				const savedContent = sessionStorage.getItem(key);
+				console.log(savedContent);
+				if (savedContent && block.content !== savedContent) {
+					try {
+						await noteService.updateBlockContent(
+							activeNoteId,
+							String(block.id),
+							savedContent,
+						);
+						sessionStorage.removeItem(key);
+					} catch (error) {
+						console.error('Failed to restore block content:', error);
+					}
+				}
+			}
 		}
 	}
 
@@ -551,5 +581,8 @@ export default class NoteBody extends Component {
 		this.unsubscribeCollaborativeCreate?.();
 		this.unsubscribeCollaborativeDelete?.();
 		this.unsubscribeSyncBlockId?.();
+		if (this.beforeUnloadHandler) {
+			window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+		}
 	}
 }

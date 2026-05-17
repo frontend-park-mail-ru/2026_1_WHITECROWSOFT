@@ -96,14 +96,6 @@ export const noteService = {
 						: block.formatting || { ranges: [] },
 				}),
 			);
-			const activeNote = {
-				ID: storeNote.ID,
-				title: storeNote.title,
-				breadcrumb: storeNote.title,
-				text: blocksWithFormatting.map((b) => b.content).join('\n\n') ?? '',
-			};
-			store.setActiveNote(activeNote);
-			store.setActiveNoteId(noteID);
 			store.setActiveBlocks(blocksWithFormatting);
 			return {
 				note: {
@@ -140,13 +132,6 @@ export const noteService = {
 					? { ranges: formattingMap[block.id] }
 					: block.formatting || { ranges: [] },
 			}));
-			const activeNote = {
-				ID: cachedNote.ID,
-				title: cachedNote.title,
-				breadcrumb: cachedNote.title,
-				text: blocks.map((b) => b.content).join('\n\n') ?? '',
-			};
-			await this._setActiveNoteState(activeNote);
 			store.setActiveBlocks(blocksWithFormatting);
 			return {
 				note: {
@@ -205,14 +190,6 @@ export const noteService = {
 					});
 				}
 			}
-			const activeNote = {
-				ID: serverNote.id,
-				title: serverNote.title,
-				breadcrumb: serverNote.title,
-				text: serverBlocks.map((b: Block) => b.content).join('\n\n') ?? '',
-			};
-			store.setActiveNote(activeNote);
-			store.setActiveNoteId(noteID);
 			store.setActiveBlocks(serverBlocks);
 			await db.settingsSet('activeNoteId', noteID);
 			return {
@@ -235,6 +212,7 @@ export const noteService = {
 		title: string;
 		breadcrumb: string;
 		text: string;
+		section?: 'personal' | 'shared' | 'favourite';
 	}): Promise<void> {
 		store.setActiveNote(activeNote);
 		store.setActiveNoteId(activeNote.ID);
@@ -251,6 +229,7 @@ export const noteService = {
 			icon: null,
 			updatedAt: Date.now(),
 			blocks: [],
+			section: 'personal',
 		};
 		if (isOnline) {
 			try {
@@ -262,6 +241,7 @@ export const noteService = {
 					updatedAt: result.updated_at || Date.now(),
 					blocks: [],
 					parent_id: data.parent_id || null,
+					section: 'personal',
 				};
 				const blockData: CreateBlockData = {
 					note_id: note.ID,
@@ -275,11 +255,14 @@ export const noteService = {
 				const updatedNote = { ...note, blocks: [createdBlock] };
 				const currentNotes = store.getNotes();
 				store.setNotes([updatedNote, ...currentNotes]);
+				await db.notesPut(updatedNote);
+				const section: 'personal' | 'shared' | 'favourite' = 'personal';
 				const activeNote = {
 					ID: note.ID,
 					title: note.title,
 					breadcrumb: note.title,
 					text: '',
+					section: section,
 				};
 				await this._setActiveNoteState(activeNote);
 				store.setPendingFocus(createdBlock.id, 'start');
@@ -290,11 +273,13 @@ export const noteService = {
 				await db.notesPut(localNote);
 				const currentNotes = store.getNotes();
 				store.setNotes([localNote, ...currentNotes]);
+				const section: 'personal' | 'shared' | 'favourite' = 'personal';
 				const activeNote = {
 					ID: localNoteId,
 					title: localNote.title,
 					breadcrumb: localNote.title,
 					text: '',
+					section: section,
 				};
 				await this._setActiveNoteState(activeNote);
 				store.setActiveBlocks([]);
@@ -311,11 +296,13 @@ export const noteService = {
 		await db.notesPut(localNote);
 		const currentNotes = store.getNotes();
 		store.setNotes([localNote, ...currentNotes]);
+		const section: 'personal' | 'shared' | 'favourite' = 'personal';
 		const activeNote = {
 			ID: localNoteId,
 			title: localNote.title,
 			breadcrumb: localNote.title,
 			text: '',
+			section: section,
 		};
 		await this._setActiveNoteState(activeNote);
 		store.setActiveBlocksSilently([]);
@@ -398,7 +385,6 @@ export const noteService = {
 				store.setNotesSilently(updatedNotes);
 
 				if (store.getActiveNoteId() === parentNote.ID) {
-					console.log('Active Blocks');
 					store.setActiveBlocks(updatedBlocks);
 				}
 
@@ -424,6 +410,15 @@ export const noteService = {
 		if (activeNoteId && idsToDelete.includes(activeNoteId)) {
 			await db.settingsSet('activeNoteId', null);
 			if (currentNotes.length > 0) {
+				const firstNote = currentNotes[0];
+				const activeNote = {
+					ID: firstNote.ID,
+					title: firstNote.title,
+					breadcrumb: firstNote.title,
+					text: '',
+					section: firstNote.section,
+				};
+				store.setActiveNote(activeNote);
 				store.setActiveNoteId(currentNotes[0].ID);
 			} else {
 				store.setActiveNote(null);
@@ -436,6 +431,7 @@ export const noteService = {
 	async updateNote(
 		noteID: string | number,
 		data: Partial<Note>,
+		silence?: boolean,
 	): Promise<Note | null> {
 		const currentNotes = store.getNotes();
 		const noteIndex = currentNotes.findIndex((n) => n.ID === noteID);
@@ -450,17 +446,28 @@ export const noteService = {
 			await db.notesPut(updatedNote);
 			const updatedNotes = [...currentNotes];
 			updatedNotes[noteIndex] = updatedNote;
-			store.setNotesSilently(updatedNotes);
-
+			if (silence === false) {
+				store.setNotesSilently(updatedNotes);
+			} else {
+				store.setNotesSilently(updatedNotes);
+			}
 			if (store.getActiveNoteId() === noteID) {
+				let newSection: 'personal' | 'shared' | 'favourite' = 'personal';
+				if (updatedNote.is_favourite) {
+					newSection = 'favourite';
+				} else if (updatedNote.is_public) {
+					newSection = 'shared';
+				}
 				const activeNote = {
 					ID: updatedNote.ID,
 					title: updatedNote.title,
 					breadcrumb: updatedNote.title,
 					text: store.getActiveNote()?.text || '',
 					parent_id: updatedNote.parent_id || null,
+					section: newSection,
 				};
 				store.setActiveNote(activeNote);
+				store.setActiveNoteId(updatedNote.ID);
 			}
 
 			const isOnline = store.getOnline();
@@ -605,7 +612,6 @@ export const noteService = {
 				};
 				const updatedNotes = [...currentNotes];
 				updatedNotes[noteIndex] = updatedNote;
-				console.log(updatedNotes);
 				store.setNotesSilently(updatedNotes);
 			}
 			store.setPendingFocus(localBlock.id, 0);
@@ -689,7 +695,6 @@ export const noteService = {
 				await db.notesPut({ ...noteForBlocks, blocks: updatedNoteBlocks });
 			}
 		}
-		console.log(block);
 		return block;
 	},
 

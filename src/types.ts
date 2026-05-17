@@ -14,7 +14,9 @@ export interface Note {
 	parent_id?: string | number | null;
 	isLocal?: boolean;
 	is_public?: boolean;
+	is_favourite?: boolean;
 	breadcrumb?: string;
+	section?: 'personal' | 'shared' | 'favourite';
 }
 
 export interface ActiveNote {
@@ -22,6 +24,7 @@ export interface ActiveNote {
 	title: string;
 	breadcrumb: string;
 	text: string;
+	section?: 'personal' | 'shared' | 'favourite';
 }
 
 export interface RecentNote {
@@ -63,13 +66,6 @@ export interface FormattingRange {
 	bold: boolean | null;
 	italic: boolean | null;
 	underline: boolean | null;
-}
-
-export interface ActiveNote {
-	ID: string | number;
-	title: string;
-	breadcrumb: string;
-	text: string;
 }
 
 export interface ImageAttachment {

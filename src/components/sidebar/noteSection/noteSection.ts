@@ -7,7 +7,11 @@ interface NoteSectionOptions {
 	title: string;
 	notes: SidebarNote[];
 	emptyMessage?: string;
-	onNoteClick: (noteId: string | number) => void;
+	section: 'personal' | 'shared' | 'favourite';
+	onNoteClick: (
+		noteId: string | number,
+		section: 'personal' | 'shared' | 'favourite',
+	) => void;
 	onToggle: (noteId: string | number) => void;
 	onAddSubnote: (noteId: string | number) => void;
 	onSettingsClick: (
@@ -41,6 +45,7 @@ export default class NoteSection extends Component {
 		if (treeContainer && this.options.notes.length > 0) {
 			this.noteTree = new NoteTree({
 				notes: this.options.notes,
+				section: this.options.section,
 				onNoteClick: this.options.onNoteClick,
 				onToggle: this.options.onToggle,
 				onAddSubnote: this.options.onAddSubnote,
@@ -63,6 +68,7 @@ export default class NoteSection extends Component {
 			if (treeContainer) {
 				this.noteTree = new NoteTree({
 					notes,
+					section: this.options.section,
 					onNoteClick: this.options.onNoteClick,
 					onToggle: this.options.onToggle,
 					onAddSubnote: this.options.onAddSubnote,

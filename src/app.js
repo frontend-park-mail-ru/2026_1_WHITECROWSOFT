@@ -51,6 +51,16 @@ async function bootstrap() {
 
 		const activeNodeId = await db.settingsGet('activeNoteId');
 		if (activeNodeId) {
+			const note = await db.notesGet(activeNodeId);
+			const activenote = {
+				ID: activeNodeId,
+				title: note.title,
+				breadcrumb: note.title,
+				text: '',
+				parent_id: note.parent_id || null,
+				section: note.section,
+			};
+			store.setActiveNote(activenote);
 			store.setActiveNoteId(activeNodeId);
 			const activeNote = await db.notesGet(activeNodeId);
 			if (activeNote && activeNote.blocks && activeNote.blocks.length > 0) {

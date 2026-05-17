@@ -5,9 +5,21 @@ import type { Note, SidebarNote } from '../types.js';
 export const sidebarService = {
 	expandedState: new Map<string | number, boolean>(),
 
-	getTreeFromStore(): SidebarNote[] {
-		const notes = store.getNotes();
-		const tree = this.buildTree(notes, this.expandedState);
+	getPersonalTreeFromStore(): SidebarNote[] {
+		const notes = store.getNotes().filter((note) => note.is_public !== true);
+		const tree = this.buildTree(notes, this.expandedState, 'personal');
+		return tree;
+	},
+
+	getPublicTreeFromStore(): SidebarNote[] {
+		const notes = store.getNotes().filter((note) => note.is_public === true);
+		const tree = this.buildTree(notes, this.expandedState, 'shared');
+		return tree;
+	},
+
+	getFavouriteTreeFromStore(): SidebarNote[] {
+		const notes = store.getNotes().filter((note) => note.is_favourite === true);
+		const tree = this.buildTree(notes, this.expandedState, 'favourite');
 		return tree;
 	},
 
@@ -18,18 +30,22 @@ export const sidebarService = {
 	buildTree(
 		notes: Note[],
 		expandedState: Map<string | number, boolean>,
+		section: 'personal' | 'shared' | 'favourite',
 	): SidebarNote[] {
 		const noteMap = new Map<string | number | null, SidebarNote>();
 		const roots: SidebarNote[] = [];
 		const activeNoteId = store.getActiveNoteId();
+		const activeNoteSection = store.getActiveNote()?.section;
 		for (const note of notes) {
+			const isActive =
+				note.ID === activeNoteId && activeNoteSection === section;
 			noteMap.set(note.ID, {
 				id: note.ID,
 				title: note.title,
 				parentId: note.parent_id || null,
 				children: [],
 				isExpanded: expandedState.get(note.ID) ?? false,
-				isActive: activeNoteId === note.ID,
+				isActive: isActive,
 				level: 0,
 			});
 		}
@@ -121,7 +137,7 @@ export const sidebarService = {
 		return await db.notesGetTree(noteId);
 	},
 
-	getBreadcrumb(noteId: string | number): string {
+	getBreadcrumb(noteId: string | number | undefined): string {
 		const allNotes = store.getNotes();
 		const notesMap = new Map(allNotes.map((n) => [n.ID, n]));
 		const path: Note[] = [];
@@ -135,7 +151,8 @@ export const sidebarService = {
 				break;
 			}
 		}
-		return path.map((n) => n.title).join(' / ');
+		const pathNames = path.map((n) => n.title);
+		return `Библиотека / ${pathNames.join(' / ')}`;
 	},
 
 	hasChildren(noteId: string | number): boolean {

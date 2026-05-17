@@ -1,5 +1,6 @@
 import '../../../assets/style/genericPopup.scss';
 import { noteService } from '../../../services/noteService.js';
+import { store } from '../../../store.js';
 import { getElementPosition } from '../../../utils/utils.js';
 import Component from '../../component.js';
 import { collabManager } from './../../../utils/collaborativeManager.js';
@@ -10,6 +11,8 @@ interface NotePopupOptions {
 	anchorElement: HTMLElement;
 	titleElement?: HTMLElement;
 	onRenameComplete?: () => void;
+	onShareComplete?: () => void;
+	onPinComplete?: () => void;
 }
 
 export default class NotePopup extends Component {
@@ -25,7 +28,9 @@ export default class NotePopup extends Component {
 		onRename?: () => void;
 		onRenameComplete?: () => void;
 		onShare?: () => void;
+		onShareComplete?: () => void;
 		onPin?: () => void;
+		onPinComplete?: () => void;
 	} = {};
 
 	constructor(options: NotePopupOptions) {
@@ -34,6 +39,8 @@ export default class NotePopup extends Component {
 		this.anchorElement = options.anchorElement;
 		this.titleElement = options.titleElement;
 		this.boundHandlers.onRenameComplete = options.onRenameComplete;
+		this.boundHandlers.onShareComplete = options.onRenameComplete;
+		this.boundHandlers.onPinComplete = options.onPinComplete;
 	}
 
 	protected getTemplateData() {
@@ -178,7 +185,7 @@ export default class NotePopup extends Component {
 			alert(
 				'Заметка стала публичной. Ссылка на заметку скопирована в буфер обмена',
 			);
-
+			this.boundHandlers.onShareComplete?.();
 			this.close();
 		} catch (error) {
 			console.error('Failed to share note:', error);
@@ -251,7 +258,19 @@ export default class NotePopup extends Component {
 	}
 
 	private async handlePin(): Promise<void> {
-		console.log('PIN');
+		try {
+			const note = store
+				.getNotes()
+				.filter((note) => note.ID === this.noteId)[0];
+			await noteService.updateNote(this.noteId, {
+				is_favourite: !note.is_favourite,
+				title: this.titleElement?.textContent,
+			});
+			this.boundHandlers.onPinComplete?.();
+			this.close();
+		} catch (error) {
+			console.error('Failed to pinn note:', error);
+		}
 	}
 
 	close(): void {

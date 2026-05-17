@@ -4,7 +4,11 @@ import templateString from './noteTreeNode.hbs?raw';
 
 interface NoteTreeNodeOptions {
 	note: SidebarNote;
-	onNoteClick: (noteId: string | number) => void;
+	section: 'personal' | 'shared' | 'favourite';
+	onNoteClick: (
+		noteId: string | number,
+		section: 'personal' | 'shared' | 'favourite',
+	) => void;
 	onToggle: (noteId: string | number) => void;
 	onAddSubnote: (noteId: string | number) => void;
 	onSettingsClick: (
@@ -13,6 +17,7 @@ interface NoteTreeNodeOptions {
 		titleElement: HTMLElement,
 	) => void;
 	onTitleDoubleClick: (noteId: string | number, element: HTMLElement) => void;
+	registerComponent?: (id: string | number, component: NoteTreeNode) => void;
 }
 
 export default class NoteTreeNode extends Component {
@@ -65,7 +70,7 @@ export default class NoteTreeNode extends Component {
 		this.contentElement?.addEventListener('click', (e) => {
 			const target = e.target as HTMLElement;
 			if (!target.closest('[data-action]')) {
-				this.options.onNoteClick(this.note.id);
+				this.options.onNoteClick(this.note.id, this.options.section);
 			}
 		});
 		this.titleElement?.addEventListener('dblclick', (e) => {
@@ -103,14 +108,19 @@ export default class NoteTreeNode extends Component {
 
 			const childComponent = new NoteTreeNode({
 				note: childNote,
+				section: this.options.section,
 				onNoteClick: this.options.onNoteClick,
 				onToggle: this.options.onToggle,
 				onAddSubnote: this.options.onAddSubnote,
 				onSettingsClick: this.options.onSettingsClick,
 				onTitleDoubleClick: this.options.onTitleDoubleClick,
+				registerComponent: this.options.registerComponent,
 			});
 			childComponent.renderTo(container);
 			this.childComponents.set(childNote.id, childComponent);
+			if (this.options.registerComponent) {
+				this.options.registerComponent(childNote.id, childComponent);
+			}
 		}
 	}
 
