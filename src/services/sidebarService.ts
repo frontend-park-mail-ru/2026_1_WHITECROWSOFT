@@ -17,9 +17,10 @@ export const sidebarService = {
 		return tree;
 	},
 
-	getFavouriteTreeFromStore(): SidebarNote[] {
-		const notes = store.getNotes().filter((note) => note.is_favourite === true);
-		const tree = this.buildTree(notes, this.expandedState, 'favourite');
+	getfavoriteTreeFromStore(): SidebarNote[] {
+		const notes = store.getNotes().filter((note) => note.is_favorite === true);
+		console.log(notes, store.getNotes());
+		const tree = this.buildTree(notes, this.expandedState, 'favorite');
 		return tree;
 	},
 
@@ -30,7 +31,7 @@ export const sidebarService = {
 	buildTree(
 		notes: Note[],
 		expandedState: Map<string | number, boolean>,
-		section: 'personal' | 'shared' | 'favourite',
+		section: 'personal' | 'shared' | 'favorite',
 	): SidebarNote[] {
 		const noteMap = new Map<string | number | null, SidebarNote>();
 		const roots: SidebarNote[] = [];

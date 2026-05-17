@@ -4,10 +4,10 @@ import templateString from './noteTreeNode.hbs?raw';
 
 interface NoteTreeNodeOptions {
 	note: SidebarNote;
-	section: 'personal' | 'shared' | 'favourite';
+	section: 'personal' | 'shared' | 'favorite';
 	onNoteClick: (
 		noteId: string | number,
-		section: 'personal' | 'shared' | 'favourite',
+		section: 'personal' | 'shared' | 'favorite',
 	) => void;
 	onToggle: (noteId: string | number) => void;
 	onAddSubnote: (noteId: string | number) => void;

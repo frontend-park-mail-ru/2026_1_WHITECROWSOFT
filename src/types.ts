@@ -14,9 +14,9 @@ export interface Note {
 	parent_id?: string | number | null;
 	isLocal?: boolean;
 	is_public?: boolean;
-	is_favourite?: boolean;
+	is_favorite?: boolean;
 	breadcrumb?: string;
-	section?: 'personal' | 'shared' | 'favourite';
+	section?: 'personal' | 'shared' | 'favorite';
 }
 
 export interface ActiveNote {
@@ -24,7 +24,7 @@ export interface ActiveNote {
 	title: string;
 	breadcrumb: string;
 	text: string;
-	section?: 'personal' | 'shared' | 'favourite';
+	section?: 'personal' | 'shared' | 'favorite';
 }
 
 export interface RecentNote {
@@ -271,6 +271,7 @@ export interface NoteApiResponse {
 	updated_at?: string;
 	parent_id?: string | number | null;
 	is_public?: boolean;
+	is_favorite?: boolean;
 }
 
 export interface BlockApiResponse {

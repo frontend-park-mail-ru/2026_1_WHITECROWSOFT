@@ -263,7 +263,7 @@ export default class NotePopup extends Component {
 				.getNotes()
 				.filter((note) => note.ID === this.noteId)[0];
 			await noteService.updateNote(this.noteId, {
-				is_favourite: !note.is_favourite,
+				is_favorite: !note.is_favorite,
 				title: this.titleElement?.textContent,
 			});
 			this.boundHandlers.onPinComplete?.();

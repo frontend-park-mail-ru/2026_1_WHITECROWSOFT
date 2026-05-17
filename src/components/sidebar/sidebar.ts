@@ -16,7 +16,7 @@ export default class Sidebar extends Component {
 	protected templateString = templateString;
 	private personalSection: NoteSection | null = null;
 	private sharedSection: NoteSection | null = null;
-	private favouriteSection: NoteSection | null = null;
+	private favoriteSection: NoteSection | null = null;
 	private currentPopup: NotePopup | null = null;
 	private unsubscribeNotes: (() => void) | null = null;
 	private unsubscribeActiveNoteId: (() => void) | null = null;
@@ -40,7 +40,7 @@ export default class Sidebar extends Component {
 		this.subscribeToSyncEvents();
 		this.updatePersonalNotes();
 		this.updateSharedNotes();
-		this.updateFavouriteNotes();
+		this.updatefavoriteNotes();
 	}
 
 	private renderSections(): void {
@@ -50,8 +50,8 @@ export default class Sidebar extends Component {
 		const sharedContainer = this.domElement?.querySelector(
 			'[data-section="shared"]',
 		);
-		const favouriteContainer = this.domElement?.querySelector(
-			'[data-section="favourites"]',
+		const favoriteContainer = this.domElement?.querySelector(
+			'[data-section="favorites"]',
 		);
 
 		if (personalContainer) {
@@ -84,10 +84,10 @@ export default class Sidebar extends Component {
 			this.sharedSection.renderTo(sharedContainer as HTMLElement);
 		}
 
-		if (favouriteContainer) {
-			this.favouriteSection = new NoteSection({
+		if (favoriteContainer) {
+			this.favoriteSection = new NoteSection({
 				title: 'Избранное',
-				section: 'favourite',
+				section: 'favorite',
 				notes: [],
 				emptyMessage: 'Нет избранных заметок',
 				onNoteClick: this.handleNoteClick,
@@ -96,7 +96,7 @@ export default class Sidebar extends Component {
 				onSettingsClick: this.handleSettingsClick,
 				onTitleDoubleClick: this.handleTitleDoubleClick,
 			});
-			this.favouriteSection.renderTo(favouriteContainer as HTMLElement);
+			this.favoriteSection.renderTo(favoriteContainer as HTMLElement);
 		}
 	}
 
@@ -110,9 +110,9 @@ export default class Sidebar extends Component {
 		this.sharedSection?.updateNotes(tree);
 	}
 
-	private updateFavouriteNotes(): void {
-		const tree = sidebarService.getFavouriteTreeFromStore();
-		this.favouriteSection?.updateNotes(tree);
+	private updatefavoriteNotes(): void {
+		const tree = sidebarService.getfavoriteTreeFromStore();
+		this.favoriteSection?.updateNotes(tree);
 	}
 
 	private bindNavigationEvents(): void {
@@ -154,7 +154,7 @@ export default class Sidebar extends Component {
 		this.unsubscribeNotes = store.subscribe('notes', () => {
 			this.updatePersonalNotes();
 			this.updateSharedNotes();
-			this.updateFavouriteNotes();
+			this.updatefavoriteNotes();
 		});
 
 		this.unsubscribeActiveNoteId = store.subscribe(
@@ -165,8 +165,8 @@ export default class Sidebar extends Component {
 				if (section !== 'shared') {
 					this.sharedSection?.updateActiveNote(null);
 				}
-				if (section !== 'favourite') {
-					this.favouriteSection?.updateActiveNote(null);
+				if (section !== 'favorite') {
+					this.favoriteSection?.updateActiveNote(null);
 				}
 				if (section !== 'personal') {
 					this.personalSection?.updateActiveNote(null);
@@ -174,8 +174,8 @@ export default class Sidebar extends Component {
 
 				if (section === 'shared') {
 					this.sharedSection?.updateActiveNote(noteId);
-				} else if (section === 'favourite') {
-					this.favouriteSection?.updateActiveNote(noteId);
+				} else if (section === 'favorite') {
+					this.favoriteSection?.updateActiveNote(noteId);
 				} else {
 					this.personalSection?.updateActiveNote(noteId);
 				}
@@ -204,13 +204,13 @@ export default class Sidebar extends Component {
 			const { serverId, localId } = e.detail;
 			this.personalSection?.updateNoteId(localId, serverId);
 			this.sharedSection?.updateNoteId(localId, serverId);
-			this.favouriteSection?.updateNoteId(localId, serverId);
+			this.favoriteSection?.updateNoteId(localId, serverId);
 		}) as EventListener);
 	}
 
 	private handleNoteClick = async (
 		noteId: string | number,
-		section: 'personal' | 'shared' | 'favourite',
+		section: 'personal' | 'shared' | 'favorite',
 	): Promise<void> => {
 		const note = store.getNotes().find((n) => n.ID === noteId);
 		if (!note) return;
@@ -259,8 +259,8 @@ export default class Sidebar extends Component {
 				const note = store.getNotes().filter((note) => note.ID === noteId)[0];
 				if (note.is_public === true) {
 					this.updateSharedNotes();
-				} else if (note.is_favourite === true) {
-					this.updateFavouriteNotes();
+				} else if (note.is_favorite === true) {
+					this.updatefavoriteNotes();
 				}
 				this.updatePersonalNotes();
 			},
@@ -269,7 +269,7 @@ export default class Sidebar extends Component {
 				this.updateSharedNotes();
 			},
 			onPinComplete: async () => {
-				this.updateFavouriteNotes();
+				this.updatefavoriteNotes();
 			},
 		});
 		this.currentPopup.renderTo(document.body);
@@ -293,6 +293,6 @@ export default class Sidebar extends Component {
 		this.currentPopup?.close();
 		this.personalSection?.destroy();
 		this.sharedSection?.destroy();
-		this.favouriteSection?.destroy();
+		this.favoriteSection?.destroy();
 	}
 }

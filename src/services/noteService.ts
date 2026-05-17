@@ -19,6 +19,7 @@ interface GetNoteResponse {
 		updated_at: string;
 		parent_id?: string | number | null;
 		is_public?: boolean;
+		is_favorite?: boolean;
 	};
 	blocks: Block[];
 }
@@ -66,6 +67,7 @@ export const noteService = {
 					parent_id: note.parent_id || null,
 					updatedAt: note.updated_at || Date.now(),
 					is_public: note.is_public || false,
+					is_favorite: note.is_favorite || false,
 				}));
 				await db.notesClear();
 				for (const note of notes) {
@@ -73,6 +75,7 @@ export const noteService = {
 						await db.notesPut(note);
 					}
 				}
+				console.log(notes);
 				store.setNotesSilently(notes);
 				return notes;
 			} catch (error) {
@@ -106,6 +109,7 @@ export const noteService = {
 							? storeNote.updatedAt
 							: new Date(storeNote.updatedAt).toISOString(),
 					is_public: storeNote.is_public || false,
+					is_favorite: storeNote.is_favorite || false,
 				},
 				blocks: blocksWithFormatting,
 			};
@@ -167,6 +171,7 @@ export const noteService = {
 				blocks: serverBlocks,
 				updatedAt: serverNote.updated_at,
 				is_public: serverNote.is_public || false,
+				is_favorite: serverNote.is_favorite || false,
 			};
 			await db.notesPut(note);
 			const currentNotes = store.getNotes();
@@ -212,7 +217,7 @@ export const noteService = {
 		title: string;
 		breadcrumb: string;
 		text: string;
-		section?: 'personal' | 'shared' | 'favourite';
+		section?: 'personal' | 'shared' | 'favorite';
 	}): Promise<void> {
 		store.setActiveNote(activeNote);
 		store.setActiveNoteId(activeNote.ID);
@@ -256,7 +261,7 @@ export const noteService = {
 				const currentNotes = store.getNotes();
 				store.setNotes([updatedNote, ...currentNotes]);
 				await db.notesPut(updatedNote);
-				const section: 'personal' | 'shared' | 'favourite' = 'personal';
+				const section: 'personal' | 'shared' | 'favorite' = 'personal';
 				const activeNote = {
 					ID: note.ID,
 					title: note.title,
@@ -273,7 +278,7 @@ export const noteService = {
 				await db.notesPut(localNote);
 				const currentNotes = store.getNotes();
 				store.setNotes([localNote, ...currentNotes]);
-				const section: 'personal' | 'shared' | 'favourite' = 'personal';
+				const section: 'personal' | 'shared' | 'favorite' = 'personal';
 				const activeNote = {
 					ID: localNoteId,
 					title: localNote.title,
@@ -296,7 +301,7 @@ export const noteService = {
 		await db.notesPut(localNote);
 		const currentNotes = store.getNotes();
 		store.setNotes([localNote, ...currentNotes]);
-		const section: 'personal' | 'shared' | 'favourite' = 'personal';
+		const section: 'personal' | 'shared' | 'favorite' = 'personal';
 		const activeNote = {
 			ID: localNoteId,
 			title: localNote.title,
@@ -452,9 +457,9 @@ export const noteService = {
 				store.setNotesSilently(updatedNotes);
 			}
 			if (store.getActiveNoteId() === noteID) {
-				let newSection: 'personal' | 'shared' | 'favourite' = 'personal';
-				if (updatedNote.is_favourite) {
-					newSection = 'favourite';
+				let newSection: 'personal' | 'shared' | 'favorite' = 'personal';
+				if (updatedNote.is_favorite) {
+					newSection = 'favorite';
 				} else if (updatedNote.is_public) {
 					newSection = 'shared';
 				}
