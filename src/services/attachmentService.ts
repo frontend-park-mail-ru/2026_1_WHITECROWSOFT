@@ -1,7 +1,7 @@
 import { client } from '../client/client.js';
 import { db } from '../db.js';
 import { store } from '../store.js';
-import type { AttachmentApiResponse, Block } from '../types.js';
+import type { AttachmentApiResponse, Block, Note } from '../types.js';
 import { handleAuthError } from '../utils/handleAuthError';
 import { noteService } from './noteService.js';
 import { queueService } from './requestQueueService.js';
@@ -111,6 +111,27 @@ export const attachmentService = {
 		} else {
 			await db.videosPut(attachmentData);
 		}
+	},
+
+	async _coverToCache(
+		noteId: string | number,
+		attachmentId: string | number,
+		file: File,
+		url: string | undefined,
+	): Promise<void> {
+		const blob = await this._fileToBlob(file);
+		const coverData = {
+			id: attachmentId,
+			noteId: noteId,
+			blob: blob,
+			filename: file.name,
+			mimeType: file.type,
+			size: file.size,
+			url: url,
+			status: 'synced' as const,
+			syncedAt: Date.now(),
+		};
+		await db.coverPut(coverData);
 	},
 
 	async _createVideoOnline(
@@ -671,6 +692,193 @@ export const attachmentService = {
 			} catch (e) {
 				console.warn('[attachmentService] Failed to parse block content:', e);
 			}
+		}
+	},
+
+	async createCover(noteId: string | number, file: File): Promise<Note | null> {
+		const isOnline = store.getOnline();
+		if (isOnline) {
+			return await this._createCoverOnline(noteId, file);
+		} else {
+			return await this._createCoverOffline(noteId, file);
+		}
+	},
+
+	async _createCoverOnline(
+		noteId: string | number,
+		file: File,
+	): Promise<Note | null> {
+		const formData = new FormData();
+		formData.append('file', file);
+		const mockCoverUrl = URL.createObjectURL(file);
+		const mockId = `mock-${Date.now()}`;
+		// const coverResult = await client.postForm<NoteApiResponse>(
+		// 	`/notes/${noteId}/covers`,
+		// 	formData,
+		// );
+		await this._coverToCache(noteId, mockId, file, mockCoverUrl);
+		const currentNote = await db.notesGet(noteId);
+		if (!currentNote) return null;
+		const updatedNote: Note = {
+			ID: currentNote.ID,
+			title: currentNote.title,
+			updatedAt: Date.now(),
+			coverUrl: mockCoverUrl,
+			iconUrl: currentNote.iconUrl || null,
+			blocks: currentNote.blocks || [],
+			parent_id: currentNote.parent_id || null,
+			isLocal: currentNote.isLocal || false,
+			is_public: currentNote.is_public || false,
+			is_favorite: currentNote.is_favorite || false,
+			section: currentNote.section || 'personal',
+		};
+		await db.notesPut(updatedNote);
+		const currentNotes = store.getNotes();
+		const noteIndex = currentNotes.findIndex((n) => n.ID === noteId);
+		if (noteIndex !== -1) {
+			const updatedNotes = [...currentNotes];
+			updatedNotes[noteIndex] = updatedNote;
+			store.setNotesSilently(updatedNotes);
+		}
+		const activeNote = store.getActiveNote();
+		if (activeNote) {
+			store.setActiveNote({
+				...activeNote,
+				coverUrl: mockCoverUrl,
+			});
+			console.log('active note:', store.getActiveNote());
+		}
+		return updatedNote;
+	},
+
+	async _createCoverOffline(
+		noteId: string | number,
+		file: File,
+	): Promise<Note | null> {
+		const localCoverId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+		const blob = await this._fileToBlob(file);
+		const coverUrl = URL.createObjectURL(blob);
+		await db.coverPut({
+			id: localCoverId,
+			noteId: noteId,
+			blob: blob,
+			filename: file.name,
+			mimeType: file.type,
+			size: file.size,
+			url: coverUrl,
+			status: 'pending',
+			createdAt: Date.now(),
+		});
+
+		await db.queueFilePut({
+			id: localCoverId,
+			noteId: noteId,
+			blob: blob,
+			filename: file.name,
+			mimeType: file.type,
+			size: file.size,
+			queuedAt: Date.now(),
+		});
+
+		await queueService.enqueueRequest({
+			method: 'POST',
+			endpoint: `/notes/${noteId}/covers`,
+			type: 'COVER_UPLOAD',
+			localId: localCoverId,
+			body: { fileId: localCoverId, noteId },
+		});
+
+		const currentNote = await db.notesGet(noteId);
+		if (!currentNote) return null;
+		const updatedNote: Note = {
+			ID: currentNote.ID,
+			title: currentNote.title,
+			updatedAt: Date.now(),
+			coverUrl: coverUrl,
+			iconUrl: currentNote.iconUrl || null,
+			blocks: currentNote.blocks || [],
+			parent_id: currentNote.parent_id || null,
+			isLocal: currentNote.isLocal || false,
+			is_public: currentNote.is_public || false,
+			is_favorite: currentNote.is_favorite || false,
+			section: currentNote.section || 'personal',
+		};
+		await db.notesPut(updatedNote);
+
+		const currentNotes = store.getNotes();
+		const noteIndex = currentNotes.findIndex((n) => n.ID === noteId);
+		if (noteIndex !== -1) {
+			const updatedNotes = [...currentNotes];
+			updatedNotes[noteIndex] = updatedNote;
+			store.setNotesSilently(updatedNotes);
+		}
+		const activeNote = store.getActiveNote();
+		if (activeNote && activeNote.ID === noteId) {
+			store.setActiveNote({
+				...activeNote,
+				coverUrl: coverUrl,
+			});
+		}
+
+		return updatedNote;
+	},
+
+	async deleteCover(noteId: string | number): Promise<void> {
+		const isOnline = store.getOnline();
+		const currentNote = await db.notesGet(noteId);
+		if (!currentNote) return;
+		if (isOnline) {
+			try {
+				await client.delete(`/notes/${noteId}/covers`);
+			} catch (error) {
+				console.warn('[attachmentService] Failed to delete cover:', error);
+				handleAuthError(error);
+				await queueService.enqueueRequest({
+					method: 'DELETE',
+					endpoint: `/notes/${noteId}/covers`,
+					body: null,
+					type: 'COVER_DELETE',
+				});
+			}
+		} else {
+			await queueService.enqueueRequest({
+				method: 'DELETE',
+				endpoint: `/notes/${noteId}/covers`,
+				body: null,
+				type: 'COVER_DELETE',
+			});
+		}
+		const coverRecord = await db.coverGetByNoteId(noteId);
+		if (coverRecord) {
+			await db.coverDelete(coverRecord.id);
+		}
+		const updatedNote: Note = {
+			ID: currentNote.ID,
+			title: currentNote.title,
+			updatedAt: Date.now(),
+			coverUrl: null,
+			iconUrl: currentNote.iconUrl || null,
+			blocks: currentNote.blocks || [],
+			parent_id: currentNote.parent_id || null,
+			isLocal: currentNote.isLocal || false,
+			is_public: currentNote.is_public || false,
+			is_favorite: currentNote.is_favorite || false,
+			section: currentNote.section || 'personal',
+		};
+		await db.notesPut(updatedNote);
+		const currentNotes = store.getNotes();
+		const noteIndex = currentNotes.findIndex((n) => n.ID === noteId);
+		if (noteIndex !== -1) {
+			const updatedNotes = [...currentNotes];
+			updatedNotes[noteIndex] = updatedNote;
+			store.setNotesSilently(updatedNotes);
+		}
+		const activeNote = store.getActiveNote();
+		if (activeNote && activeNote.ID === noteId) {
+			store.setActiveNote({
+				...activeNote,
+				coverUrl: null,
+			});
 		}
 	},
 };

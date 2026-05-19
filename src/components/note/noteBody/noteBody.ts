@@ -221,14 +221,6 @@ export default class NoteBody extends Component {
 		this.blockWrappers.set(String(block.id), wrapper);
 	}
 
-	private clearBlocks(container: HTMLElement): void {
-		for (const wrapper of this.blockWrappers.values()) {
-			if (wrapper.destroy) wrapper.destroy();
-		}
-		this.blockWrappers.clear();
-		container.innerHTML = '';
-	}
-
 	private async handleContentChange(
 		blockId: string,
 		content: string,

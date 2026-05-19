@@ -1,0 +1,17 @@
+<div class="iconPopup">
+    <div class="iconPopup__text">Иконка</div>
+    <div class="iconPopup__row">
+        <button class="iconPopup__button {{#if (eq iconType 'personal')}}iconPopup__button--active{{/if}}" data-action="personal">
+            <img src="/icons/icon_personal.svg" class="iconPopup__icon"/>
+        </button>
+        <button class="iconPopup__button {{#if (eq iconType 'shared')}}iconPopup__button--active{{/if}}" data-action="shared">
+            <img src="/icons/icon_shared.svg" class="iconPopup__icon"/>
+        </button>
+        <button class="iconPopup__button {{#if (eq iconType 'favorite')}}iconPopup__button--active{{/if}}" data-action="favorite">
+            <img src="/icons/icon_favorite.svg" class="iconPopup__icon"/>
+        </button>
+        <button class="iconPopup__button {{#if (eq iconType 'draft')}}iconPopup__button--active{{/if}}" data-action="draft">
+            <img src="/icons/icon_draft.svg" class="iconPopup__icon"/>
+        </button>
+    </div>
+</div>

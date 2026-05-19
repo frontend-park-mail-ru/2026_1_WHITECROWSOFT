@@ -27,7 +27,6 @@ export class CollaborativeManager {
 	 * Очищает предыдущих участников и подключается к новому WebSocket
 	 */
 	async startCollab(noteId: string): Promise<void> {
-		// Проверяем, является ли заметка публичной
 		const note = store.getNotes().find((n) => String(n.ID) === noteId);
 		console.log(note);
 		if (!note || !note.is_public) {

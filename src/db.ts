@@ -2,6 +2,7 @@ import type {
 	AudioAttachment,
 	Block,
 	BlockFormatting,
+	Cover,
 	FormattingRange,
 	ImageAttachment,
 	Note,
@@ -27,7 +28,7 @@ interface RecentNote {
 class Database {
 	private db: IDBDatabase | null = null;
 	private readonly DB_NAME = 'Noterian';
-	private readonly DB_VERSION = 14;
+	private readonly DB_VERSION = 15;
 
 	async open(): Promise<IDBDatabase> {
 		return new Promise((resolve, reject) => {
@@ -65,6 +66,11 @@ class Database {
 					});
 					fmt.createIndex('noteId', 'noteId', { unique: false });
 					fmt.createIndex('synced', 'synced', { unique: false });
+				}
+				if (!db.objectStoreNames.contains('covers')) {
+					const covers = db.createObjectStore('covers', { keyPath: 'id' });
+					covers.createIndex('noteId', 'noteId', { unique: false });
+					covers.createIndex('url', 'url', { unique: false });
 				}
 				if (!db.objectStoreNames.contains('images')) {
 					const images = db.createObjectStore('images', { keyPath: 'id' });
@@ -354,6 +360,34 @@ class Database {
 		return this._clear('blockFormatting');
 	}
 
+	async coverPut(cover: Cover): Promise<void> {
+		return this._put('covers', cover);
+	}
+
+	async coverGet(id: string | number): Promise<Cover | undefined> {
+		return this._get<Cover>('covers', id);
+	}
+
+	async coverGetByNoteId(noteId: string | number): Promise<Cover | undefined> {
+		const all = await this._getAll<Cover>('covers');
+		return all.find((cover) => cover.noteId === noteId);
+	}
+
+	async coverDelete(id: string | number): Promise<void> {
+		return this._delete('covers', id);
+	}
+
+	async coverDeleteByNoteId(noteId: string | number): Promise<void> {
+		const cover = await this.coverGetByNoteId(noteId);
+		if (cover) {
+			await this.coverDelete(cover.id);
+		}
+	}
+
+	async coverClear(): Promise<void> {
+		return this._clear('covers');
+	}
+
 	async imagesPut(image: ImageAttachment): Promise<void> {
 		return this._put('images', image);
 	}
@@ -589,6 +623,7 @@ class Database {
 	async clearAllUserData(): Promise<void> {
 		await this.notesClear();
 		await this.formattingClear();
+		await this.coverClear();
 		await this.imagesClear();
 		await this.audiosClear();
 		await this.videosClear();

@@ -63,7 +63,6 @@ export const noteService = {
 				const notes: Note[] = notesArray.map((note) => ({
 					ID: note.id,
 					title: note.title,
-					icon: null,
 					parent_id: note.parent_id || null,
 					updatedAt: note.updated_at || Date.now(),
 					is_public: note.is_public || false,
@@ -166,7 +165,6 @@ export const noteService = {
 			const note: Note = {
 				ID: serverNote.id,
 				title: serverNote.title,
-				icon: null,
 				parent_id: serverNote.parent_id || null,
 				blocks: serverBlocks,
 				updatedAt: serverNote.updated_at,
@@ -231,7 +229,6 @@ export const noteService = {
 			...data,
 			ID: localNoteId,
 			isLocal: true,
-			icon: null,
 			updatedAt: Date.now(),
 			blocks: [],
 			section: 'personal',
@@ -242,7 +239,6 @@ export const noteService = {
 				const note: Note = {
 					ID: result.id,
 					title: result.title,
-					icon: null,
 					updatedAt: result.updated_at || Date.now(),
 					blocks: [],
 					parent_id: data.parent_id || null,

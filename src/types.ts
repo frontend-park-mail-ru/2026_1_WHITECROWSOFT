@@ -8,7 +8,7 @@ export interface User {
 export interface Note {
 	ID: string | number;
 	title: string;
-	icon: string | null;
+	iconUrl?: string | null;
 	updatedAt: string | number;
 	blocks?: Block[];
 	parent_id?: string | number | null;
@@ -16,14 +16,17 @@ export interface Note {
 	is_public?: boolean;
 	is_favorite?: boolean;
 	breadcrumb?: string;
+	coverUrl?: string | null;
 	section?: 'personal' | 'shared' | 'favorite';
 }
 
 export interface ActiveNote {
 	ID: string | number;
 	title: string;
+	iconUrl?: string | null;
 	breadcrumb: string;
 	text: string;
+	coverUrl?: string | null;
 	section?: 'personal' | 'shared' | 'favorite';
 }
 
@@ -118,7 +121,7 @@ export interface VideoAttachment {
 
 export interface QueueFile {
 	id: string;
-	blockId: string | number;
+	blockId?: string | number;
 	noteId: string | number;
 	blob: Blob;
 	filename: string;
@@ -270,6 +273,8 @@ export interface NoteApiResponse {
 	title: string;
 	updated_at?: string;
 	parent_id?: string | number | null;
+	iconUrl?: string;
+	coverUrl?: string;
 	is_public?: boolean;
 	is_favorite?: boolean;
 }
@@ -324,4 +329,18 @@ export type FormAction =
 export enum RequestEvents {
 	NOTE_CREATE = 'NOTE_CREATE',
 	BLOCK_CREATE = 'BLOCK_CREATE',
+}
+
+export interface Cover {
+	id: string | number;
+	noteId: string | number;
+	blob?: Blob;
+	url?: string;
+	filename: string;
+	mimeType: string;
+	size: number;
+	status: 'pending' | 'synced';
+	createdAt?: number;
+	syncedAt?: number;
+	isLocal?: boolean;
 }

@@ -1,0 +1,70 @@
+.iconPopup {
+	display: none;
+	position: fixed;
+	flex-direction: column;
+	z-index: 1000;
+	background: var(--background);
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+	padding: 8px 12px;
+	gap: 8px;
+	pointer-events: auto;
+	visibility: hidden;
+	transform: translateY(6px);
+	opacity: 0;
+	transition:
+		opacity 0.15s ease,
+		transform 0.15s ease;
+
+	&--visible {
+		display: flex;
+		flex-direction: column;
+		visibility: visible;
+		opacity: 1;
+		transform: translateY(0);
+	}
+
+	&__text {
+		font-size: 12px;
+		color: var(--text-secondary);
+		padding-bottom: 4px;
+		border-bottom: 1px solid var(--border);
+	}
+
+	&__row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	&__button {
+		padding: 6px;
+		border: none;
+		background: transparent;
+		border-radius: 6px;
+		cursor: pointer;
+		transition: background 0.15s;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+
+		&:hover {
+			background: var(--highlight);
+		}
+
+		&--active {
+			background: var(--highlight);
+			
+			.iconPopup__icon {
+				filter: brightness(0) invert(1);
+			}
+		}
+	}
+
+	&__icon {
+		width: 20px;
+		height: 20px;
+		pointer-events: none;
+	}
+}
