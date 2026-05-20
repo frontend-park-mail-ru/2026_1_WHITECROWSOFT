@@ -10,6 +10,7 @@ interface IconPopupOptions {
 	currentIcon?: IconType | null;
 	noteId: string | number;
 	onSelect?: (iconType: IconType) => void;
+	onRemove?: () => void;
 }
 
 export default class IconPopup extends Component {
@@ -19,6 +20,7 @@ export default class IconPopup extends Component {
 	private currentIcon: IconType | null;
 	private noteId: string | number;
 	private onSelect?: (iconType: IconType) => void;
+	private onRemove?: () => void;
 
 	private boundHandlers: {
 		onDocumentClick?: (e: MouseEvent) => void;
@@ -31,11 +33,15 @@ export default class IconPopup extends Component {
 		this.currentIcon = options.currentIcon || null;
 		this.noteId = options.noteId;
 		this.onSelect = options.onSelect;
+		this.onRemove = options.onRemove;
 	}
 
 	protected getTemplateData() {
 		return {
-			iconType: this.currentIcon,
+			isPersonal: this.currentIcon === 'personal',
+			isShared: this.currentIcon === 'shared',
+			isFavorite: this.currentIcon === 'favorite',
+			isDraft: this.currentIcon === 'draft',
 		};
 	}
 
@@ -52,12 +58,24 @@ export default class IconPopup extends Component {
 		this.bindPopupEvents();
 	}
 
+	renderTo(container: HTMLElement | null): void {
+		if (!container) return;
+		const temp = document.createElement('div');
+		temp.innerHTML = this.render();
+		const popupElement = temp.firstChild as HTMLElement;
+		if (popupElement) {
+			this.domElement = popupElement;
+			container.appendChild(popupElement);
+			this.onRender();
+		}
+	}
+
 	private position(): void {
 		if (!this.anchorElement || !this.domElement) return;
 		const rect = this.anchorElement.getBoundingClientRect();
 		this.domElement.style.position = 'fixed';
-		this.domElement.style.top = `${rect.bottom + window.scrollY + 5}px`;
-		this.domElement.style.left = `${rect.left + window.scrollX}px`;
+		this.domElement.style.top = `${rect.bottom + 10}px`;
+		this.domElement.style.left = `${rect.left}px`;
 		this.domElement.style.zIndex = '1000';
 	}
 
@@ -90,19 +108,37 @@ export default class IconPopup extends Component {
 		buttons.forEach((btn) => {
 			btn.addEventListener('click', async (e) => {
 				e.stopPropagation();
-				const action = btn.getAttribute('data-action') as IconType;
-				if (action) {
-					const iconUrl = `/icons/icon_${action}.svg`;
-					await noteService.updateNote(this.noteId, { iconUrl });
-					const activeNote = store.getActiveNote();
-					if (activeNote && activeNote.ID === this.noteId) {
-						store.setActiveNote({
-							...activeNote,
-							iconUrl: iconUrl,
-						});
-					}
-					this.onSelect?.(action);
+				if (btn.getAttribute('data-action') === 'delete') {
+					this.onRemove?.();
+					window.dispatchEvent(
+						new CustomEvent('noteIconChanged', {
+							detail: { noteId: this.noteId, iconUrl: null },
+						}),
+					);
 					this.close();
+				} else {
+					const action = btn.getAttribute('data-action') as IconType;
+					if (action) {
+						const iconUrl = `/icons/icon_${action}.svg`;
+						await noteService.updateNote(this.noteId, {
+							title: store.getActiveNote()?.title,
+							iconUrl,
+						});
+						const activeNote = store.getActiveNote();
+						if (activeNote && activeNote.ID === this.noteId) {
+							store.setActiveNote({
+								...activeNote,
+								iconUrl: iconUrl,
+							});
+						}
+						window.dispatchEvent(
+							new CustomEvent('noteIconChanged', {
+								detail: { noteId: this.noteId, iconUrl },
+							}),
+						);
+						this.onSelect?.(action);
+						this.close();
+					}
 				}
 			});
 		});

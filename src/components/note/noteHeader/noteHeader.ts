@@ -19,6 +19,7 @@ export default class NoteHeader extends Component {
 	private savedTitle: string = '';
 	private coverBlock: CoverBlock | null = null;
 	private iconBlock: IconBlock | null = null;
+	private currentPopup: IconPopup | null = null;
 
 	constructor() {
 		super();
@@ -61,19 +62,15 @@ export default class NoteHeader extends Component {
 		const container = this.domElement?.querySelector('[data-icon-container]');
 		if (!container) return;
 		const iconUrl = this.activeNote?.iconUrl || null;
-		if (this.iconBlock) {
-			if (iconUrl) {
-				this.iconBlock.updateIcon(iconUrl);
-			} else {
-				this.iconBlock.destroy();
-				this.iconBlock = null;
-			}
-		} else if (iconUrl) {
+		container.innerHTML = '';
+		if (iconUrl) {
 			this.iconBlock = new IconBlock({
 				iconUrl,
-				onRemove: () => this.removeIcon(),
+				onIcon: () => this.addIcon(),
 			});
 			this.iconBlock.renderTo(container as HTMLElement);
+		} else {
+			this.iconBlock = null;
 		}
 		this.updateButtonsVisibility();
 	}
@@ -178,8 +175,8 @@ export default class NoteHeader extends Component {
 				currentIcon = 'favorite';
 			else if (this.activeNote.iconUrl.includes('draft')) currentIcon = 'draft';
 		}
-
-		const popup = new IconPopup({
+		this.currentPopup?.close();
+		this.currentPopup = new IconPopup({
 			anchorElement: iconBtn,
 			currentIcon: currentIcon,
 			noteId: activeNoteId,
@@ -189,17 +186,20 @@ export default class NoteHeader extends Component {
 				this.renderIcon();
 				this.updateButtonsVisibility();
 			},
+			onRemove: () => this.removeIcon(),
 		});
-		popup.open();
+		this.currentPopup.open();
 	}
 
 	private async removeIcon(): Promise<void> {
 		const activeNoteId = store.getActiveNoteId();
 		if (activeNoteId && this.activeNote) {
-			await noteService.updateNote(activeNoteId, { iconUrl: null });
+			await noteService.updateNote(activeNoteId, {
+				title: store.getActiveNote()?.title,
+				iconUrl: null,
+			});
 			this.activeNote.iconUrl = null;
-			this.iconBlock?.destroy();
-			this.iconBlock = null;
+			this.renderIcon();
 			this.updateButtonsVisibility();
 		}
 	}
@@ -227,8 +227,14 @@ export default class NoteHeader extends Component {
 				}
 			});
 		}
-		coverBtn?.addEventListener('click', () => this.addCover());
-		iconBtn?.addEventListener('click', () => this.addIcon());
+		coverBtn?.addEventListener('click', (e) => {
+			e.stopPropagation();
+			this.addCover();
+		});
+		iconBtn?.addEventListener('click', (e) => {
+			e.stopPropagation();
+			this.addIcon();
+		});
 	}
 
 	private async saveTitle(input: HTMLInputElement): Promise<void> {

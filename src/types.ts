@@ -30,15 +30,10 @@ export interface ActiveNote {
 	section?: 'personal' | 'shared' | 'favorite';
 }
 
-export interface RecentNote {
-	noteId: string | number;
-	lastOpenedAt: number;
-	title: string;
-}
-
 export interface SidebarNote {
 	id: string | number;
 	title: string;
+	iconUrl?: string | null;
 	parentId: string | number | null;
 	children: SidebarNote[];
 	isExpanded: boolean;
@@ -254,7 +249,6 @@ export interface StoreState {
 	activeNote: ActiveNote | null;
 	activeBlocks: Block[];
 	online: boolean;
-	recentNotes: RecentNote[];
 	pendingFocus: {
 		blockId: string | number | null;
 		offset: number | 'start' | 'end' | null;

@@ -444,6 +444,7 @@ export const noteService = {
 				updatedAt: Date.now(),
 				parent_id: currentNotes[noteIndex].parent_id ?? null,
 			};
+			console.log(updatedNote);
 			await db.notesPut(updatedNote);
 			const updatedNotes = [...currentNotes];
 			updatedNotes[noteIndex] = updatedNote;

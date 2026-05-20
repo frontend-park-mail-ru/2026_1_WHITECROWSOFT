@@ -28,6 +28,7 @@ export default class NoteTreeNode extends Component {
 	private titleElement: HTMLElement | null = null;
 	private childrenContainer: HTMLElement | null = null;
 	private contentElement: HTMLElement | null = null;
+	private boundIconChangeHandler?: (e: Event) => void;
 
 	constructor(private options: NoteTreeNodeOptions) {
 		super();
@@ -38,6 +39,7 @@ export default class NoteTreeNode extends Component {
 		return {
 			id: this.note.id,
 			title: this.note.title,
+			iconUrl: this.note.iconUrl,
 			level: this.note.level * 16,
 			hasChildren: this.note.children.length > 0,
 			isExpanded: this.note.isExpanded,
@@ -93,6 +95,23 @@ export default class NoteTreeNode extends Component {
 				this.titleElement as HTMLElement,
 			);
 		});
+		this.boundIconChangeHandler = (e: Event) =>
+			this.handleIconChange(e as CustomEvent);
+		window.addEventListener('noteIconChanged', this.boundIconChangeHandler);
+	}
+
+	private handleIconChange(e: CustomEvent): void {
+		const { noteId, iconUrl } = e.detail;
+		if (String(noteId) === String(this.note.id)) {
+			this.note.iconUrl = iconUrl;
+			const iconEl = this.domElement?.querySelector(
+				'.note-tree-node__icon',
+			) as HTMLImageElement;
+			if (iconEl) {
+				console.log('changed');
+				iconEl.src = iconUrl;
+			}
+		}
 	}
 
 	private renderChildren(): void {
@@ -129,6 +148,12 @@ export default class NoteTreeNode extends Component {
 		if (this.titleElement) {
 			this.titleElement.textContent = note.title;
 		}
+		const iconEl = this.domElement?.querySelector(
+			'.note-tree-node__doc-icon',
+		) as HTMLImageElement;
+		if (iconEl) {
+			iconEl.src = note.iconUrl || '';
+		}
 		const toggleIcon = this.domElement?.querySelector(
 			'.note-tree-node__toggle-icon',
 		);
@@ -157,6 +182,12 @@ export default class NoteTreeNode extends Component {
 	}
 
 	destroy(): void {
+		if (this.boundIconChangeHandler) {
+			window.removeEventListener(
+				'noteIconChanged',
+				this.boundIconChangeHandler,
+			);
+		}
 		this.childComponents.forEach((child) => child.destroy());
 		this.childComponents.clear();
 	}

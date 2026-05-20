@@ -48,6 +48,7 @@ export const sidebarService = {
 				isExpanded: expandedState.get(note.ID) ?? false,
 				isActive: isActive,
 				level: 0,
+				iconUrl: note.iconUrl,
 			});
 		}
 		for (const note of noteMap.values()) {

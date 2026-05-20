@@ -1,5 +1,4 @@
 .iconPopup {
-	display: none;
 	position: fixed;
 	flex-direction: column;
 	z-index: 1000;
@@ -10,20 +9,10 @@
 	padding: 8px 12px;
 	gap: 8px;
 	pointer-events: auto;
-	visibility: hidden;
 	transform: translateY(6px);
-	opacity: 0;
 	transition:
 		opacity 0.15s ease,
 		transform 0.15s ease;
-
-	&--visible {
-		display: flex;
-		flex-direction: column;
-		visibility: visible;
-		opacity: 1;
-		transform: translateY(0);
-	}
 
 	&__text {
 		font-size: 12px;

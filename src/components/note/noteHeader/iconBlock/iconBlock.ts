@@ -3,7 +3,7 @@ import templateString from './iconBlock.hbs?raw';
 
 interface IconBlockOptions {
 	iconUrl: string | null;
-	onRemove: () => void;
+	onIcon: () => void;
 }
 
 export default class IconBlock extends Component {
@@ -24,10 +24,11 @@ export default class IconBlock extends Component {
 	}
 
 	private bindEvents(): void {
-		const removeBtn = this.domElement?.querySelector(
-			'[data-action="removeIcon"]',
-		);
-		removeBtn?.addEventListener('click', () => this.options.onRemove());
+		const icon = this.domElement?.querySelector('.note__icon');
+		icon?.addEventListener('click', (e) => {
+			e.stopPropagation();
+			this.options.onIcon();
+		});
 	}
 
 	updateIcon(iconUrl: string | null): void {
