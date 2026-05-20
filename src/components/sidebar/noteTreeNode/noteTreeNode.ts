@@ -158,7 +158,10 @@ export default class NoteTreeNode extends Component {
 			'.note-tree-node__toggle-icon',
 		);
 		if (toggleIcon) {
-			toggleIcon.classList.toggle('rotated', note.isExpanded);
+			toggleIcon.classList.toggle(
+				'note-tree-node__toggle-icon--rotated',
+				note.isExpanded,
+			);
 		}
 		if (this.childrenContainer) {
 			this.childrenContainer.style.display = note.isExpanded ? 'block' : 'none';

@@ -225,12 +225,12 @@
 		background: transparent;
 		border: none;
 		cursor: pointer;
-		padding: 4px;
+		padding: 0px;
 		display: none;
 		align-items: center;
 		justify-content: center;
-		width: 20px;
-		height: 20px;
+		width: 15px;
+		height: 15px;
 		flex-shrink: 0;
 
 		&:hover {
@@ -249,9 +249,10 @@
 		width: 15px;
 		height: 15px;
 		transition: transform 0.2s ease;
+		transform: rotate(-90deg);
 
-		&.rotated {
-			transform: rotate(90deg);
+		&--rotated {
+			transform: rotate(0deg);
 		}
 	}
 
