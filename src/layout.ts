@@ -56,7 +56,6 @@ export class Layout {
 		this.sidebar = new Sidebar();
 		this.sidebar.renderTo(this.sidebarContainer);
 		this.sidebarContainer.style.display = 'block';
-		await this._toggleSidebar();
 		this.sidebarToggle?.addEventListener('click', async () => {
 			await this._toggleSidebar();
 		});
@@ -67,17 +66,15 @@ export class Layout {
 
 	private async _toggleSidebar(): Promise<void> {
 		if (!this.sidebarContainer) return;
-		this.sidebarContainer.style.display =
-			this.sidebarContainer.style.display === 'none' ? 'block' : 'none';
+		const isHidden = this.sidebarContainer.style.display === 'none';
+		this.sidebarContainer.style.display = isHidden ? 'block' : 'none';
 		if (this.layoutContainer) {
-			this.layoutContainer.style.gridTemplateColumns =
-				this.layoutContainer.style.gridTemplateColumns === '250px 1fr'
-					? '0px 1fr'
-					: '250px 1fr';
+			if (isHidden) {
+				delete this.layoutContainer.dataset.collapsed;
+			} else {
+				this.layoutContainer.dataset.collapsed = 'true';
+			}
 		}
-		// if (this.sidebarToggle) {
-		// 	this.sidebarToggle.style.display = this.sidebarToggle.style.display === 'none' ? 'block' : 'none';
-		// }
 	}
 
 	destroy(): void {

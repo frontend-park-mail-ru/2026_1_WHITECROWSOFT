@@ -12,6 +12,10 @@ import NoteSection from './noteSection/noteSection.js';
 import templateString from './sidebar.hbs?raw';
 import './sidebar.scss';
 
+const MIN_SIDEBAR_WIDTH = 180;
+const MAX_SIDEBAR_WIDTH = 500;
+const DEFAULT_SIDEBAR_WIDTH = 250;
+
 export default class Sidebar extends Component {
 	protected templateString = templateString;
 	private personalSection: NoteSection | null = null;
@@ -23,6 +27,8 @@ export default class Sidebar extends Component {
 	private unsubscribeUser: (() => void) | null = null;
 
 	private sidebarToggle: (() => void) | null = null;
+	private resizePointerMove: ((e: PointerEvent) => void) | null = null;
+	private resizePointerUp: ((e: PointerEvent) => void) | null = null;
 
 	protected getTemplateData() {
 		const user = store.getUser();
@@ -36,11 +42,84 @@ export default class Sidebar extends Component {
 	async onRender(): Promise<void> {
 		this.renderSections();
 		this.bindNavigationEvents();
+		this.bindResizeHandle();
+		await this.restoreSidebarWidth();
 		this.subscribeToStore();
 		this.subscribeToSyncEvents();
 		this.updatePersonalNotes();
 		this.updateSharedNotes();
 		this.updatefavoriteNotes();
+	}
+
+	private async restoreSidebarWidth(): Promise<void> {
+		const layout = document.getElementById('appLayout');
+		if (!layout) return;
+		const saved = await db.settingsGet<number>('sidebarWidth');
+		const width = this.clampWidth(saved ?? DEFAULT_SIDEBAR_WIDTH);
+		layout.style.setProperty('--sidebar-width', `${width}px`);
+	}
+
+	private clampWidth(value: number): number {
+		if (!Number.isFinite(value)) return DEFAULT_SIDEBAR_WIDTH;
+		return Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, value));
+	}
+
+	private bindResizeHandle(): void {
+		if (!this.domElement) return;
+		const handle = this.domElement.querySelector(
+			'[data-action="resize"]',
+		) as HTMLElement | null;
+		const layout = document.getElementById('appLayout');
+		if (!handle || !layout) return;
+
+		handle.addEventListener('pointerdown', (e: PointerEvent) => {
+			if (e.button !== 0) return;
+			e.preventDefault();
+
+			const startX = e.clientX;
+			const computed =
+				getComputedStyle(layout).getPropertyValue('--sidebar-width');
+			const startWidth = parseFloat(computed) || DEFAULT_SIDEBAR_WIDTH;
+
+			handle.classList.add('sidebar__resizeHandle--active');
+			layout.dataset.resizing = 'true';
+			handle.setPointerCapture(e.pointerId);
+
+			this.resizePointerMove = (moveEvent: PointerEvent) => {
+				const next = this.clampWidth(startWidth + (moveEvent.clientX - startX));
+				layout.style.setProperty('--sidebar-width', `${next}px`);
+			};
+
+			this.resizePointerUp = async (upEvent: PointerEvent) => {
+				handle.releasePointerCapture(upEvent.pointerId);
+				handle.classList.remove('sidebar__resizeHandle--active');
+				delete layout.dataset.resizing;
+				if (this.resizePointerMove) {
+					handle.removeEventListener('pointermove', this.resizePointerMove);
+					this.resizePointerMove = null;
+				}
+				if (this.resizePointerUp) {
+					handle.removeEventListener('pointerup', this.resizePointerUp);
+					handle.removeEventListener('pointercancel', this.resizePointerUp);
+					this.resizePointerUp = null;
+				}
+				const finalWidth = parseFloat(
+					getComputedStyle(layout).getPropertyValue('--sidebar-width'),
+				);
+				if (Number.isFinite(finalWidth)) {
+					await db.settingsSet('sidebarWidth', finalWidth);
+				}
+			};
+
+			handle.addEventListener('pointermove', this.resizePointerMove);
+			handle.addEventListener('pointerup', this.resizePointerUp);
+			handle.addEventListener('pointercancel', this.resizePointerUp);
+		});
+
+		handle.addEventListener('dblclick', async () => {
+			layout.style.setProperty('--sidebar-width', `${DEFAULT_SIDEBAR_WIDTH}px`);
+			await db.settingsSet('sidebarWidth', DEFAULT_SIDEBAR_WIDTH);
+		});
 	}
 
 	private renderSections(): void {
