@@ -99,7 +99,6 @@ h5 {
 		overflow: hidden;
 	}
 	&__sidebarToggle {
-		/* display: none; */
 		position: absolute;
 		bottom: 16px;
 		left: 16px;
@@ -114,6 +113,9 @@ h5 {
 			width: 24px;
 			height: 24px;
 		}
+	}
+	&__layout:not([data-collapsed='true']) + &__sidebarToggle {
+		display: none;
 	}
 }
 
