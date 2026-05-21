@@ -1,0 +1,81 @@
+.confirmDialog {
+	position: relative;
+	background: var(--background);
+	border: 1px solid var(--faint-a);
+	border-radius: 12px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+	padding: 20px 24px;
+	min-width: 320px;
+	max-width: 440px;
+	font-family: var(--font-main);
+	color: var(--text);
+
+	&__backdrop {
+		position: fixed;
+		inset: 0;
+		background: rgba(6, 38, 89, 0.25);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 2000;
+		padding: 16px;
+	}
+
+	&__title {
+		margin: 0 0 8px 0;
+		font-size: 18px;
+		font-weight: 600;
+	}
+
+	&__message {
+		margin: 0 0 20px 0;
+		font-size: 14px;
+		line-height: 1.5;
+		white-space: pre-line;
+	}
+
+	&__actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 8px;
+	}
+
+	&__button {
+		padding: 8px 16px;
+		border-radius: 8px;
+		border: none;
+		font-family: inherit;
+		font-size: 14px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: background-color 0.2s;
+
+		&--cancel {
+			background: transparent;
+			color: var(--text);
+			border: 1px solid var(--faint-a);
+
+			&:hover {
+				background: var(--highlight);
+			}
+		}
+
+		&--confirm {
+			background: var(--text);
+			color: var(--background);
+
+			&:hover {
+				background: var(--oceanic);
+			}
+		}
+
+		&--danger {
+			background: var(--danger-red);
+			color: var(--background);
+
+			&:hover {
+				background: var(--coral-red);
+			}
+		}
+	}
+}

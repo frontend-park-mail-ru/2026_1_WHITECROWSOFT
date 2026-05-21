@@ -4,6 +4,7 @@ import { store } from '../../../store.js';
 import type { Block } from '../../../types.js';
 import BlockWrapper from '../../blocks/blockWrapper/blockWrapper.js';
 import Component from '../../component.js';
+import { confirmDialog } from '../../popups/confirmDialog/confirmDialog.js';
 import FormatPopup from '../../popups/formatPopup/formatPopup.js';
 import templateString from './noteBody.hbs?raw';
 
@@ -246,10 +247,14 @@ export default class NoteBody extends Component {
 			const subnoteId = block.content;
 			const subnote = store.getNotes().find((n) => n.ID === subnoteId);
 			const subnoteTitle = subnote?.title || 'эту подзаметку';
-			const confirmed = confirm(
-				`Вы действительно хотите удалить подзаметку "${subnoteTitle}"?\n\n` +
+			const confirmed = await confirmDialog({
+				title: 'Удаление подзаметки',
+				message:
+					`Вы действительно хотите удалить подзаметку "${subnoteTitle}"?\n\n` +
 					`Внимание: Подзаметка и все её содержимое будут удалены без возможности восстановления.`,
-			);
+				confirmText: 'Удалить',
+				danger: true,
+			});
 			if (!confirmed) return;
 			try {
 				await noteService.deleteNote(subnoteId);

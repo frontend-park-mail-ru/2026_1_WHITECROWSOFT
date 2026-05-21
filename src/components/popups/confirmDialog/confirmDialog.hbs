@@ -1,0 +1,16 @@
+<div class="confirmDialog__backdrop">
+    <div class="confirmDialog" role="dialog" aria-modal="true">
+        {{#if title}}
+            <h3 class="confirmDialog__title">{{title}}</h3>
+        {{/if}}
+        <p class="confirmDialog__message">{{message}}</p>
+        <div class="confirmDialog__actions">
+            <button type="button" class="confirmDialog__button confirmDialog__button--cancel" data-action="cancel">
+                {{cancelText}}
+            </button>
+            <button type="button" class="confirmDialog__button confirmDialog__button--confirm{{#if danger}} confirmDialog__button--danger{{/if}}" data-action="confirm">
+                {{confirmText}}
+            </button>
+        </div>
+    </div>
+</div>

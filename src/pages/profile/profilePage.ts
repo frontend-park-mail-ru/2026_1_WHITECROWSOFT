@@ -1,5 +1,6 @@
 import Handlebars from 'handlebars';
 import '../../assets/style/authForm.scss';
+import { confirmDialog } from '../../components/popups/confirmDialog/confirmDialog.js';
 import ProfileAvatar from '../../components/profile/avatar/avatar.js';
 import ProfileForm from '../../components/profile/form/form.js';
 import { db } from '../../db.js';
@@ -152,9 +153,13 @@ async function handleLogout(): Promise<void> {
 }
 
 async function handleDeleteAccount(): Promise<void> {
-	if (
-		confirm('Вы уверены, что хотите удалить аккаунт? Это действие необратимо.')
-	) {
+	const confirmed = await confirmDialog({
+		title: 'Удаление аккаунта',
+		message: 'Вы уверены, что хотите удалить аккаунт? Это действие необратимо.',
+		confirmText: 'Удалить',
+		danger: true,
+	});
+	if (confirmed) {
 		console.log('Delete account');
 	}
 }

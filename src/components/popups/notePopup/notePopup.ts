@@ -3,6 +3,7 @@ import { noteService } from '../../../services/noteService.js';
 import { store } from '../../../store.js';
 import { getElementPosition } from '../../../utils/utils.js';
 import Component from '../../component.js';
+import { confirmDialog } from '../confirmDialog/confirmDialog.js';
 import { collabManager } from './../../../utils/collaborativeManager.js';
 import templateString from './notePopup.hbs?raw';
 
@@ -160,7 +161,12 @@ export default class NotePopup extends Component {
 	}
 
 	private async handleDelete(): Promise<void> {
-		const confirmed = confirm('Вы действительно хотите удалить эту заметку?');
+		const confirmed = await confirmDialog({
+			title: 'Удаление заметки',
+			message: 'Вы действительно хотите удалить эту заметку?',
+			confirmText: 'Удалить',
+			danger: true,
+		});
 		if (!confirmed) return;
 
 		try {
