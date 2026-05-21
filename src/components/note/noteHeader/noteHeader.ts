@@ -162,10 +162,14 @@ export default class NoteHeader extends Component {
 		const activeNoteId = store.getActiveNoteId();
 		if (!activeNoteId || !this.activeNote) return;
 
+		const iconEl = this.domElement?.querySelector(
+			'.note__icon',
+		) as HTMLElement | null;
 		const iconBtn = this.domElement?.querySelector(
 			'[data-action="icon"]',
-		) as HTMLElement;
-		if (!iconBtn) return;
+		) as HTMLElement | null;
+		const anchor = iconEl ?? iconBtn;
+		if (!anchor) return;
 		let currentIcon: IconType | null = null;
 		if (this.activeNote.iconUrl) {
 			if (this.activeNote.iconUrl.includes('personal'))
@@ -178,7 +182,7 @@ export default class NoteHeader extends Component {
 		}
 		this.currentPopup?.close();
 		this.currentPopup = new IconPopup({
-			anchorElement: iconBtn,
+			anchorElement: anchor,
 			currentIcon: currentIcon,
 			noteId: activeNoteId,
 			onSelect: (iconType) => {

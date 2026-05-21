@@ -53,18 +53,23 @@
 	line-height: 1;
 	cursor: pointer;
 	transition: background-color 0.15s ease;
+	background: transparent;
 
 	&:hover {
-		background: rgba(91, 116, 157, 0.35);
+		background: var(--highlight);
 	}
 }
 
-.note__cover-change-btn {
-	background: var(--highlight);
-}
+.note__cover-buttons--dark {
+	.note__cover-change-btn,
+	.note__cover-remove-btn {
+		border-color: rgba(6, 38, 89, 0.85);
+		color: rgba(6, 38, 89, 0.85);
 
-.note__cover-remove-btn {
-	background: transparent;
+		&:hover {
+			background: rgba(251, 248, 244, 0.55);
+		}
+	}
 }
 
 .note__icon-container {
@@ -127,7 +132,7 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 5px;
-	padding: 2px 5px;
+	padding: 5px 10px;
 	background: transparent;
 	border: none;
 	border-radius: 10px;
