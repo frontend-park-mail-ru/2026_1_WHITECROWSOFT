@@ -38,7 +38,7 @@
 		max-width: 740px;
 		display: flex;
 		gap: 8px;
-		margin-bottom: 16px;
+		margin: 0 auto 16px auto;
 		font-size: var(--size-label);
 		color: var(--faint-b);
 	}
@@ -58,7 +58,7 @@
 	&__title {
 		font-size: 2rem;
 		font-weight: 800;
-		margin-bottom: 16px;
+		margin: 0 auto 16px auto;
 		width: 100%;
 		text-align: left;
 		max-width: 740px;
@@ -67,6 +67,7 @@
 		outline: none;
 		color: var(--text);
 		text-overflow: ellipsis;
+		display: block;
 
 		&:focus {
 			outline: none;
@@ -113,8 +114,11 @@
 
 	&__header {
 		width: 100%;
-		max-width: 740px;
+		max-width: 1035px;
 		margin: 0 auto 30px auto;
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
 	}
 
 	&__block {
@@ -262,7 +266,7 @@
 
 .note__header-container {
 	width: 100%;
-	max-width: 740px;
+	max-width: 1035px;
 	margin: 0 auto;
 }
 

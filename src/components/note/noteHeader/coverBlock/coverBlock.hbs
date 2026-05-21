@@ -2,12 +2,14 @@
     {{#if coverUrl}}
         <div class="note__cover">
             <img src="{{coverUrl}}" alt="coverImage" class="note__cover-image" data-cover-image>
-            <button class="note__cover-change-btn" data-action="changeCover">
-                Изменить
-            </button>
-            <button class="note__cover-remove-btn" data-action="removeCover">
-                Удалить
-            </button>
+            <div class="note__cover-buttons">
+                <button class="note__cover-change-btn" data-action="changeCover">
+                    Изменить
+                </button>
+                <button class="note__cover-remove-btn" data-action="removeCover">
+                    Удалить
+                </button>
+            </div>
         </div>
     {{/if}}
 </div>

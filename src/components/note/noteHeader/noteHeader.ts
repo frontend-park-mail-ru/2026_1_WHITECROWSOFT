@@ -11,6 +11,7 @@ import Component from '../../component.js';
 import CoverBlock from './coverBlock/coverBlock.js';
 import IconBlock from './iconBlock/iconBlock.js';
 import templateString from './noteHeader.hbs?raw';
+import './noteHeader.scss';
 
 export default class NoteHeader extends Component {
 	protected templateString = templateString;

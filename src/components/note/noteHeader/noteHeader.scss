@@ -1,0 +1,155 @@
+.note__cover-container {
+	width: 100%;
+	max-width: 1035px;
+	margin: 0 auto;
+	display: none;
+
+	&:has(.note__cover) {
+		display: block;
+	}
+}
+
+.note__cover {
+	position: relative;
+	width: 100%;
+	height: 150px;
+	overflow: hidden;
+	border-radius: 4px;
+
+	&:hover .note__cover-buttons {
+		opacity: 1;
+	}
+}
+
+.note__cover-image {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	pointer-events: none;
+	user-select: none;
+}
+
+.note__cover-buttons {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	display: flex;
+	gap: 10px;
+	opacity: 0;
+	transition: opacity 0.15s ease;
+}
+
+.note__cover-change-btn,
+.note__cover-remove-btn {
+	height: 35px;
+	padding: 0 10px;
+	border: 2px solid rgba(251, 248, 244, 0.85);
+	border-radius: 10px;
+	color: rgba(251, 248, 244, 0.85);
+	font-family: inherit;
+	font-weight: 700;
+	font-size: 16px;
+	line-height: 1;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+
+	&:hover {
+		background: rgba(91, 116, 157, 0.35);
+	}
+}
+
+.note__cover-change-btn {
+	background: var(--highlight);
+}
+
+.note__cover-remove-btn {
+	background: transparent;
+}
+
+.note__icon-container {
+	width: 100%;
+	max-width: 740px;
+	margin: 0 auto;
+	display: none;
+
+	&:has(.note__icon) {
+		display: block;
+	}
+}
+
+.note__header:has(.note__cover) .note__icon-container:has(.note__icon) {
+	margin-top: -48px;
+	position: relative;
+	z-index: 1;
+}
+
+.note__icon {
+	width: 64px;
+	height: 64px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	border-radius: 8px;
+	transition: background-color 0.15s ease;
+
+	&:hover {
+		background: var(--highlight);
+	}
+}
+
+.note__icon-image {
+	width: 64px;
+	height: 64px;
+	pointer-events: none;
+	user-select: none;
+}
+
+.headerButtons {
+	width: 100%;
+	max-width: 740px;
+	margin: 0 auto;
+	display: flex;
+	gap: 16px;
+	align-items: center;
+	min-height: 30px;
+	opacity: 0;
+	transition: opacity 0.15s ease;
+}
+
+.note__header:hover .headerButtons,
+.note__header:focus-within .headerButtons {
+	opacity: 1;
+}
+
+.header__btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 2px 5px;
+	background: transparent;
+	border: none;
+	border-radius: 10px;
+	color: var(--faint-b);
+	font-family: inherit;
+	font-weight: 700;
+	font-size: 16px;
+	line-height: 1;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+
+	.icon {
+		width: 15px;
+		height: 15px;
+		opacity: 0.7;
+	}
+
+	&:hover {
+		background: var(--highlight);
+
+		.icon {
+			opacity: 1;
+		}
+	}
+}
