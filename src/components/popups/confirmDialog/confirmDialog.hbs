@@ -5,9 +5,11 @@
         {{/if}}
         <p class="confirmDialog__message">{{message}}</p>
         <div class="confirmDialog__actions">
-            <button type="button" class="confirmDialog__button confirmDialog__button--cancel" data-action="cancel">
-                {{cancelText}}
-            </button>
+            {{#unless alert}}
+                <button type="button" class="confirmDialog__button confirmDialog__button--cancel" data-action="cancel">
+                    {{cancelText}}
+                </button>
+            {{/unless}}
             <button type="button" class="confirmDialog__button confirmDialog__button--confirm{{#if danger}} confirmDialog__button--danger{{/if}}" data-action="confirm">
                 {{confirmText}}
             </button>

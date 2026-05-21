@@ -38,6 +38,10 @@
 		display: flex;
 		justify-content: flex-end;
 		gap: 8px;
+
+		&:has(> .confirmDialog__button:only-child) {
+			justify-content: center;
+		}
 	}
 
 	&__button {

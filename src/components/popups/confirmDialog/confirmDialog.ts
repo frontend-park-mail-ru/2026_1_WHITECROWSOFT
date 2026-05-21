@@ -8,7 +8,13 @@ interface ConfirmDialogOptions {
 	confirmText?: string;
 	cancelText?: string;
 	danger?: boolean;
+	alert?: boolean;
 }
+
+type AlertDialogOptions = Omit<
+	ConfirmDialogOptions,
+	'cancelText' | 'alert' | 'danger'
+> & { danger?: boolean };
 
 export default class ConfirmDialog extends Component {
 	protected templateString = templateString;
@@ -18,6 +24,7 @@ export default class ConfirmDialog extends Component {
 	private confirmText: string;
 	private cancelText: string;
 	private danger: boolean;
+	private alert: boolean;
 
 	private resolveFn: ((value: boolean) => void) | null = null;
 	private boundHandlers: {
@@ -31,7 +38,9 @@ export default class ConfirmDialog extends Component {
 		super();
 		this.message = options.message;
 		this.title = options.title;
-		this.confirmText = options.confirmText ?? 'Подтвердить';
+		this.alert = options.alert ?? false;
+		this.confirmText =
+			options.confirmText ?? (this.alert ? 'OK' : 'Подтвердить');
 		this.cancelText = options.cancelText ?? 'Отмена';
 		this.danger = options.danger ?? false;
 	}
@@ -43,6 +52,7 @@ export default class ConfirmDialog extends Component {
 			confirmText: this.confirmText,
 			cancelText: this.cancelText,
 			danger: this.danger,
+			alert: this.alert,
 		};
 	}
 
@@ -86,7 +96,7 @@ export default class ConfirmDialog extends Component {
 
 		this.boundHandlers.onBackdropClick = (e: MouseEvent) => {
 			if (e.target === this.domElement) {
-				this.resolve(false);
+				this.resolve(this.alert);
 			}
 		};
 		this.domElement.addEventListener(
@@ -97,7 +107,7 @@ export default class ConfirmDialog extends Component {
 		this.boundHandlers.onKeydown = (e: KeyboardEvent) => {
 			if (e.key === 'Escape') {
 				e.preventDefault();
-				this.resolve(false);
+				this.resolve(this.alert);
 			} else if (e.key === 'Enter') {
 				e.preventDefault();
 				this.resolve(true);
@@ -133,7 +143,7 @@ export default class ConfirmDialog extends Component {
 		if (this.resolveFn) {
 			const fn = this.resolveFn;
 			this.resolveFn = null;
-			fn(false);
+			fn(this.alert);
 		}
 	}
 
@@ -144,4 +154,8 @@ export default class ConfirmDialog extends Component {
 
 export function confirmDialog(options: ConfirmDialogOptions): Promise<boolean> {
 	return new ConfirmDialog(options).open();
+}
+
+export function alertDialog(options: AlertDialogOptions): Promise<void> {
+	return new ConfirmDialog({ ...options, alert: true }).open().then(() => {});
 }

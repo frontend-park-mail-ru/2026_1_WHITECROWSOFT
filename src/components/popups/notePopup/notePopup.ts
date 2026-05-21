@@ -3,7 +3,7 @@ import { noteService } from '../../../services/noteService.js';
 import { store } from '../../../store.js';
 import { getElementPosition } from '../../../utils/utils.js';
 import Component from '../../component.js';
-import { confirmDialog } from '../confirmDialog/confirmDialog.js';
+import { alertDialog, confirmDialog } from '../confirmDialog/confirmDialog.js';
 import { collabManager } from './../../../utils/collaborativeManager.js';
 import templateString from './notePopup.hbs?raw';
 
@@ -188,14 +188,19 @@ export default class NotePopup extends Component {
 			const shareUrl = `${window.location.origin}/?note=${noteIdStr}`;
 			await navigator.clipboard.writeText(shareUrl);
 			collabManager.startCollab(noteIdStr);
-			alert(
-				'Заметка стала публичной. Ссылка на заметку скопирована в буфер обмена',
-			);
+			await alertDialog({
+				title: 'Заметка опубликована',
+				message:
+					'Заметка стала публичной. Ссылка на заметку скопирована в буфер обмена',
+			});
 			this.boundHandlers.onShareComplete?.();
 			this.close();
 		} catch (error) {
 			console.error('Failed to share note:', error);
-			alert('Не удалось сделать заметку публичной');
+			await alertDialog({
+				title: 'Ошибка',
+				message: 'Не удалось сделать заметку публичной',
+			});
 		}
 	}
 
