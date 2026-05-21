@@ -89,6 +89,12 @@
 		border-radius: 4px;
 		transition: background-color 0.15s ease;
 
+		&:hover .note__block-actions {
+			opacity: 1;
+			visibility: visible;
+			transform: translateX(0);
+		}
+
 		&:focus-within {
 			background-color: rgba(0, 0, 0, 0.03);
 
