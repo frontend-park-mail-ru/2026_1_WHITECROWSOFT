@@ -19,6 +19,7 @@ export default class NoteBody extends Component {
 	private draggedBlockId: string | null = null;
 	private isRendering = false;
 	private needsRender = false;
+	private phantomBlock: HTMLElement | null = null;
 	private unsubscribeActiveBlocks: (() => void) | null = null;
 	private unsubscribeSyncBlockId: (() => void) | null = null;
 	private unsubscribePendingFocus: (() => void) | null = null;
@@ -49,6 +50,7 @@ export default class NoteBody extends Component {
 		this.subscribeToSyncBlockId();
 		await this.restoreFromSessionStorage();
 		await this.renderBlocks();
+		this.ensurePhantomBlock();
 		this.bindEvents();
 		this.bindBeforeUnload();
 	}
@@ -194,6 +196,7 @@ export default class NoteBody extends Component {
 			}
 		} finally {
 			this.isRendering = false;
+			this.updatePhantomState();
 		}
 	}
 
@@ -446,7 +449,84 @@ export default class NoteBody extends Component {
 		);
 		container.addEventListener('drop', this.handleDrop as EventListener);
 		container.addEventListener('dragend', this.handleDragEnd as EventListener);
+		container.addEventListener(
+			'input',
+			this.handleContainerInput as EventListener,
+		);
 	}
+
+	private ensurePhantomBlock(): void {
+		const container = this.domElement?.querySelector(
+			'.note__body-container',
+		) as HTMLElement | null;
+		if (!container) return;
+		if (this.phantomBlock && container.contains(this.phantomBlock)) {
+			this.updatePhantomState();
+			return;
+		}
+		const phantom = document.createElement('div');
+		phantom.className = 'note__phantom-block';
+		phantom.setAttribute('aria-hidden', 'true');
+		phantom.addEventListener('click', this.handlePhantomClick);
+		container.appendChild(phantom);
+		this.phantomBlock = phantom;
+		this.updatePhantomState();
+	}
+
+	private updatePhantomState(): void {
+		if (!this.phantomBlock) return;
+		const container = this.domElement?.querySelector(
+			'.note__body-container',
+		) as HTMLElement | null;
+		if (!container) return;
+		if (container.lastElementChild !== this.phantomBlock) {
+			container.appendChild(this.phantomBlock);
+		}
+		const blocks = store.getActiveBlocks();
+		let shouldShow = blocks.length > 0;
+		if (shouldShow) {
+			const lastBlock = blocks[blocks.length - 1];
+			if (lastBlock.block_type_id === 1) {
+				const wrapper = this.blockWrappers.get(String(lastBlock.id));
+				const blockEl = wrapper
+					?.getElement()
+					?.querySelector('.note__block') as HTMLElement | null;
+				const text = blockEl
+					? blockEl.innerText
+					: (lastBlock.content || '').replace(/<[^>]*>/g, '');
+				if (text.replace(/ /g, '').trim() === '') {
+					shouldShow = false;
+				}
+			}
+		}
+		this.phantomBlock.classList.toggle(
+			'note__phantom-block--hidden',
+			!shouldShow,
+		);
+	}
+
+	private handlePhantomClick = async (): Promise<void> => {
+		const activeNoteId = store.getActiveNoteId();
+		if (!activeNoteId) return;
+		const blocks = store.getActiveBlocks();
+		if (blocks.length === 0) return;
+		const lastBlock = blocks[blocks.length - 1];
+		try {
+			await noteService.createBlockAfter(
+				activeNoteId,
+				{ note_id: activeNoteId, block_type_id: 1 },
+				String(lastBlock.id),
+			);
+		} catch (error) {
+			console.error('Failed to create block from phantom:', error);
+		}
+	};
+
+	private handleContainerInput = (e: Event): void => {
+		const target = e.target as HTMLElement | null;
+		if (!target?.closest('.note__block')) return;
+		this.updatePhantomState();
+	};
 
 	private handleContextMenu = (e: Event): void => {
 		e.preventDefault();
@@ -570,6 +650,11 @@ export default class NoteBody extends Component {
 			if (wrapper.destroy) wrapper.destroy();
 		}
 		this.blockWrappers.clear();
+		if (this.phantomBlock) {
+			this.phantomBlock.removeEventListener('click', this.handlePhantomClick);
+			this.phantomBlock.remove();
+			this.phantomBlock = null;
+		}
 		this.draggedBlockWrapper = null;
 		this.draggedBlockId = null;
 		this.isDraggingSelection = false;
