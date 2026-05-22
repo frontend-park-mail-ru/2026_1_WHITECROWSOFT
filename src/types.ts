@@ -24,6 +24,7 @@ export interface ActiveNote {
 	ID: string | number;
 	title: string;
 	iconUrl?: string | null;
+	is_public?: boolean;
 	breadcrumb: string;
 	text: string;
 	coverUrl?: string | null;
@@ -173,6 +174,7 @@ export type WebSocketMessageType =
 	| 'delete_block' // Удаление блока
 	| 'move_block' // Перемещение блока
 	| 'update_note_title' // Обновление заголовка заметки
+	| 'upload_attachment'
 	| 'update_note_public' // Изменение публичности заметки
 	| 'delete_note' // Удаление заметки
 	| 'note_private' // Заметка стала приватной

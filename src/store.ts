@@ -1,10 +1,8 @@
-import { db } from './db';
 import type {
 	ActiveNote,
 	Block,
 	CollaborativeUser,
 	Note,
-	RecentNote,
 	StoreState,
 	User,
 } from './types';
@@ -24,7 +22,6 @@ export type Subscribers = {
 	activeNote: Map<number, SubscriberCallback<ActiveNote | null>>;
 	activeBlocks: Map<number, SubscriberCallback<Block[]>>;
 	online: Map<number, SubscriberCallback<boolean>>;
-	recentNotes: Map<number, SubscriberCallback<RecentNote[]>>;
 	pendingFocus: Map<
 		number,
 		SubscriberCallback<{
@@ -56,7 +53,6 @@ class Store {
 			activeNote: null,
 			activeBlocks: [],
 			online: navigator.onLine,
-			recentNotes: [],
 			pendingFocus: {
 				blockId: null,
 				offset: null,
@@ -70,7 +66,6 @@ class Store {
 			activeNote: new Map(),
 			activeBlocks: new Map(),
 			online: new Map(),
-			recentNotes: new Map(),
 			pendingFocus: new Map(),
 			collaborativeUsers: new Map(),
 		};
@@ -103,10 +98,6 @@ class Store {
 
 	getOnline(): boolean {
 		return this.state.online;
-	}
-
-	getRecentNotes(): RecentNote[] {
-		return [...this.state.recentNotes];
 	}
 
 	setUser(user: User | null): void {
@@ -190,37 +181,6 @@ class Store {
 
 		const updated = blocks.map((b, i) => ({ ...b, position: i }));
 		this.setActiveBlocks(updated);
-	}
-
-	async addToRecentNotes(
-		noteId: string | number,
-		title: string,
-	): Promise<void> {
-		const existing = this.state.recentNotes.find((r) => r.noteId === noteId);
-		const recentNote: RecentNote = {
-			noteId,
-			title,
-			lastOpenedAt: Date.now(),
-		};
-		let newRecentNotes: RecentNote[];
-		if (existing) {
-			newRecentNotes = this.state.recentNotes.map((r) =>
-				r.noteId === noteId ? recentNote : r,
-			);
-		} else {
-			newRecentNotes = [recentNote, ...this.state.recentNotes].slice(0, 5);
-		}
-		this.state.recentNotes = newRecentNotes;
-		await db.recentNotesPut(recentNote);
-		this._notify('recentNotes', this.state.recentNotes);
-	}
-
-	async loadRecentNotes(): Promise<void> {
-		const recentNotes = await db.recentNotesGetAll();
-		this.state.recentNotes = recentNotes.sort(
-			(a, b) => b.lastOpenedAt - a.lastOpenedAt,
-		);
-		this._notify('recentNotes', this.state.recentNotes);
 	}
 
 	setPendingFocus(

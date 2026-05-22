@@ -60,6 +60,7 @@ async function bootstrap() {
 				parent_id: note.parent_id || null,
 				section: note.section,
 				coverUrl: note.coverUrl,
+				iconUrl: note.iconUrl,
 			};
 			store.setActiveNote(activenote);
 			store.setActiveNoteId(activeNodeId);

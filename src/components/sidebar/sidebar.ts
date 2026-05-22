@@ -241,6 +241,7 @@ export default class Sidebar extends Component {
 			async (noteId: string | number | null) => {
 				const activeNote = store.getActiveNote();
 				const section = activeNote?.section;
+				console.log(section);
 				if (section !== 'shared') {
 					this.sharedSection?.updateActiveNote(null);
 				}

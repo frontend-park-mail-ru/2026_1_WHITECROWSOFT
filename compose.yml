@@ -12,6 +12,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./../../Back/2026_1_WHITECROWSOFT/migrations:/docker-entrypoint-initdb.d
+      - ./../../Back/2026_1_WHITECROWSOFT/postgresql.conf:/etc/postgresql/postgresql.conf
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s

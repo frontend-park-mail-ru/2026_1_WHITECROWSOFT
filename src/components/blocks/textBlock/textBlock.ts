@@ -139,7 +139,7 @@ export default class TextBlock extends Component {
 		if (!blockEl) return;
 
 		blockEl.addEventListener('focus', () => {
-			this.updateCursorPosition();
+			//this.updateCursorPosition();
 		});
 
 		blockEl.addEventListener('click', () => {

@@ -2,6 +2,7 @@ import { client } from '../client/client.js';
 import { db } from '../db.js';
 import { store } from '../store.js';
 import type { AttachmentApiResponse, Block, Note } from '../types.js';
+import { collabManager } from '../utils/collaborativeManager.js';
 import { handleAuthError } from '../utils/handleAuthError';
 import { noteService } from './noteService.js';
 import { queueService } from './requestQueueService.js';
@@ -19,6 +20,11 @@ export const attachmentService = {
 		file: File,
 		afterBlockId: string | null = null,
 	): Promise<Block> {
+		const isPublic =
+			store.getNotes().find((note) => note.ID === noteId)?.is_public === true;
+		if (isPublic && store.getOnline()) {
+			return await this._createViaWebSocket(noteId, file, afterBlockId, 2);
+		}
 		const isOnline = store.getOnline();
 		if (isOnline) {
 			return await this._createOnline(noteId, file, afterBlockId);
@@ -27,11 +33,59 @@ export const attachmentService = {
 		}
 	},
 
+	async _createViaWebSocket(
+		noteId: string | number,
+		file: File,
+		afterBlockId: string | null = null,
+		blockTypeId: number,
+	): Promise<Block> {
+		const { insertIndex, shiftedBlocks } = await this._prepareInsertPosition(
+			noteId,
+			afterBlockId,
+		);
+		store.setActiveBlocksSilently(shiftedBlocks);
+		const cachedNote = await db.notesGet(noteId);
+		if (cachedNote) {
+			await db.notesPut({ ...cachedNote, blocks: shiftedBlocks });
+		}
+		const arrayBuffer = await file.arrayBuffer();
+		const base64 = this._arrayBufferToBase64(arrayBuffer);
+		collabManager.sendUploadAttachment({
+			fileName: file.name,
+			fileData: base64,
+			hasPosition: !!afterBlockId,
+			position: insertIndex,
+		});
+		return {
+			id: `pending-${Date.now()}`,
+			note_id: noteId,
+			block_type_id: blockTypeId,
+			position: insertIndex,
+			content: '',
+			formatting: { ranges: [] },
+			isLocal: true,
+		} as Block;
+	},
+
+	_arrayBufferToBase64(buffer: ArrayBuffer): string {
+		const bytes = new Uint8Array(buffer);
+		let binary = '';
+		for (let i = 0; i < bytes.byteLength; i++) {
+			binary += String.fromCharCode(bytes[i]);
+		}
+		return btoa(binary);
+	},
+
 	async createAudioBlock(
 		noteId: string | number,
 		file: File,
 		afterBlockId: string | null = null,
 	): Promise<Block> {
+		const isPublic =
+			store.getNotes().find((note) => note.ID === noteId)?.is_public === true;
+		if (isPublic && store.getOnline()) {
+			return await this._createViaWebSocket(noteId, file, afterBlockId, 6);
+		}
 		const isOnline = store.getOnline();
 		if (isOnline) {
 			return await this._createAudioOnline(noteId, file, afterBlockId);
@@ -45,6 +99,11 @@ export const attachmentService = {
 		file: File,
 		afterBlockId: string | null = null,
 	): Promise<Block> {
+		const isPublic =
+			store.getNotes().find((note) => note.ID === noteId)?.is_public === true;
+		if (isPublic && store.getOnline()) {
+			return await this._createViaWebSocket(noteId, file, afterBlockId, 7);
+		}
 		const isOnline = store.getOnline();
 		if (isOnline) {
 			return await this._createVideoOnline(noteId, file, afterBlockId);

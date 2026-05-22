@@ -243,7 +243,6 @@ export default class NoteBody extends Component {
 		if (!activeNoteId) return;
 		const blocks = store.getActiveBlocks();
 		const block = blocks.find((b) => String(b.id) === blockId);
-		console.log(block, blockId, blocks);
 		if (!block) return;
 
 		if (block.block_type_id === 5 && block.content) {
@@ -301,7 +300,6 @@ export default class NoteBody extends Component {
 	private async handleSplitBlock(blockId: string): Promise<void> {
 		const activeNoteId = store.getActiveNoteId();
 		if (!activeNoteId) return;
-		console.log(activeNoteId);
 		await noteService.createBlockAfter(
 			activeNoteId,
 			{ note_id: activeNoteId, block_type_id: 1 },
@@ -615,16 +613,13 @@ export default class NoteBody extends Component {
 
 	private async restoreFromSessionStorage(): Promise<void> {
 		const activeNoteId = store.getActiveNoteId();
-		console.log(activeNoteId);
 		if (!activeNoteId) return;
 
 		const blocks = store.getActiveBlocks();
-		console.log(blocks);
 		for (const block of blocks) {
 			if (block.block_type_id !== 2) {
 				const key = `pending_block_${activeNoteId}_${block.id}`;
 				const savedContent = sessionStorage.getItem(key);
-				console.log(savedContent);
 				if (savedContent && block.content !== savedContent) {
 					try {
 						await noteService.updateBlockContent(

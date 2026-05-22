@@ -74,7 +74,6 @@ export const noteService = {
 						await db.notesPut(note);
 					}
 				}
-				console.log(notes);
 				store.setNotesSilently(notes);
 				return notes;
 			} catch (error) {
@@ -444,7 +443,6 @@ export const noteService = {
 				updatedAt: Date.now(),
 				parent_id: currentNotes[noteIndex].parent_id ?? null,
 			};
-			console.log(updatedNote);
 			await db.notesPut(updatedNote);
 			const updatedNotes = [...currentNotes];
 			updatedNotes[noteIndex] = updatedNote;
@@ -716,19 +714,10 @@ export const noteService = {
 		const shouldQueue = isLocalBlock || isLocalNote || !isOnline;
 		if (isOnline && !isLocalBlock && !isLocalNote) {
 			try {
-				const result = await client.put<BlockApiResponse>(
+				await client.put<BlockApiResponse>(
 					`/notes/${noteID}/blocks/${blockID}/move`,
 					{ new_position: newPosition },
 				);
-				const block: Block = {
-					id: result.id,
-					block_type_id: result.block_type_id,
-					content: result.content,
-					position: result.position,
-					formatting: { ranges: [] },
-				};
-				await this._updateCachedBlocksWithPosition(noteID, block, 'update');
-				return block;
 			} catch (error) {
 				console.warn(
 					`[noteService] Network failed, queueing block move request`,
@@ -749,17 +738,7 @@ export const noteService = {
 			...existingBlock,
 			position: newPosition,
 		};
-		await this._updateCachedBlocksWithPosition(noteID, block, 'update');
-		const updatedBlocks = existingBlocks.map((b) =>
-			b.id === blockID ? block : b,
-		);
-		updatedBlocks.sort((a, b) => a.position - b.position);
-		store.setActiveBlocks(updatedBlocks);
-		store.reorderBlocks(blockID, newPosition);
-		const noteForMove = await db.notesGet(noteID);
-		if (noteForMove) {
-			await db.notesPut({ ...noteForMove, blocks: updatedBlocks });
-		}
+		await this._updateCachedBlocksWithPosition(noteID, block, 'move');
 		return block;
 	},
 
@@ -773,6 +752,12 @@ export const noteService = {
 		const isLocal = String(blockID).startsWith('local-');
 
 		if (isPublic && !isLocal) {
+			const blocks = store.getActiveBlocks();
+			const blockIndex = blocks.findIndex((b) => b.id === blockID);
+			const prevBlockId = blockIndex > 0 ? blocks[blockIndex - 1].id : null;
+			const nextBlockId =
+				blockIndex < blocks.length - 1 ? blocks[blockIndex + 1].id : null;
+			const blockToFocus = prevBlockId || nextBlockId;
 			collabManager.sendDeleteBlock(String(blockID));
 			const currentBlocks = store.getActiveBlocks();
 			const updatedBlocks = currentBlocks.filter((b) => b.id !== blockID);
@@ -785,6 +770,12 @@ export const noteService = {
 				{ id: blockID } as Block,
 				'delete',
 			);
+			if (blockToFocus) {
+				const newBlock = updatedBlocks.find((b) => b.id === blockToFocus);
+				const position = newBlock?.content?.length || 0;
+				console.log('position:', position);
+				collabManager.sendCursorMove(String(blockToFocus), position);
+			}
 			return;
 		}
 		if (isOnline && !isLocal) {
@@ -853,7 +844,7 @@ export const noteService = {
 	async _updateCachedBlocksWithPosition(
 		noteID: string | number,
 		block: Block,
-		action: 'add' | 'update' | 'delete',
+		action: 'add' | 'update' | 'delete' | 'move',
 	): Promise<void> {
 		const cachedNote = await db.notesGet(noteID);
 		if (!cachedNote) return;
@@ -869,6 +860,31 @@ export const noteService = {
 				b.id === block.id ? { ...b, ...block, updatedAt: Date.now() } : b,
 			);
 			blocks.sort((a, b) => a.position - b.position);
+		} else if (action === 'move') {
+			const oldBlock = blocks.find((b) => b.id === block.id);
+			if (!oldBlock) return;
+			const oldPosition = oldBlock.position;
+			const newPosition = block.position;
+			if (oldPosition === newPosition) return;
+			blocks = blocks.filter((b) => b.id !== block.id);
+			if (oldPosition < newPosition) {
+				blocks = blocks.map((b) => {
+					if (b.position > oldPosition && b.position <= newPosition) {
+						return { ...b, position: b.position - 1 };
+					}
+					return b;
+				});
+			} else {
+				blocks = blocks.map((b) => {
+					if (b.position >= newPosition && b.position < oldPosition) {
+						return { ...b, position: b.position + 1 };
+					}
+					return b;
+				});
+			}
+			blocks.push({ ...block, position: newPosition });
+			blocks.sort((a, b) => a.position - b.position);
+			store.setActiveBlocksSilently(blocks);
 		} else if (action === 'delete') {
 			blocks = blocks.filter((b) => b.id !== block.id);
 			blocks.forEach((b, idx) => {

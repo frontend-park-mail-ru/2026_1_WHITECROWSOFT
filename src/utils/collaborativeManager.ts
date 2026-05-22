@@ -1,3 +1,4 @@
+import { db } from '../db.js';
 import { wsService } from '../services/websocketService.js';
 import { store } from '../store.js';
 import type {
@@ -262,6 +263,20 @@ export class CollaborativeManager {
 		});
 	}
 
+	sendUploadAttachment(data: {
+		fileName: string;
+		fileData: string;
+		hasPosition: boolean;
+		position: number;
+	}): void {
+		if (!wsService.isConnected()) return;
+
+		wsService.send({
+			type: 'upload_attachment',
+			msg: data,
+		});
+	}
+
 	/**
 	 * Обрабатывает входящее WebSocket-сообщение
 	 * Выбирает нужный метод на основе типа сообщения
@@ -298,6 +313,9 @@ export class CollaborativeManager {
 					break;
 				case 'update_note_title':
 					this.handleUpdateNoteTitle(message);
+					break;
+				case 'upload_attachment':
+					this.handleUploadAttachment(message);
 					break;
 				case 'sync_state':
 					this.handleSyncState(message);
@@ -562,7 +580,7 @@ export class CollaborativeManager {
 				};
 				const updatedNotes = [...currentNotes];
 				updatedNotes[noteIndex] = updatedNote;
-				store.setNotes(updatedNotes);
+				store.setNotesSilently(updatedNotes);
 			}
 		}
 
@@ -582,7 +600,7 @@ export class CollaborativeManager {
 	 * Удаляет блок из store и пересчитывает позиции
 	 */
 	private handleDeleteBlock(message: WebSocketMessage): void {
-		if (message.is_local) return;
+		// if (message.is_local) return;
 
 		const blockId = message.msg;
 		const blocks = store.getActiveBlocks();
@@ -634,6 +652,7 @@ export class CollaborativeManager {
 			);
 			if (blockElement) {
 				const textLength = blockElement.textContent?.length || 0;
+				console.log('textLength:', textLength);
 				collabManager.sendCursorMove(String(focusBlockId), textLength);
 				window.dispatchEvent(
 					new CustomEvent('collaborativeFocusBlock', {
@@ -704,6 +723,86 @@ export class CollaborativeManager {
 				},
 			}),
 		);
+	}
+
+	/**
+	 * Обрабатывает загрузку вложения другим участником
+	 * Блок уже создан на сервере, нужно только добавить его в UI и кэш
+	 */
+	private async handleUploadAttachment(
+		message: WebSocketMessage,
+	): Promise<void> {
+		const msg = message.msg as {
+			id: string;
+			block_id: string;
+			note_id: string;
+			attach_url: string;
+			created_at: string;
+			position: number;
+			mime_type: string;
+		};
+		let blockTypeId = 2;
+		if (msg.mime_type.startsWith('video/')) blockTypeId = 7;
+		else if (msg.mime_type.startsWith('audio/')) blockTypeId = 6;
+		const blocks = store.getActiveBlocks();
+		if (blocks.some((b) => String(b.id) === msg.block_id)) return;
+		const newBlock: Block = {
+			id: msg.block_id,
+			note_id: msg.note_id,
+			block_type_id: blockTypeId,
+			content: msg.id,
+			position: msg.position,
+			created_at: msg.created_at,
+			updated_at: msg.created_at,
+		};
+		const updatedBlocks = [...blocks];
+		updatedBlocks.splice(msg.position, 0, newBlock);
+		updatedBlocks.forEach((block, idx) => {
+			block.position = idx;
+		});
+		store.setActiveBlocks(updatedBlocks);
+		await db.notesUpdateBlocks(msg.note_id, updatedBlocks);
+		const normalizedUrl = msg.attach_url?.replace(
+			'http://minio:9000',
+			'/minio',
+		);
+		this.cacheAttachment(msg.block_id, msg.id, normalizedUrl, blockTypeId);
+	}
+
+	/**
+	 * Кэширует вложение из синхронизации (аналогично _saveToCache в attachmentService)
+	 */
+	private async cacheAttachment(
+		blockId: string,
+		attachmentId: string,
+		url: string,
+		blockTypeId: number,
+	): Promise<void> {
+		const activeNoteId = store.getActiveNoteId();
+		if (!activeNoteId) return;
+		const attachmentData = {
+			id: attachmentId,
+			blockId: blockId,
+			noteId: activeNoteId,
+			url: url,
+			status: 'synced' as const,
+			syncedAt: Date.now(),
+			filename: '',
+			mimeType: '',
+			size: 0,
+		};
+
+		try {
+			if (blockTypeId === 2) {
+				await db.imagesPut(attachmentData);
+			} else if (blockTypeId === 6) {
+				await db.audiosPut(attachmentData);
+			} else if (blockTypeId === 7) {
+				await db.videosPut(attachmentData);
+			}
+		} catch (error) {
+			console.warn('[CollaborativeManager] Failed to cache attachment:', error);
+		}
 	}
 
 	/**
