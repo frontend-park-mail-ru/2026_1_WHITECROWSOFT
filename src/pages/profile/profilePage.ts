@@ -126,6 +126,16 @@ async function handleLogout(): Promise<void> {
 	const logoutBtn = document.querySelector(
 		'.logoutButton',
 	) as HTMLButtonElement | null;
+	const confirmation = await confirmDialog({
+		title: 'Выход',
+		message: 'Вы уверены, что хотите выйти из аккаунта?',
+		confirmText: 'Выйти',
+		danger: false,
+	});
+	if (!confirmation) {
+		return;
+	}
+
 	const originalText = logoutBtn?.textContent;
 	if (logoutBtn) {
 		logoutBtn.disabled = true;
