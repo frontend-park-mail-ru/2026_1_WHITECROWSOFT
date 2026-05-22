@@ -364,9 +364,12 @@ export default class NoteBody extends Component {
 		const draggedElement = this.draggedBlockWrapper;
 		if (afterElement) {
 			container.insertBefore(draggedElement, afterElement);
+		} else if (this.phantomBlock && container.contains(this.phantomBlock)) {
+			container.insertBefore(draggedElement, this.phantomBlock);
 		} else {
 			container.appendChild(draggedElement);
 		}
+		this.updatePhantomState();
 	};
 
 	private getDragAfterElement(
@@ -482,18 +485,23 @@ export default class NoteBody extends Component {
 		if (container.lastElementChild !== this.phantomBlock) {
 			container.appendChild(this.phantomBlock);
 		}
-		const blocks = store.getActiveBlocks();
-		let shouldShow = blocks.length > 0;
-		if (shouldShow) {
-			const lastBlock = blocks[blocks.length - 1];
-			if (lastBlock.block_type_id === 1) {
-				const wrapper = this.blockWrappers.get(String(lastBlock.id));
-				const blockEl = wrapper
-					?.getElement()
-					?.querySelector('.note__block') as HTMLElement | null;
+		const wrapperEls = container.querySelectorAll('.note__block-wrapper');
+		const lastWrapperEl = wrapperEls[wrapperEls.length - 1] as
+			| HTMLElement
+			| undefined;
+		let shouldShow = !!lastWrapperEl;
+		if (shouldShow && lastWrapperEl) {
+			const lastBlockId = lastWrapperEl.dataset.blockId;
+			const block = store
+				.getActiveBlocks()
+				.find((b) => String(b.id) === lastBlockId);
+			if (block && block.block_type_id === 1) {
+				const blockEl = lastWrapperEl.querySelector(
+					'.note__block',
+				) as HTMLElement | null;
 				const text = blockEl
 					? blockEl.innerText
-					: (lastBlock.content || '').replace(/<[^>]*>/g, '');
+					: (block.content || '').replace(/<[^>]*>/g, '');
 				if (text.replace(/ /g, '').trim() === '') {
 					shouldShow = false;
 				}
