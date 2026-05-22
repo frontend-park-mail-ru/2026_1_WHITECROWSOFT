@@ -81,11 +81,20 @@
 		border: none;
 		background: transparent;
 		width: 100%;
+		min-width: 0;
 		height: 30px;
 		text-align: left;
 		font-family: 'Inter', sans-serif;
 		font-size: 16px;
 		color: var(--text);
+		white-space: nowrap;
+		overflow: hidden;
+		> span {
+			flex: 1;
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
 		&:hover {
 			background: var(--highlight);
 			.sidebar__noteItemActions {

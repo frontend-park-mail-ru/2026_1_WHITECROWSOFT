@@ -12,7 +12,7 @@ import NoteSection from './noteSection/noteSection.js';
 import templateString from './sidebar.hbs?raw';
 import './sidebar.scss';
 
-const MIN_SIDEBAR_WIDTH = 180;
+const MIN_SIDEBAR_WIDTH = 210;
 const MAX_SIDEBAR_WIDTH = 500;
 const DEFAULT_SIDEBAR_WIDTH = 250;
 
