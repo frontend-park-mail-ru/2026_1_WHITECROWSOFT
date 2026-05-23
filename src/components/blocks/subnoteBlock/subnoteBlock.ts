@@ -2,6 +2,7 @@ import { store } from '../../../store.js';
 import type { Block } from '../../../types.js';
 import Component from '../../component.js';
 import templateString from './subnoteBlock.hbs?raw';
+import './subnoteBlock.scss';
 
 interface SubnoteBlockOptions {
 	block: Block;
