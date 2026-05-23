@@ -620,7 +620,11 @@ export default class NoteBody extends Component {
 			if (block.block_type_id !== 2) {
 				const key = `pending_block_${activeNoteId}_${block.id}`;
 				const savedContent = sessionStorage.getItem(key);
-				if (savedContent && block.content !== savedContent) {
+				if (
+					savedContent &&
+					block.block_type_id === 1 &&
+					block.content !== savedContent
+				) {
 					try {
 						await noteService.updateBlockContent(
 							activeNoteId,

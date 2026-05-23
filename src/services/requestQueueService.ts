@@ -154,23 +154,59 @@ export const queueService = {
 						);
 					} else if (requestItem.type === 'SUBNOTE_CREATE') {
 						const resp = response as {
-							id: string | number;
-							title?: string;
-							updated_at?: string;
+							note: {
+								id: string | number;
+								user_id: string | number;
+								title: string;
+								parent_id: string | number | null;
+								is_public: boolean;
+								created_at: string;
+								updated_at: string;
+							};
+							block_id: string | number;
 						};
+
+						const localBlockId = (requestItem.body as { localBlockId?: string })
+							?.localBlockId;
+
 						window.dispatchEvent(
 							new CustomEvent('syncNoteId', {
 								detail: {
-									serverId: resp.id,
+									serverId: resp.note.id,
 									localId: requestItem.localId,
 								},
 							}),
 						);
-						await this._commitLocalSubnoteId(requestItem.localId, resp);
+
+						if (localBlockId && resp.block_id) {
+							console.log('asdfasdfasdfasdf');
+							window.dispatchEvent(
+								new CustomEvent('syncBlockId', {
+									detail: {
+										serverId: resp.block_id,
+										localId: localBlockId,
+									},
+								}),
+							);
+
+							queue = await this._updateQueueArrayForBlock(
+								queue,
+								localBlockId,
+								String(resp.block_id),
+							);
+						}
+
+						await this._commitLocalSubnoteId(
+							requestItem.localId,
+							resp.note,
+							localBlockId,
+							resp.block_id,
+						);
+
 						queue = await this._updateQueueArray(
 							queue,
 							requestItem.localId,
-							String(resp.id),
+							String(resp.note.id),
 						);
 					}
 				}
@@ -502,7 +538,7 @@ export const queueService = {
 			title: localNote.title,
 			updatedAt:
 				serverData.updated_at ?? serverData.updatedAt ?? localNote.updatedAt,
-			icon: localNote.icon || null,
+			iconUrl: localNote.iconUrl || null,
 			blocks: updatedBlocks,
 			isLocal: false,
 		};
@@ -889,14 +925,46 @@ export const queueService = {
 	async _commitLocalSubnoteId(
 		localId: string,
 		serverData: { id: string | number; title?: string; updated_at?: string },
+		localBlockId?: string,
+		serverBlockId?: string | number,
 	): Promise<void> {
 		await this._commitLocalNoteId(localId, serverData);
 		const newSubnoteId = serverData.id;
 		if (!newSubnoteId) return;
+		if (localBlockId && serverBlockId) {
+			const allNotes = await db.notesGetAll();
+			for (const note of allNotes) {
+				const blockIndex = (note.blocks || []).findIndex(
+					(b) => String(b.id) === localBlockId,
+				);
+				if (blockIndex !== -1) {
+					const updatedBlocks = [...(note.blocks || [])];
+					updatedBlocks[blockIndex] = {
+						...updatedBlocks[blockIndex],
+						id: serverBlockId,
+						content: String(newSubnoteId),
+						subnote_id: newSubnoteId,
+						isLocal: false,
+					};
+					const updatedNote = { ...note, blocks: updatedBlocks };
+					await db.notesPut(updatedNote);
+					const storeNotes = store.getNotes();
+					const updatedStoreNotes = storeNotes.map((n) =>
+						n.ID === note.ID ? updatedNote : n,
+					);
+					store.setNotesSilently(updatedStoreNotes);
+					if (store.getActiveNoteId() === note.ID) {
+						store.setActiveBlocksSilently(updatedBlocks);
+					}
+					break;
+				}
+			}
+		}
 		const pendingRequests = await db.getQueuedRequests();
 		for (const req of pendingRequests) {
 			let needUpdate = false;
 			let newBody = req.body;
+			let newEndpoint = req.endpoint;
 			if (req.body) {
 				const body = req.body as Record<string, unknown>;
 				if (
@@ -911,10 +979,18 @@ export const queueService = {
 					needUpdate = true;
 				}
 			}
+			if (localBlockId && req.endpoint?.includes(String(localBlockId))) {
+				newEndpoint = req.endpoint.replace(
+					new RegExp(String(localBlockId), 'g'),
+					String(serverBlockId),
+				);
+				needUpdate = true;
+			}
 			if (needUpdate && req.id) {
 				await db.deleteQueuedRequest(req.id);
 				await db.queueRequest({
 					...req,
+					endpoint: newEndpoint,
 					body: newBody,
 					queuedAt: Date.now(),
 				});

@@ -50,8 +50,8 @@ export async function initMainPage(
 
 	if (sharedNoteId) {
 		savedNoteId = sharedNoteId;
-		const newUrl = window.location.pathname;
-		window.history.replaceState({}, '', newUrl);
+		// const newUrl = window.location.pathname;
+		// window.history.replaceState({}, '', newUrl);
 	}
 
 	if (savedNoteId && !activeNote) {

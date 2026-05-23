@@ -102,8 +102,21 @@ export default class BlockWrapper extends Component {
 				block: this.block,
 				onDelete: this.onDelete,
 				onOpen: (subnoteId: string | number) => {
-					store.setActiveNoteId(subnoteId);
-					router.push('/');
+					const note = store.getNotes().find((note) => note.ID === subnoteId);
+					if (note) {
+						store.setActiveNote({
+							ID: note.ID,
+							title: note.title,
+							breadcrumb: note.title,
+							text: '',
+							is_public: note.is_public,
+							iconUrl: note.iconUrl,
+							coverUrl: note.coverUrl,
+							section: note.section,
+						});
+						store.setActiveNoteId(subnoteId);
+						router.push(`/?note=${subnoteId}`);
+					}
 				},
 				onFocus: () => this.onFocusBlock?.(String(this.block.id)),
 			});

@@ -75,6 +75,9 @@ export const authService = {
 			store.setActiveBlocks([]);
 			store.setOnline(navigator.onLine);
 
+			localStorage.removeItem('NoterianCookieCSRF');
+			localStorage.removeItem('NoterianCookieJWT');
+
 			await db.clearAllUserData();
 		}
 	},

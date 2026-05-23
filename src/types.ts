@@ -133,10 +133,23 @@ export interface QueuedRequest {
 	body?: unknown | null;
 	formData?: FormData | null;
 	localId?: string | null;
+	localBlockId?: string | null;
 	type?: string | null;
 	silent?: boolean;
 	queuedAt: number;
 	retryCount: number;
+}
+
+export interface GetNoteResponse {
+	note: {
+		id: string | number;
+		title: string;
+		updated_at: string;
+		parent_id?: string | number | null;
+		is_public?: boolean;
+		is_favorite?: boolean;
+	};
+	blocks: Block[];
 }
 
 /**

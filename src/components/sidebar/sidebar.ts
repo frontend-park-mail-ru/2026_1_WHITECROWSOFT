@@ -292,6 +292,7 @@ export default class Sidebar extends Component {
 		noteId: string | number,
 		section: 'personal' | 'shared' | 'favorite',
 	): Promise<void> => {
+		router.push(`/?note=${noteId}`);
 		const note = store.getNotes().find((n) => n.ID === noteId);
 		if (!note) return;
 		const activeNote = {
@@ -299,6 +300,8 @@ export default class Sidebar extends Component {
 			title: note.title,
 			breadcrumb: note.title,
 			text: '',
+			iconUrl: note.iconUrl,
+			coverUrl: note.coverUrl,
 			section: section,
 		};
 		store.setActiveNote(activeNote);

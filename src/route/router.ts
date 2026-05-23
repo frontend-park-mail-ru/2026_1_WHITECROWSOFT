@@ -13,8 +13,8 @@ export const router = {
 	_pendingQuery: null as Record<string, string> | null,
 
 	init(): void {
-		window.addEventListener('popstate', (e: PopStateEvent) => {
-			this.handleRoute(e.state?.path || window.location.pathname);
+		window.addEventListener('popstate', () => {
+			this.handleRoute(window.location.pathname + window.location.search);
 		});
 
 		document.addEventListener('click', (e: MouseEvent) => {
@@ -36,7 +36,7 @@ export const router = {
 				return;
 			}
 
-			if (href === window.location.pathname) {
+			if (href === window.location.pathname + window.location.search) {
 				e.preventDefault();
 				return;
 			}
@@ -51,16 +51,14 @@ export const router = {
 	},
 
 	push(path: string): void {
-		const pathWithoutQuery = path.split('?')[0];
-		if (pathWithoutQuery === this._currentPath) return;
-		history.pushState({ path: pathWithoutQuery }, '', path);
+		console.log('push:', path);
+		history.pushState({ path: path }, '', path);
 		this.handleRoute(path);
 	},
 
 	replace(path: string): void {
-		const pathWithoutQuery = path.split('?')[0];
-		if (pathWithoutQuery === this._currentPath) return;
-		history.replaceState({ path: pathWithoutQuery }, '', path);
+		console.log('replace:', path);
+		history.replaceState({ path: path }, '', path);
 		this.handleRoute(path);
 	},
 
@@ -82,6 +80,8 @@ export const router = {
 	},
 
 	async handleRoute(fullPath: string): Promise<void> {
+		console.log('handleRoute:', fullPath);
+
 		const pathWithoutQuery = fullPath.split('?')[0];
 		const queryParams = this.getQueryParams(fullPath);
 
@@ -146,7 +146,12 @@ export const router = {
 		}
 
 		if (route.guest && session.isAuthenticated) {
-			this.replace('/');
+			const noteId = queryParams.note || queryParams.noteid;
+			if (noteId) {
+				this.replace(`/?noteid=${noteId}`);
+			} else {
+				this.replace('/');
+			}
 			return;
 		}
 

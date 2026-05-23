@@ -1,18 +1,26 @@
 import { client } from '../client/client.js';
 import { db } from '../db.js';
 import { store } from '../store.js';
-import type { Block, BlockApiResponse, Note } from '../types.js';
+import type {
+	Block,
+	BlockApiResponse,
+	GetNoteResponse,
+	Note,
+} from '../types.js';
 import { noteService } from './noteService.js';
 import { queueService } from './requestQueueService.js';
 
-interface SubnoteResponse {
-	id: string | number;
-	user_id: string | number;
-	title: string;
-	parent_id: string | number | null;
-	is_public: boolean;
-	created_at: string;
-	updated_at: string;
+export interface SubnoteResponse {
+	note: {
+		id: string | number;
+		user_id: string | number;
+		title: string;
+		parent_id: string | number | null;
+		is_public: boolean;
+		created_at: string;
+		updated_at: string;
+	};
+	block_id: string | number;
 }
 
 interface CreateBlockData {
@@ -57,20 +65,25 @@ export const subnoteService = {
 			`/notes/${parentNoteId}/subnote`,
 			{ title, parent_id: parentNoteId },
 		);
+		const subnoteData = subnoteResult.note;
+		const subnoteBlockId = subnoteResult.block_id;
 		const subnote: Note = {
-			ID: subnoteResult.id,
-			title: subnoteResult.title,
+			ID: subnoteData.id,
+			title: subnoteData.title,
 			parent_id: parentNoteId,
-			icon: null,
-			updatedAt: subnoteResult.updated_at || Date.now(),
+			updatedAt: subnoteData.updated_at || Date.now(),
 			blocks: [],
 			section: 'personal',
+			is_public: subnoteData.is_public || false,
+			is_favorite: false,
 		};
 		const blockData: CreateBlockData = {
 			note_id: subnote.ID,
 			block_type_id: 1,
 			position: 0,
 		};
+		const data = await client.get<GetNoteResponse>(`/notes/${subnote.ID}`);
+		console.log(data);
 		const createdBlock = await client.post<BlockApiResponse>(
 			`/notes/${subnote.ID}/blocks`,
 			blockData,
@@ -92,7 +105,12 @@ export const subnoteService = {
 		};
 		await noteService._setActiveNoteState(activeNote);
 		store.setPendingFocus(createdBlock.id, 'start');
-		this._createParentBlockInBackground(parentNoteId, subnote.ID, afterBlockId);
+		this._createParentBlockInBackground(
+			parentNoteId,
+			subnote.ID,
+			afterBlockId,
+			subnoteBlockId,
+		);
 		return { subnote, block: null };
 	},
 
@@ -100,6 +118,7 @@ export const subnoteService = {
 		parentNoteId: string | number,
 		subnoteId: string | number,
 		afterBlockId: string | null = null,
+		subnoteBlockId: string | number,
 	): Promise<void> {
 		try {
 			const parentNote = store.getNotes().find((n) => n.ID === parentNoteId);
@@ -117,28 +136,14 @@ export const subnoteService = {
 			} else {
 				insertIndex = sortedBlocks.length;
 			}
-			const blockData = {
-				note_id: parentNoteId,
-				block_type_id: 5,
-				position: insertIndex,
-				content: String(subnoteId),
-				subnote_id: subnoteId,
-			};
-
-			const createdBlock = await client.post<{
-				id: string | number;
-				block_type_id: number;
-				content: string;
-				position: number;
-			}>(`/notes/${parentNoteId}/blocks`, blockData);
 			await client.put(
-				`/notes/${parentNoteId}/blocks/${createdBlock.id}/content`,
+				`/notes/${parentNoteId}/blocks/${subnoteBlockId}/content`,
 				{
 					content: String(subnoteId),
 				},
 			);
 			const newBlock: Block = {
-				id: createdBlock.id,
+				id: subnoteBlockId,
 				note_id: parentNoteId,
 				block_type_id: 5,
 				position: insertIndex,
@@ -176,7 +181,6 @@ export const subnoteService = {
 			ID: localSubnoteId,
 			title: title,
 			parent_id: parentNoteId,
-			icon: null,
 			updatedAt: Date.now(),
 			blocks: [],
 			isLocal: true,
@@ -229,19 +233,6 @@ export const subnoteService = {
 				store.setNotesSilently(updatedNotes);
 			}
 			await db.notesPut(updatedParentNote);
-
-			await queueService.enqueueRequest({
-				method: 'POST',
-				endpoint: `/notes/${parentNoteId}/blocks`,
-				body: {
-					note_id: parentNoteId,
-					block_type_id: 5,
-					position: insertIndex,
-					content: String(localSubnoteId),
-					subnote_id: localSubnoteId,
-				},
-				localId: localBlockId,
-			});
 		}
 
 		const activeNote = {
@@ -263,6 +254,7 @@ export const subnoteService = {
 				title,
 				parent_id: parentNoteId,
 				afterBlockId,
+				localBlockId: subnoteBlock?.id,
 			},
 		});
 

@@ -447,7 +447,7 @@ export const noteService = {
 			const updatedNotes = [...currentNotes];
 			updatedNotes[noteIndex] = updatedNote;
 			if (silence === false) {
-				store.setNotesSilently(updatedNotes);
+				store.setNotes(updatedNotes);
 			} else {
 				store.setNotesSilently(updatedNotes);
 			}
@@ -514,6 +514,20 @@ export const noteService = {
 		} else {
 			insertIndex = sortedBlocks.length;
 		}
+		const note = store.getNotes().find((n) => n.ID === noteID);
+		const isPublic = note?.is_public === true;
+		if (isPublic && store.getOnline()) {
+			collabManager.sendCreateBlock(blockData.block_type_id, insertIndex);
+			return {
+				id: `pending-${Date.now()}`,
+				note_id: noteID,
+				block_type_id: blockData.block_type_id,
+				position: insertIndex,
+				content: '',
+				formatting: { ranges: [] },
+				isLocal: true,
+			} as Block;
+		}
 		const shifted = sortedBlocks.map((block, i) => {
 			if (i >= insertIndex) {
 				return { ...block, position: i + 1 };
@@ -538,6 +552,21 @@ export const noteService = {
 		blockData: CreateBlockData,
 		silence?: boolean,
 	): Promise<Block> {
+		const note = store.getNotes().find((n) => n.ID === noteID);
+		const isPublic = note?.is_public === true;
+		if (isPublic && store.getOnline()) {
+			collabManager.sendCreateBlock(
+				blockData.block_type_id,
+				blockData.position,
+			);
+			return {
+				...blockData,
+				content: '',
+				id: `pending-${Date.now()}`,
+				isLocal: true,
+				formatting: { ranges: [] },
+			} as Block;
+		}
 		const isOnline = store.getOnline();
 		const localBlock: Block = {
 			...blockData,

@@ -28,6 +28,7 @@ async function bootstrap() {
 		});
 
 		const cachedNotes = await db.notesGetAll();
+		console.log(cachedNotes);
 		if (cachedNotes && cachedNotes.length > 0) {
 			const notesWithFormatting = [];
 			for (const note of cachedNotes) {
