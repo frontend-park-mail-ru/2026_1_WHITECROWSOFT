@@ -44,10 +44,6 @@
 
 		&--active {
 			background: var(--highlight);
-			
-			.iconPopup__icon {
-				filter: brightness(0) invert(1);
-			}
 		}
 	}
 
