@@ -316,10 +316,10 @@
 		height: 15px;
 		flex-shrink: 0;
 	}
-	&:hover .note-tree-node__icon {
+	&__content:hover:has(.note-tree-node__toggle) .note-tree-node__icon {
 		display: none;
 	}
-	&:hover .note-tree-node__toggle {
+	&__content:hover .note-tree-node__toggle {
 		display: flex;
 	}
 

@@ -108,8 +108,7 @@ export default class NoteTreeNode extends Component {
 				'.note-tree-node__icon',
 			) as HTMLImageElement;
 			if (iconEl) {
-				console.log('changed');
-				iconEl.src = iconUrl;
+				iconEl.src = iconUrl || '/icons/document.svg';
 			}
 		}
 	}
