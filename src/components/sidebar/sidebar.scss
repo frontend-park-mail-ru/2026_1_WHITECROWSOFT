@@ -206,6 +206,8 @@
 		margin: 0;
 		font-size: 14px;
 		letter-spacing: 0.5px;
+		user-select: none;
+		-webkit-user-select: none;
 	}
 
 	&__content {
