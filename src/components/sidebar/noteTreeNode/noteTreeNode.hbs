@@ -5,9 +5,15 @@
             <button class="note-tree-node__toggle" data-action="toggle">
                 <img src="/icons/expand.svg" class="note-tree-node__toggle-icon {{#if isExpanded}}note-tree-node__toggle-icon--rotated{{/if}}">
             </button>
+<<<<<<< Updated upstream
             <img src="{{#if iconUrl}}{{iconUrl}}{{else}}/icons/document.svg{{/if}}" class="note-tree-node__icon">
         {{else}}
             <img src="{{#if iconUrl}}{{iconUrl}}{{else}}/icons/document.svg{{/if}}" class="note-tree-node__icon">
+=======
+            <img src="{{#if icon}}{{icon}}{{/if}}" class="note-tree-node__icon">
+        {{else}}
+            <img src="{{#if icon}}{{icon}}{{/if}}" class="note-tree-node__icon">
+>>>>>>> Stashed changes
         {{/if}}
         
         <span class="note-tree-node__title" data-name="noteTitle">{{title}}</span>

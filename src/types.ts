@@ -8,7 +8,7 @@ export interface User {
 export interface Note {
 	ID: string | number;
 	title: string;
-	iconUrl?: string | null;
+	icon?: string | null;
 	updatedAt: string | number;
 	blocks?: Block[];
 	parent_id?: string | number | null;
@@ -23,7 +23,7 @@ export interface Note {
 export interface ActiveNote {
 	ID: string | number;
 	title: string;
-	iconUrl?: string | null;
+	icon?: string | null;
 	is_public?: boolean;
 	breadcrumb: string;
 	text: string;
@@ -34,7 +34,7 @@ export interface ActiveNote {
 export interface SidebarNote {
 	id: string | number;
 	title: string;
-	iconUrl?: string | null;
+	icon?: string | null;
 	parentId: string | number | null;
 	children: SidebarNote[];
 	isExpanded: boolean;
@@ -282,8 +282,8 @@ export interface NoteApiResponse {
 	title: string;
 	updated_at?: string;
 	parent_id?: string | number | null;
-	iconUrl?: string;
-	coverUrl?: string;
+	icon?: string;
+	header_url?: string;
 	is_public?: boolean;
 	is_favorite?: boolean;
 }

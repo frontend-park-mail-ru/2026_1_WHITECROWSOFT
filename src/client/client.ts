@@ -181,6 +181,21 @@ class Client {
 			method: 'DELETE',
 		});
 	}
+
+	async getBlob(endpoint: string): Promise<Blob> {
+		const url = `${this.serverURL}${endpoint}`;
+		const response = await fetch(url, {
+			credentials: 'include',
+			method: 'GET',
+			headers: {
+				Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+			},
+		});
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+		return response.blob();
+	}
 }
 
 export const client = new Client();

@@ -28,7 +28,6 @@ async function bootstrap() {
 		});
 
 		const cachedNotes = await db.notesGetAll();
-		console.log(cachedNotes);
 		if (cachedNotes && cachedNotes.length > 0) {
 			const notesWithFormatting = [];
 			for (const note of cachedNotes) {
@@ -61,7 +60,7 @@ async function bootstrap() {
 				parent_id: note.parent_id || null,
 				section: note.section,
 				coverUrl: note.coverUrl,
-				iconUrl: note.iconUrl,
+				icon: note.icon,
 			};
 			store.setActiveNote(activenote);
 			store.setActiveNoteId(activeNodeId);

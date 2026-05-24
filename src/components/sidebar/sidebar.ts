@@ -5,7 +5,6 @@ import { sidebarService } from '../../services/sidebarService.js';
 import { subnoteService } from '../../services/subnoteService.js';
 import { store } from '../../store.js';
 import type { User } from '../../types.js';
-import { collabManager } from '../../utils/collaborativeManager.js';
 import Component from '../component.js';
 import NotePopup from '../popups/notePopup/notePopup.js';
 import NoteSection from './noteSection/noteSection.js';
@@ -241,7 +240,6 @@ export default class Sidebar extends Component {
 			async (noteId: string | number | null) => {
 				const activeNote = store.getActiveNote();
 				const section = activeNote?.section;
-				console.log(section);
 				if (section !== 'shared') {
 					this.sharedSection?.updateActiveNote(null);
 				}
@@ -258,15 +256,6 @@ export default class Sidebar extends Component {
 					this.favoriteSection?.updateActiveNote(noteId);
 				} else {
 					this.personalSection?.updateActiveNote(noteId);
-				}
-
-				if (noteId) {
-					const note = store.getNotes().find((n) => n.ID === noteId);
-					if (note?.is_public) {
-						await collabManager.startCollab(String(noteId));
-					} else {
-						collabManager.stopCollab();
-					}
 				}
 			},
 		);
@@ -300,7 +289,7 @@ export default class Sidebar extends Component {
 			title: note.title,
 			breadcrumb: note.title,
 			text: '',
-			iconUrl: note.iconUrl,
+			icon: note.icon,
 			coverUrl: note.coverUrl,
 			section: section,
 		};

@@ -1,12 +1,7 @@
 import { client } from '../client/client.js';
 import { db } from '../db.js';
 import { store } from '../store.js';
-import type {
-	Block,
-	BlockApiResponse,
-	GetNoteResponse,
-	Note,
-} from '../types.js';
+import type { Block, BlockApiResponse, Note } from '../types.js';
 import { noteService } from './noteService.js';
 import { queueService } from './requestQueueService.js';
 
@@ -82,8 +77,6 @@ export const subnoteService = {
 			block_type_id: 1,
 			position: 0,
 		};
-		const data = await client.get<GetNoteResponse>(`/notes/${subnote.ID}`);
-		console.log(data);
 		const createdBlock = await client.post<BlockApiResponse>(
 			`/notes/${subnote.ID}/blocks`,
 			blockData,

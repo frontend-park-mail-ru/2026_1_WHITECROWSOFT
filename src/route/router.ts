@@ -1,6 +1,5 @@
-import { authService } from '../services/authService.js';
-import type { UserSession } from '../types.js';
 import { Layout } from './../layout.js';
+import { store } from './../store.js';
 import { getRoute } from './routes.js';
 
 const modules = import.meta.glob<{ default?: unknown; [key: string]: unknown }>(
@@ -13,8 +12,8 @@ export const router = {
 	_pendingQuery: null as Record<string, string> | null,
 
 	init(): void {
-		window.addEventListener('popstate', () => {
-			this.handleRoute(window.location.pathname + window.location.search);
+		window.addEventListener('popstate', (e: PopStateEvent) => {
+			this.handleRoute(e.state?.path || window.location.pathname);
 		});
 
 		document.addEventListener('click', (e: MouseEvent) => {
@@ -36,7 +35,7 @@ export const router = {
 				return;
 			}
 
-			if (href === window.location.pathname + window.location.search) {
+			if (href === window.location.pathname) {
 				e.preventDefault();
 				return;
 			}
@@ -51,13 +50,13 @@ export const router = {
 	},
 
 	push(path: string): void {
-		console.log('push:', path);
+		if (path === this._currentPath) return;
 		history.pushState({ path: path }, '', path);
 		this.handleRoute(path);
 	},
 
 	replace(path: string): void {
-		console.log('replace:', path);
+		if (path === this._currentPath) return;
 		history.replaceState({ path: path }, '', path);
 		this.handleRoute(path);
 	},
@@ -80,12 +79,10 @@ export const router = {
 	},
 
 	async handleRoute(fullPath: string): Promise<void> {
-		console.log('handleRoute:', fullPath);
-
 		const pathWithoutQuery = fullPath.split('?')[0];
 		const queryParams = this.getQueryParams(fullPath);
 
-		this._currentPath = pathWithoutQuery;
+		this._currentPath = fullPath;
 		this._pendingQuery = queryParams;
 
 		const route = getRoute(pathWithoutQuery);
@@ -131,27 +128,16 @@ export const router = {
 			return;
 		}
 
-		let session: UserSession;
-		try {
-			session = await authService.getUserSession();
-		} catch (err) {
-			console.error('Failed to get user session:', err);
-			session = { isAuthenticated: false, user: null };
-		}
+		const isAuthenticated = store.getUser();
 
-		if (route.protected && !session.isAuthenticated) {
+		if (route.protected && !isAuthenticated) {
 			const redirectUrl = `/signin?redirect=${encodeURIComponent(fullPath)}`;
 			this.replace(redirectUrl);
 			return;
 		}
 
-		if (route.guest && session.isAuthenticated) {
-			const noteId = queryParams.note || queryParams.noteid;
-			if (noteId) {
-				this.replace(`/?noteid=${noteId}`);
-			} else {
-				this.replace('/');
-			}
+		if (route.guest && isAuthenticated) {
+			this.replace('/');
 			return;
 		}
 
@@ -175,7 +161,6 @@ export const router = {
 						this._currentLayout = new Layout();
 						await this._currentLayout.init(false);
 					}
-
 					await this._currentLayout.setPage(initFn, {
 						query: this._pendingQuery,
 					});

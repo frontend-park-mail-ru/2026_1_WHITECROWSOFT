@@ -29,7 +29,6 @@ export class CollaborativeManager {
 	 */
 	async startCollab(noteId: string): Promise<void> {
 		const note = store.getNotes().find((n) => String(n.ID) === noteId);
-		console.log(note);
 		if (!note || !note.is_public) {
 			return;
 		}
@@ -257,9 +256,7 @@ export class CollaborativeManager {
 
 		wsService.send({
 			type: 'update_note_title',
-			msg: {
-				title,
-			},
+			msg: title,
 		});
 	}
 
@@ -546,8 +543,8 @@ export class CollaborativeManager {
 	 * Обрабатывает создание нового блока от другого участника
 	 * Вставляет блок в нужную позицию и синхронизирует позиции
 	 */
-	private handleCreateBlock(message: WebSocketMessage): void {
-		// if (message.is_local) return;
+	private async handleCreateBlock(message: WebSocketMessage): Promise<void> {
+		//if (message.is_local) return;
 
 		const msg = message.msg as CreateBlockMsg & {
 			id: string;
@@ -568,6 +565,56 @@ export class CollaborativeManager {
 			b.position = i;
 		});
 		store.setActiveBlocks([...blocks]);
+		store.setPendingFocus(newBlock.id, 'start');
+		const activeNoteId = store.getActiveNoteId();
+		if (activeNoteId) {
+			const currentNotes = store.getNotes();
+			const noteIndex = currentNotes.findIndex((n) => n.ID === activeNoteId);
+			if (noteIndex !== -1) {
+				const updatedNote = {
+					...currentNotes[noteIndex],
+					blocks: blocks,
+				};
+				const updatedNotes = [...currentNotes];
+				updatedNotes[noteIndex] = updatedNote;
+				store.setNotesSilently(updatedNotes);
+			}
+			await db.notesUpdateBlocks(activeNoteId, blocks);
+		}
+	}
+
+	/**
+	 * Обрабатывает удаление блока другим участником
+	 * Удаляет блок из store и пересчитывает позиции
+	 */
+	private async handleDeleteBlock(message: WebSocketMessage): Promise<void> {
+		// if (message.is_local) return;
+
+		const blockId = message.msg;
+		const blocks = store.getActiveBlocks();
+		const blockIndex = blocks.findIndex((b) => b.id === blockId);
+
+		if (blockIndex === -1) return;
+
+		const prevBlockId = blockIndex > 0 ? blocks[blockIndex - 1].id : null;
+		const nextBlockId =
+			blockIndex < blocks.length - 1 ? blocks[blockIndex + 1].id : null;
+		const blockToFocus = prevBlockId || nextBlockId;
+
+		if (blockToFocus) {
+			const newBlock = blocks.find((b) => b.id === blockToFocus);
+			const position = newBlock?.content?.length || 0;
+			collabManager.sendCursorMove(String(blockToFocus), position);
+		}
+
+		blocks.splice(blockIndex, 1);
+		blocks.forEach((b, i) => {
+			b.position = i;
+		});
+		store.setActiveBlocks([...blocks]);
+		if (blockToFocus) {
+			store.setPendingFocus(blockToFocus, 'end');
+		}
 
 		const activeNoteId = store.getActiveNoteId();
 		if (activeNoteId) {
@@ -582,88 +629,7 @@ export class CollaborativeManager {
 				updatedNotes[noteIndex] = updatedNote;
 				store.setNotesSilently(updatedNotes);
 			}
-		}
-
-		window.dispatchEvent(
-			new CustomEvent('collaborativeBlockCreate', {
-				detail: {
-					block: newBlock,
-					userId: message.userId,
-					focusBlockId: newBlock.id,
-				},
-			}),
-		);
-	}
-
-	/**
-	 * Обрабатывает удаление блока другим участником
-	 * Удаляет блок из store и пересчитывает позиции
-	 */
-	private handleDeleteBlock(message: WebSocketMessage): void {
-		// if (message.is_local) return;
-
-		const blockId = message.msg;
-		const blocks = store.getActiveBlocks();
-		const blockIndex = blocks.findIndex((b) => b.id === blockId);
-
-		if (blockIndex === -1) return;
-
-		const prevBlockId = blockIndex > 0 ? blocks[blockIndex - 1].id : null;
-		const nextBlockId =
-			blockIndex < blocks.length - 1 ? blocks[blockIndex + 1].id : null;
-		const blockToFocus = prevBlockId || nextBlockId;
-
-		const focusBlockId = blockToFocus;
-
-		blocks.splice(blockIndex, 1);
-		blocks.forEach((b, i) => {
-			b.position = i;
-		});
-		store.setActiveBlocks([...blocks]);
-
-		const activeNoteId = store.getActiveNoteId();
-		if (activeNoteId) {
-			const currentNotes = store.getNotes();
-			const noteIndex = currentNotes.findIndex((n) => n.ID === activeNoteId);
-			if (noteIndex !== -1) {
-				const updatedNote = {
-					...currentNotes[noteIndex],
-					blocks: blocks,
-				};
-				const updatedNotes = [...currentNotes];
-				updatedNotes[noteIndex] = updatedNote;
-				store.setNotes(updatedNotes);
-			}
-		}
-
-		window.dispatchEvent(
-			new CustomEvent('collaborativeBlockDelete', {
-				detail: {
-					blockId: blockId,
-					userId: message.userId,
-					focusBlockId: focusBlockId,
-				},
-			}),
-		);
-
-		if (focusBlockId) {
-			const blockElement = document.querySelector(
-				`.note__block[data-block-id="${focusBlockId}"]`,
-			);
-			if (blockElement) {
-				const textLength = blockElement.textContent?.length || 0;
-				console.log('textLength:', textLength);
-				collabManager.sendCursorMove(String(focusBlockId), textLength);
-				window.dispatchEvent(
-					new CustomEvent('collaborativeFocusBlock', {
-						detail: {
-							blockId: focusBlockId,
-							position: 'end',
-							userId: message.userId,
-						},
-					}),
-				);
-			}
+			await db.notesUpdateBlocks(activeNoteId, blocks);
 		}
 	}
 
@@ -706,23 +672,38 @@ export class CollaborativeManager {
 	 */
 	private handleUpdateNoteTitle(message: WebSocketMessage): void {
 		// if (message.is_local) return;
-
 		const msg = message.msg as { title: string };
-		const activeNote = store.getActiveNote();
-
-		if (!activeNote) return;
-
-		activeNote.title = msg.title;
-		store.setActiveNote(activeNote);
-
-		window.dispatchEvent(
-			new CustomEvent('collaborativeTitleUpdate', {
-				detail: {
-					title: msg.title,
-					userId: message.userId,
-				},
-			}),
+		const currentNotes = store.getNotes();
+		const activeNoteId = store.getActiveNoteId();
+		const activeNote = store
+			.getNotes()
+			.find((note) => note.ID === store.getActiveNoteId());
+		const noteIndex = currentNotes.findIndex(
+			(n) => String(n.ID) === activeNoteId,
 		);
+		if (noteIndex === -1) return;
+		const oldNote = currentNotes[noteIndex];
+		const updatedNote = {
+			...oldNote,
+			title: msg.title,
+			updatedAt: Date.now(),
+		};
+		const updatedNotes = [...currentNotes];
+		updatedNotes[noteIndex] = updatedNote;
+		store.setNotes(updatedNotes);
+		if (activeNote) {
+			store.setActiveNote({
+				ID: activeNote.ID,
+				title: msg.title,
+				text: '',
+				section: activeNote.section,
+				icon: activeNote.icon,
+				is_public: activeNote.is_public,
+				coverUrl: activeNote.coverUrl,
+				breadcrumb: activeNote.title,
+			});
+		}
+		db.notesPut(updatedNote);
 	}
 
 	/**
@@ -761,6 +742,7 @@ export class CollaborativeManager {
 			block.position = idx;
 		});
 		store.setActiveBlocks(updatedBlocks);
+		store.setPendingFocus(newBlock.id, 'start');
 		await db.notesUpdateBlocks(msg.note_id, updatedBlocks);
 		const normalizedUrl = msg.attach_url?.replace(
 			'http://minio:9000',

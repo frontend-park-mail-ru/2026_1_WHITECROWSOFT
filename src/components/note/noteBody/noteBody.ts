@@ -45,8 +45,6 @@ export default class NoteBody extends Component {
 	async onRender(): Promise<void> {
 		this.subscribeToStore();
 		this.subscribeToPendingFocus();
-		this.subscribeToCollaborativeCreate();
-		this.subscribeToCollaborativeDelete();
 		this.subscribeToSyncBlockId();
 		await this.restoreFromSessionStorage();
 		await this.renderBlocks();
@@ -70,44 +68,6 @@ export default class NoteBody extends Component {
 				}
 			},
 		);
-	}
-
-	private subscribeToCollaborativeCreate(): void {
-		const handleBlockCreate = ((e: CustomEvent) => {
-			const { userId, focusBlockId } = e.detail;
-			const currentUserId = store.getUser()?.id;
-			if (userId === currentUserId) {
-				store.setPendingFocus(focusBlockId, 'start');
-				return;
-			}
-			this.renderBlocks();
-			store.setPendingFocus(focusBlockId, 'start');
-		}) as EventListener;
-		window.addEventListener('collaborativeBlockCreate', handleBlockCreate);
-		this.unsubscribeCollaborativeCreate = () => {
-			window.removeEventListener('collaborativeBlockCreate', handleBlockCreate);
-		};
-	}
-
-	private subscribeToCollaborativeDelete(): void {
-		const handleBlockDelete = ((e: CustomEvent) => {
-			const { blockId, userId, focusBlockId } = e.detail;
-			const currentUserId = store.getUser()?.id;
-			if (userId === currentUserId) {
-				return;
-			}
-			const blocks = store.getActiveBlocks();
-			const updatedBlocks = blocks.filter((b) => String(b.id) !== blockId);
-			updatedBlocks.forEach((block, idx) => {
-				block.position = idx;
-			});
-			store.setActiveBlocks(updatedBlocks);
-			store.setPendingFocus(focusBlockId, 'end');
-		}) as EventListener;
-		window.addEventListener('collaborativeBlockDelete', handleBlockDelete);
-		this.unsubscribeCollaborativeDelete = () => {
-			window.removeEventListener('collaborativeBlockDelete', handleBlockDelete);
-		};
 	}
 
 	private subscribeToSyncBlockId(): void {
@@ -592,7 +552,7 @@ export default class NoteBody extends Component {
 
 			const blocks = store.getActiveBlocks();
 			for (const block of blocks) {
-				if (block.block_type_id !== 2) {
+				if (block.block_type_id === 1) {
 					const blockElement = container.querySelector(
 						`.note__block-wrapper[data-block-id="${block.id}"] .note__block`,
 					);
@@ -617,7 +577,7 @@ export default class NoteBody extends Component {
 
 		const blocks = store.getActiveBlocks();
 		for (const block of blocks) {
-			if (block.block_type_id !== 2) {
+			if (block.block_type_id === 1) {
 				const key = `pending_block_${activeNoteId}_${block.id}`;
 				const savedContent = sessionStorage.getItem(key);
 				if (

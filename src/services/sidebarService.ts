@@ -19,7 +19,6 @@ export const sidebarService = {
 
 	getfavoriteTreeFromStore(): SidebarNote[] {
 		const notes = store.getNotes().filter((note) => note.is_favorite === true);
-		console.log(notes, store.getNotes());
 		const tree = this.buildTree(notes, this.expandedState, 'favorite');
 		return tree;
 	},
@@ -48,7 +47,7 @@ export const sidebarService = {
 				isExpanded: expandedState.get(note.ID) ?? false,
 				isActive: isActive,
 				level: 0,
-				iconUrl: note.iconUrl,
+				icon: note.icon,
 			});
 		}
 		for (const note of noteMap.values()) {

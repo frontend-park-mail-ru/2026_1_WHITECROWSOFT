@@ -2,7 +2,7 @@ import Component from '../../../component.js';
 import templateString from './iconBlock.hbs?raw';
 
 interface IconBlockOptions {
-	iconUrl: string | null;
+	icon: string | null;
 	onIcon: () => void;
 }
 
@@ -15,7 +15,7 @@ export default class IconBlock extends Component {
 
 	protected getTemplateData() {
 		return {
-			iconUrl: this.options.iconUrl,
+			icon: this.options.icon,
 		};
 	}
 
@@ -31,11 +31,15 @@ export default class IconBlock extends Component {
 		});
 	}
 
-	updateIcon(iconUrl: string | null): void {
+	updateIcon(icon: string | null): void {
 		const img = this.domElement?.querySelector('.note__icon-image');
-		if (img && iconUrl) {
-			img.setAttribute('src', iconUrl);
+		if (img && icon) {
+			img.setAttribute('src', icon);
 		}
+	}
+
+	getIcon(): string | null {
+		return this.options.icon;
 	}
 
 	destroy(): void {}

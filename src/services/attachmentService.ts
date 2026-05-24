@@ -1,7 +1,12 @@
 import { client } from '../client/client.js';
 import { db } from '../db.js';
 import { store } from '../store.js';
-import type { AttachmentApiResponse, Block, Note } from '../types.js';
+import type {
+	AttachmentApiResponse,
+	Block,
+	Note,
+	NoteApiResponse,
+} from '../types.js';
 import { collabManager } from '../utils/collaborativeManager.js';
 import { handleAuthError } from '../utils/handleAuthError';
 import { noteService } from './noteService.js';
@@ -245,6 +250,18 @@ export const attachmentService = {
 		updatedBlocks.sort((a, b) => a.position - b.position);
 		store.setActiveBlocks(updatedBlocks);
 		await db.notesUpdateBlocks(noteId, updatedBlocks);
+		const currentNotes = store.getNotes();
+		const noteIndex = currentNotes.findIndex((n) => n.ID === noteId);
+		if (noteIndex !== -1) {
+			const updatedNote = {
+				...currentNotes[noteIndex],
+				blocks: updatedBlocks,
+				updatedAt: Date.now(),
+			};
+			const updatedNotes = [...currentNotes];
+			updatedNotes[noteIndex] = updatedNote;
+			store.setNotesSilently(updatedNotes);
+		}
 
 		return finalBlock;
 	},
@@ -323,6 +340,18 @@ export const attachmentService = {
 		updatedBlocks.sort((a, b) => a.position - b.position);
 		store.setActiveBlocks(updatedBlocks);
 		await db.notesUpdateBlocks(noteId, updatedBlocks);
+		const currentNotes = store.getNotes();
+		const noteIndex = currentNotes.findIndex((n) => n.ID === noteId);
+		if (noteIndex !== -1) {
+			const updatedNote = {
+				...currentNotes[noteIndex],
+				blocks: updatedBlocks,
+				updatedAt: Date.now(),
+			};
+			const updatedNotes = [...currentNotes];
+			updatedNotes[noteIndex] = updatedNote;
+			store.setNotesSilently(updatedNotes);
+		}
 
 		return finalBlock;
 	},
@@ -379,6 +408,18 @@ export const attachmentService = {
 		updatedBlocks.sort((a, b) => a.position - b.position);
 		store.setActiveBlocks(updatedBlocks);
 		await db.notesUpdateBlocks(noteId, updatedBlocks);
+		const currentNotes = store.getNotes();
+		const noteIndex = currentNotes.findIndex((n) => n.ID === noteId);
+		if (noteIndex !== -1) {
+			const updatedNote = {
+				...currentNotes[noteIndex],
+				blocks: updatedBlocks,
+				updatedAt: Date.now(),
+			};
+			const updatedNotes = [...currentNotes];
+			updatedNotes[noteIndex] = updatedNote;
+			store.setNotesSilently(updatedNotes);
+		}
 
 		return finalBlock;
 	},
@@ -457,6 +498,18 @@ export const attachmentService = {
 		updatedBlocks.sort((a, b) => a.position - b.position);
 		store.setActiveBlocks(updatedBlocks);
 		await db.notesUpdateBlocks(noteId, updatedBlocks);
+		const currentNotes = store.getNotes();
+		const noteIndex = currentNotes.findIndex((n) => n.ID === noteId);
+		if (noteIndex !== -1) {
+			const updatedNote = {
+				...currentNotes[noteIndex],
+				blocks: updatedBlocks,
+				updatedAt: Date.now(),
+			};
+			const updatedNotes = [...currentNotes];
+			updatedNotes[noteIndex] = updatedNote;
+			store.setNotesSilently(updatedNotes);
+		}
 
 		return finalBlock;
 	},
@@ -512,6 +565,18 @@ export const attachmentService = {
 		updatedBlocks.sort((a, b) => a.position - b.position);
 		store.setActiveBlocks(updatedBlocks);
 		await db.notesUpdateBlocks(noteId, updatedBlocks);
+		const currentNotes = store.getNotes();
+		const noteIndex = currentNotes.findIndex((n) => n.ID === noteId);
+		if (noteIndex !== -1) {
+			const updatedNote = {
+				...currentNotes[noteIndex],
+				blocks: updatedBlocks,
+				updatedAt: Date.now(),
+			};
+			const updatedNotes = [...currentNotes];
+			updatedNotes[noteIndex] = updatedNote;
+			store.setNotesSilently(updatedNotes);
+		}
 
 		return finalBlock;
 	},
@@ -590,7 +655,18 @@ export const attachmentService = {
 		updatedBlocks.sort((a, b) => a.position - b.position);
 		store.setActiveBlocks(updatedBlocks);
 		await db.notesUpdateBlocks(noteId, updatedBlocks);
-
+		const currentNotes = store.getNotes();
+		const noteIndex = currentNotes.findIndex((n) => n.ID === noteId);
+		if (noteIndex !== -1) {
+			const updatedNote = {
+				...currentNotes[noteIndex],
+				blocks: updatedBlocks,
+				updatedAt: Date.now(),
+			};
+			const updatedNotes = [...currentNotes];
+			updatedNotes[noteIndex] = updatedNote;
+			store.setNotesSilently(updatedNotes);
+		}
 		return finalBlock;
 	},
 
@@ -769,21 +845,28 @@ export const attachmentService = {
 	): Promise<Note | null> {
 		const formData = new FormData();
 		formData.append('file', file);
-		const mockCoverUrl = URL.createObjectURL(file);
-		const mockId = `mock-${Date.now()}`;
-		// const coverResult = await client.postForm<NoteApiResponse>(
-		// 	`/notes/${noteId}/covers`,
-		// 	formData,
-		// );
-		await this._coverToCache(noteId, mockId, file, mockCoverUrl);
+		const coverResult = await client.postForm<NoteApiResponse>(
+			`/notes/${noteId}/header`,
+			formData,
+		);
+		const oldCover = await db.coverGetByNoteId(noteId);
+		if (oldCover) {
+			await db.coverDelete(oldCover.id);
+		}
+		await this._coverToCache(
+			noteId,
+			coverResult.id,
+			file,
+			coverResult.header_url,
+		);
 		const currentNote = await db.notesGet(noteId);
 		if (!currentNote) return null;
 		const updatedNote: Note = {
 			ID: currentNote.ID,
 			title: currentNote.title,
 			updatedAt: Date.now(),
-			coverUrl: mockCoverUrl,
-			iconUrl: currentNote.iconUrl || null,
+			coverUrl: coverResult.header_url,
+			icon: currentNote.icon || null,
 			blocks: currentNote.blocks || [],
 			parent_id: currentNote.parent_id || null,
 			isLocal: currentNote.isLocal || false,
@@ -803,9 +886,8 @@ export const attachmentService = {
 		if (activeNote) {
 			store.setActiveNote({
 				...activeNote,
-				coverUrl: mockCoverUrl,
+				coverUrl: coverResult.header_url,
 			});
-			console.log('active note:', store.getActiveNote());
 		}
 		return updatedNote;
 	},
@@ -814,6 +896,10 @@ export const attachmentService = {
 		noteId: string | number,
 		file: File,
 	): Promise<Note | null> {
+		const oldCover = await db.coverGetByNoteId(noteId);
+		if (oldCover) {
+			await db.coverDelete(oldCover.id);
+		}
 		const localCoverId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 		const blob = await this._fileToBlob(file);
 		const coverUrl = URL.createObjectURL(blob);
@@ -841,7 +927,7 @@ export const attachmentService = {
 
 		await queueService.enqueueRequest({
 			method: 'POST',
-			endpoint: `/notes/${noteId}/covers`,
+			endpoint: `/notes/${noteId}/header`,
 			type: 'COVER_UPLOAD',
 			localId: localCoverId,
 			body: { fileId: localCoverId, noteId },
@@ -854,7 +940,7 @@ export const attachmentService = {
 			title: currentNote.title,
 			updatedAt: Date.now(),
 			coverUrl: coverUrl,
-			iconUrl: currentNote.iconUrl || null,
+			icon: currentNote.icon || null,
 			blocks: currentNote.blocks || [],
 			parent_id: currentNote.parent_id || null,
 			isLocal: currentNote.isLocal || false,
@@ -882,13 +968,51 @@ export const attachmentService = {
 		return updatedNote;
 	},
 
+	async getCoverUrl(noteId: string | number): Promise<string | null> {
+		const localCover = await db.coverGetByNoteId(noteId);
+		if (localCover?.blob) {
+			const blobUrl = URL.createObjectURL(localCover.blob);
+			return blobUrl;
+		}
+		if (localCover?.url && store.getOnline()) {
+			try {
+				let imageUrl = localCover.url;
+				if (imageUrl.includes('http://minio:9000')) {
+					imageUrl = imageUrl.replace('http://minio:9000', '/minio');
+				}
+				const response = await fetch(imageUrl);
+				if (response.ok) {
+					const blob = await response.blob();
+					await db.coverPut({
+						...localCover,
+						blob: blob,
+						status: 'synced',
+						syncedAt: Date.now(),
+					});
+					return URL.createObjectURL(blob);
+				}
+			} catch (error) {
+				console.warn('[attachmentService] Failed to fetch cover:', error);
+			}
+		}
+		const note = await db.notesGet(noteId);
+		if (note?.coverUrl) {
+			let coverUrl = note.coverUrl;
+			if (coverUrl.includes('http://minio:9000')) {
+				coverUrl = coverUrl.replace('http://minio:9000', '/minio');
+			}
+			return coverUrl;
+		}
+		return null;
+	},
+
 	async deleteCover(noteId: string | number): Promise<void> {
 		const isOnline = store.getOnline();
 		const currentNote = await db.notesGet(noteId);
 		if (!currentNote) return;
 		if (isOnline) {
 			try {
-				await client.delete(`/notes/${noteId}/covers`);
+				await client.delete(`/notes/${noteId}/header`);
 			} catch (error) {
 				console.warn('[attachmentService] Failed to delete cover:', error);
 				handleAuthError(error);
@@ -902,7 +1026,7 @@ export const attachmentService = {
 		} else {
 			await queueService.enqueueRequest({
 				method: 'DELETE',
-				endpoint: `/notes/${noteId}/covers`,
+				endpoint: `/notes/${noteId}/header`,
 				body: null,
 				type: 'COVER_DELETE',
 			});
@@ -916,7 +1040,7 @@ export const attachmentService = {
 			title: currentNote.title,
 			updatedAt: Date.now(),
 			coverUrl: null,
-			iconUrl: currentNote.iconUrl || null,
+			icon: currentNote.icon || null,
 			blocks: currentNote.blocks || [],
 			parent_id: currentNote.parent_id || null,
 			isLocal: currentNote.isLocal || false,

@@ -10,6 +10,7 @@ import type {
 } from '../types.js';
 import { collabManager } from '../utils/collaborativeManager.js';
 import { handleAuthError } from '../utils/handleAuthError';
+import { router } from './../route/router.js';
 import { queueService } from './requestQueueService.js';
 
 interface GetNoteResponse {
@@ -18,6 +19,8 @@ interface GetNoteResponse {
 		title: string;
 		updated_at: string;
 		parent_id?: string | number | null;
+		icon?: string | null;
+		header_url?: string | null;
 		is_public?: boolean;
 		is_favorite?: boolean;
 	};
@@ -167,9 +170,20 @@ export const noteService = {
 				parent_id: serverNote.parent_id || null,
 				blocks: serverBlocks,
 				updatedAt: serverNote.updated_at,
+				icon: serverNote.icon,
+				coverUrl: serverNote.header_url,
 				is_public: serverNote.is_public || false,
 				is_favorite: serverNote.is_favorite || false,
 			};
+			store.setActiveNote({
+				ID: note.ID,
+				title: note.title,
+				breadcrumb: note.title,
+				icon: note.icon,
+				coverUrl: note.coverUrl,
+				text: '',
+				section: note.section,
+			});
 			await db.notesPut(note);
 			const currentNotes = store.getNotes();
 			const existingIndex = currentNotes.findIndex((n) => n.ID === note.ID);
@@ -216,6 +230,7 @@ export const noteService = {
 		text: string;
 		section?: 'personal' | 'shared' | 'favorite';
 	}): Promise<void> {
+		router.push(`/?note=${activeNote.ID}`);
 		store.setActiveNote(activeNote);
 		store.setActiveNoteId(activeNote.ID);
 		await db.settingsSet('activeNoteId', activeNote.ID);
@@ -402,6 +417,7 @@ export const noteService = {
 			await db.videosDeleteByNoteId?.(id);
 			await db.formattingDeleteByNoteId?.(id);
 			await db.queueFileDeleteByNoteId?.(id);
+			await db.coverDeleteByNoteId?.(id);
 		}
 		let currentNotes = store.getNotes();
 		currentNotes = currentNotes.filter((n) => !idsToDelete.includes(n.ID));
@@ -415,15 +431,21 @@ export const noteService = {
 					ID: firstNote.ID,
 					title: firstNote.title,
 					breadcrumb: firstNote.title,
+					icon: firstNote.icon,
+					coverUrl: firstNote.coverUrl,
 					text: '',
 					section: firstNote.section,
 				};
+				router.push(`/?note=${activeNote.ID}`);
 				store.setActiveNote(activeNote);
 				store.setActiveNoteId(currentNotes[0].ID);
+				db.settingsSet('activeNoteId', activeNote.ID);
 			} else {
+				router.push(`/`);
 				store.setActiveNote(null);
 				store.setActiveBlocks([]);
 				store.setActiveNoteId(null);
+				db.settingsSet('activeNoteId', null);
 			}
 		}
 	},
@@ -462,6 +484,8 @@ export const noteService = {
 					ID: updatedNote.ID,
 					title: updatedNote.title,
 					breadcrumb: updatedNote.title,
+					icon: updatedNote.icon,
+					coverUrl: updatedNote.coverUrl,
 					text: store.getActiveNote()?.text || '',
 					parent_id: updatedNote.parent_id || null,
 					section: newSection,
@@ -470,7 +494,16 @@ export const noteService = {
 				store.setActiveNoteId(updatedNote.ID);
 			}
 
+			const note = currentNotes[noteIndex];
 			const isOnline = store.getOnline();
+			const isPublic = note.is_public === true;
+
+			if (isPublic && isOnline) {
+				if (data.title) {
+					collabManager.sendUpdateNoteTitle(data.title);
+				}
+				return updatedNote;
+			}
 
 			if (isOnline) {
 				try {
@@ -547,6 +580,28 @@ export const noteService = {
 		});
 	},
 
+	async _prepareInsertPosition(
+		position: number | null = null,
+	): Promise<{ insertIndex: number; shiftedBlocks: Block[] }> {
+		const currentBlocks = store.getActiveBlocks();
+		const sortedBlocks = [...currentBlocks].sort(
+			(a, b) => a.position - b.position,
+		);
+		const insertIndex =
+			position !== null && position !== undefined
+				? Math.min(position, sortedBlocks.length)
+				: sortedBlocks.length;
+
+		const shiftedBlocks = sortedBlocks.map((block, idx) => {
+			if (idx >= insertIndex) {
+				return { ...block, position: idx + 1 };
+			}
+			return { ...block, position: idx };
+		});
+
+		return { insertIndex, shiftedBlocks };
+	},
+
 	async createBlock(
 		noteID: string | number,
 		blockData: CreateBlockData,
@@ -555,16 +610,23 @@ export const noteService = {
 		const note = store.getNotes().find((n) => n.ID === noteID);
 		const isPublic = note?.is_public === true;
 		if (isPublic && store.getOnline()) {
-			collabManager.sendCreateBlock(
-				blockData.block_type_id,
+			const { insertIndex, shiftedBlocks } = await this._prepareInsertPosition(
 				blockData.position,
 			);
+			store.setActiveBlocksSilently(shiftedBlocks);
+			const cachedNote = await db.notesGet(noteID);
+			if (cachedNote) {
+				await db.notesPut({ ...cachedNote, blocks: shiftedBlocks });
+			}
+			collabManager.sendCreateBlock(blockData.block_type_id, insertIndex);
 			return {
-				...blockData,
+				id: `pending-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+				note_id: noteID,
+				block_type_id: blockData.block_type_id,
+				position: insertIndex,
 				content: '',
-				id: `pending-${Date.now()}`,
-				isLocal: true,
 				formatting: { ranges: [] },
+				isLocal: true,
 			} as Block;
 		}
 		const isOnline = store.getOnline();
@@ -802,7 +864,6 @@ export const noteService = {
 			if (blockToFocus) {
 				const newBlock = updatedBlocks.find((b) => b.id === blockToFocus);
 				const position = newBlock?.content?.length || 0;
-				console.log('position:', position);
 				collabManager.sendCursorMove(String(blockToFocus), position);
 			}
 			return;
@@ -1044,5 +1105,9 @@ export const noteService = {
 		} catch (error) {
 			console.error('[noteService] Failed to save formatting to cache:', error);
 		}
+	},
+
+	async exportToPdf(noteId: string | number): Promise<Blob> {
+		return client.getBlob(`/notes/${noteId}/pdf`);
 	},
 };

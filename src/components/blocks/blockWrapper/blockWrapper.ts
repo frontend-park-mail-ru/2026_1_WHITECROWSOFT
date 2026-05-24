@@ -110,7 +110,7 @@ export default class BlockWrapper extends Component {
 							breadcrumb: note.title,
 							text: '',
 							is_public: note.is_public,
-							iconUrl: note.iconUrl,
+							icon: note.icon,
 							coverUrl: note.coverUrl,
 							section: note.section,
 						});

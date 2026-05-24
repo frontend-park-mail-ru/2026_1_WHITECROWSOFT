@@ -48,6 +48,7 @@ const ASSETS_TO_CACHE = [
 	'/icons/validation.svg',
 	'/icons/visibility-off.svg',
 	'/icons/visibility.svg',
+	'/icons/pdf.svg',
 	'/fonts/inter/inter.woff2',
 	'/fonts/inter/inter_italic.woff2',
 	'/fonts/librecaslon/LibreCaslonText-Bold.woff2',

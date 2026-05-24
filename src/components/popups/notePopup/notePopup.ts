@@ -32,6 +32,7 @@ export default class NotePopup extends Component {
 		onShareComplete?: () => void;
 		onPin?: () => void;
 		onPinComplete?: () => void;
+		onPdf?: () => void;
 	} = {};
 
 	constructor(options: NotePopupOptions) {
@@ -40,7 +41,7 @@ export default class NotePopup extends Component {
 		this.anchorElement = options.anchorElement;
 		this.titleElement = options.titleElement;
 		this.boundHandlers.onRenameComplete = options.onRenameComplete;
-		this.boundHandlers.onShareComplete = options.onRenameComplete;
+		this.boundHandlers.onShareComplete = options.onShareComplete;
 		this.boundHandlers.onPinComplete = options.onPinComplete;
 	}
 
@@ -110,6 +111,7 @@ export default class NotePopup extends Component {
 		const renameBtn = this.domElement?.querySelector('[data-action="rename"]');
 		const pinBtn = this.domElement?.querySelector('[data-action="pin"]');
 		const shareBtn = this.domElement?.querySelector('[data-action="share"]');
+		const pdfBtn = this.domElement?.querySelector('[data-action="pdf"]');
 
 		if (deleteBtn) {
 			this.boundHandlers.onDelete = async () => {
@@ -138,6 +140,13 @@ export default class NotePopup extends Component {
 			};
 			shareBtn.addEventListener('click', this.boundHandlers.onShare);
 		}
+
+		if (pdfBtn) {
+			this.boundHandlers.onPdf = () => {
+				this.handlePdf();
+			};
+			pdfBtn.addEventListener('click', this.boundHandlers.onPdf);
+		}
 	}
 
 	private unbindPopupEvents(): void {
@@ -145,6 +154,7 @@ export default class NotePopup extends Component {
 		const renameBtn = this.domElement?.querySelector('[data-action="rename"]');
 		const pinBtn = this.domElement?.querySelector('[data-action="pin"]');
 		const shareBtn = this.domElement?.querySelector('[data-action="share"]');
+		const pdfBtn = this.domElement?.querySelector('[data-action="pdf"]');
 
 		if (deleteBtn && this.boundHandlers.onDelete) {
 			deleteBtn.removeEventListener('click', this.boundHandlers.onDelete);
@@ -157,6 +167,9 @@ export default class NotePopup extends Component {
 		}
 		if (shareBtn && this.boundHandlers.onShare) {
 			shareBtn.removeEventListener('click', this.boundHandlers.onShare);
+		}
+		if (pdfBtn && this.boundHandlers.onPdf) {
+			pdfBtn.removeEventListener('click', this.boundHandlers.onPdf);
 		}
 	}
 
@@ -200,6 +213,33 @@ export default class NotePopup extends Component {
 			await alertDialog({
 				title: 'Ошибка',
 				message: 'Не удалось сделать заметку публичной',
+			});
+		}
+	}
+
+	private async handlePdf(): Promise<void> {
+		try {
+			const blob = await noteService.exportToPdf(this.noteId);
+
+			const note = store.getNotes().find((n) => n.ID === this.noteId);
+			const filename = `${note?.title || 'note'}.pdf`;
+
+			const blobUrl = window.URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = blobUrl;
+			link.download = filename;
+
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+
+			window.URL.revokeObjectURL(blobUrl);
+			this.close();
+		} catch (error) {
+			console.error('Failed to download PDF:', error);
+			await alertDialog({
+				title: 'Ошибка',
+				message: 'Не удалось экспортировать заметку в PDF',
 			});
 		}
 	}

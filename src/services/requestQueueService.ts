@@ -152,6 +152,11 @@ export const queueService = {
 							requestItem.localId,
 							response as AttachmentApiResponse,
 						);
+					} else if (requestItem.type === 'COVER_UPLOAD') {
+						await this._commitLocalCoverId(
+							requestItem.localId,
+							response as { id: string; header_url: string },
+						);
 					} else if (requestItem.type === 'SUBNOTE_CREATE') {
 						const resp = response as {
 							note: {
@@ -179,7 +184,6 @@ export const queueService = {
 						);
 
 						if (localBlockId && resp.block_id) {
-							console.log('asdfasdfasdfasdf');
 							window.dispatchEvent(
 								new CustomEvent('syncBlockId', {
 									detail: {
@@ -406,7 +410,8 @@ export const queueService = {
 		if (
 			type === 'IMAGE_UPLOAD' ||
 			type === 'AUDIO_UPLOAD' ||
-			type === 'VIDEO_UPLOAD'
+			type === 'VIDEO_UPLOAD' ||
+			type === 'COVER_UPLOAD'
 		) {
 			const fileId = (body as { fileId?: string })?.fileId;
 			if (!fileId) {
@@ -538,7 +543,7 @@ export const queueService = {
 			title: localNote.title,
 			updatedAt:
 				serverData.updated_at ?? serverData.updatedAt ?? localNote.updatedAt,
-			iconUrl: localNote.iconUrl || null,
+			icon: localNote.icon || null,
 			blocks: updatedBlocks,
 			isLocal: false,
 		};
@@ -918,6 +923,58 @@ export const queueService = {
 						},
 					}),
 				);
+			}
+		}
+	},
+
+	async _commitLocalCoverId(
+		localId: string,
+		serverData: { id: string; header_url: string },
+	): Promise<void> {
+		let cover = await db.coverGet(localId);
+		if (!cover) {
+			const coversByNoteId = await db.coverGetByNoteId(localId);
+			cover = coversByNoteId;
+		}
+		if (!cover) {
+			console.warn('[Queue] Cover not found for localId:', localId);
+			return;
+		}
+		const newCoverId = serverData.id;
+		const newCoverUrl = serverData.header_url.replace(
+			'http://minio:9000',
+			'/minio',
+		);
+		const updatedCover = {
+			...cover,
+			id: newCoverId,
+			url: newCoverUrl,
+			status: 'synced' as const,
+			syncedAt: Date.now(),
+		};
+		await db.coverDelete(localId);
+		await db.coverPut(updatedCover);
+		await db.queueFileDelete(localId);
+		const noteId = cover.noteId;
+		const note = await db.notesGet(noteId);
+		if (note) {
+			const updatedNote = {
+				...note,
+				coverUrl: newCoverUrl,
+				updatedAt: Date.now(),
+			};
+			await db.notesPut(updatedNote);
+			const storeNotes = store.getNotes();
+			const updatedStoreNotes = storeNotes.map((n) =>
+				n.ID === noteId ? updatedNote : n,
+			);
+			store.setNotesSilently(updatedStoreNotes);
+			const activeNote = store.getActiveNote();
+			if (activeNote && activeNote.ID === noteId) {
+				store.setActiveNote({
+					...activeNote,
+					coverUrl: newCoverUrl,
+				});
 			}
 		}
 	},

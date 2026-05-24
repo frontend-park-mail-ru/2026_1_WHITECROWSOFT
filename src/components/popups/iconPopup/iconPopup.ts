@@ -112,28 +112,28 @@ export default class IconPopup extends Component {
 					this.onRemove?.();
 					window.dispatchEvent(
 						new CustomEvent('noteIconChanged', {
-							detail: { noteId: this.noteId, iconUrl: null },
+							detail: { noteId: this.noteId, icon: null },
 						}),
 					);
 					this.close();
 				} else {
 					const action = btn.getAttribute('data-action') as IconType;
 					if (action) {
-						const iconUrl = `/icons/icon_${action}.svg`;
+						const icon = `/icons/icon_${action}.svg`;
 						await noteService.updateNote(this.noteId, {
 							title: store.getActiveNote()?.title,
-							iconUrl,
+							icon,
 						});
 						const activeNote = store.getActiveNote();
 						if (activeNote && activeNote.ID === this.noteId) {
 							store.setActiveNote({
 								...activeNote,
-								iconUrl: iconUrl,
+								icon: icon,
 							});
 						}
 						window.dispatchEvent(
 							new CustomEvent('noteIconChanged', {
-								detail: { noteId: this.noteId, iconUrl },
+								detail: { noteId: this.noteId, icon },
 							}),
 						);
 						this.onSelect?.(action);

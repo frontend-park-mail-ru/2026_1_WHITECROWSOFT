@@ -87,5 +87,9 @@ export default class CoverBlock extends Component {
 		}
 	}
 
+	getCoverUrl(): string | null {
+		return this.options.coverUrl;
+	}
+
 	destroy(): void {}
 }

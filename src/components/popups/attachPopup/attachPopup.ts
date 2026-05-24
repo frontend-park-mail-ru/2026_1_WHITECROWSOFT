@@ -182,7 +182,6 @@ export default class AttachPopup extends Component {
 
 		if (tableBtn) {
 			this.boundHandlers.onTableClick = () => {
-				console.log('Add table block');
 				this.close();
 			};
 			tableBtn.addEventListener('click', this.boundHandlers.onTableClick);
