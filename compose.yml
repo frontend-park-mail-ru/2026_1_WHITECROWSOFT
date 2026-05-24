@@ -132,6 +132,24 @@ services:
     networks:
       - noterian_network
 
+  og-sidecar:
+    build:
+      context: ./og-sidecar
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      INDEX_URL: "http://frontend/"
+      API_BASE: "http://main:8000"
+      SITE_TAGLINE: "Прочитайте эту заметку в Noterian"
+    expose:
+      - "3000"
+    depends_on:
+      - frontend
+      - main
+    networks:
+      - noterian_network
+
 volumes:
   postgres_data:
   minio_data:
