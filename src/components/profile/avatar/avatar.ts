@@ -24,7 +24,8 @@ export default class ProfileAvatar extends Component {
 	}
 
 	protected getTemplateData() {
-		const avatarUrl = this.user?.avatar || ProfileAvatar.DEFAULT_AVATAR;
+		let avatarUrl = this.user?.avatar || ProfileAvatar.DEFAULT_AVATAR;
+		avatarUrl = avatarUrl.replace('http://minio:9000', '/minio');
 		return {
 			avatarUrl: avatarUrl,
 			hasAvatar:
