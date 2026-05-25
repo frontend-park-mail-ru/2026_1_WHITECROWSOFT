@@ -1,3 +1,4 @@
+import 'virtual:svg-icons-register';
 import { db } from './db.js';
 import { router } from './route/router.js';
 import { queueService } from './services/requestQueueService.js';

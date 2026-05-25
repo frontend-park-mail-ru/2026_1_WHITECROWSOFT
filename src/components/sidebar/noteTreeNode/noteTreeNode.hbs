@@ -3,20 +3,20 @@
         <div class="note-tree-node__indent" style="width: {{level}}px;"></div>
         {{#if hasChildren}}
             <button class="note-tree-node__toggle" data-action="toggle">
-                <img src="/icons/expand.svg" class="note-tree-node__toggle-icon {{#if isExpanded}}note-tree-node__toggle-icon--rotated{{/if}}">
+                {{{svgIcon "expand" class="note-tree-node__toggle-icon {{#if isExpanded}}note-tree-node__toggle-icon--rotated{{/if}}" alt="Toggle"}}}
             </button>
-            <img src="{{#if icon}}{{icon}}{{else}}/icons/document.svg{{/if}}" class="note-tree-node__icon">
+            {{{svgIcon (ternary icon icon "document") class="note-tree-node__icon" alt="Note icon"}}}
         {{else}}
-            <img src="{{#if icon}}{{icon}}{{else}}/icons/document.svg{{/if}}" class="note-tree-node__icon">
+            {{{svgIcon (ternary icon icon "document") class="note-tree-node__icon" alt="Note icon"}}}
         {{/if}}
         
         <span class="note-tree-node__title" data-name="noteTitle">{{title}}</span>
         <div class="note-tree-node__actions">
             <button class="note-tree-node__action" data-action="addSubnote" title="Добавить подзаметку">
-                <img src="/icons/add.svg" class="icon">
+                {{{svgIcon "add" class="icon" alt="Add subnote"}}}
             </button>
             <button class="note-tree-node__action" data-action="settings" title="Настройки">
-                <img src="/icons/more.svg" class="icon">
+                {{{svgIcon "more" class="icon" alt="More"}}}
             </button>
         </div>
     </div>

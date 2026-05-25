@@ -15,24 +15,8 @@
 		/>
 		{{#if (eq type "password")}}
 		<span class="passwordToggle" data-toggle-password>
-			<img
-				src="/icons/visibility-off.svg"
-				class="icon input__eyeIcon input__eyeIcon--open"
-				style="display: {{#if (eq name "password")}}
-					{{#if ../showPassword}}none{{else}}block{{/if}}
-				{{else if (eq name "passwordConfirm")}}
-					{{#if ../showPasswordConfirm}}none{{else}}block{{/if}}
-				{{/if}}"
-			/>
-			<img
-				src="/icons/visibility.svg"
-				class="icon input__eyeIcon input__eyeIcon--closed"
-				style="display: {{#if (eq name "password")}}
-					{{#if ../showPassword}}block{{else}}none{{/if}}
-				{{else if (eq name "passwordConfirm")}}
-					{{#if ../showPasswordConfirm}}block{{else}}none{{/if}}
-				{{/if}}"
-			/>
+			{{{svgIcon "visibility-off" class="icon input__eyeIcon input__eyeIcon--open" alt="Hide password" style="display: {{#if (eq name \"password\")}}{{#if ../showPassword}}none{{else}}block{{/if}}{{else if (eq name \"passwordConfirm\")}}{{#if ../showPasswordConfirm}}none{{else}}block{{/if}}{{/if}}"}}}
+			{{{svgIcon "visibility" class="icon input__eyeIcon input__eyeIcon--closed" alt="Show password" style="display: {{#if (eq name \"password\")}}{{#if ../showPassword}}block{{else}}none{{/if}}{{else if (eq name \"passwordConfirm\")}}{{#if ../showPasswordConfirm}}block{{else}}none{{/if}}{{/if}}"}}}
 		</span>
 		{{/if}}
         {{#if (eq withrequirements "true") }}

@@ -114,6 +114,21 @@ interface HelpersMap {
 	[key: string]: HandlebarsHelper;
 }
 
+function normalizeIconName(icon: string): string {
+	const match = icon.match(/([^/\\]+)\.svg$/);
+	return match ? match[1] : icon;
+}
+
+function buildSvgAttributes(hash: Record<string, unknown>): string {
+	return Object.entries(hash)
+		.filter(([key]) => key !== 'alt')
+		.map(
+			([key, value]) =>
+				`${key}="${Handlebars.escapeExpression(String(value))}"`,
+		)
+		.join(' ');
+}
+
 /**
  * Регистрирует Handlebars helpers для использования в шаблонах
  */
@@ -123,6 +138,24 @@ export function registerHelpers(): void {
 		neq: (a: unknown, b: unknown) => a !== b,
 		and: (a: unknown, b: unknown) => !!(a && b),
 		or: (a: unknown, b: unknown) => !!(a || b),
+		ternary: (condition: unknown, truthy: unknown, falsy: unknown) =>
+			condition ? truthy : falsy,
+		svgIcon: (name: unknown, options: any) => {
+			const iconName = normalizeIconName(String(name || ''));
+			const hash = options?.hash || {};
+			const alt =
+				typeof hash.alt === 'string'
+					? Handlebars.escapeExpression(hash.alt)
+					: null;
+			const attributes = buildSvgAttributes(hash);
+			const accessibility = alt
+				? `aria-label="${alt}" role="img"`
+				: 'aria-hidden="true"';
+			const svg = `<svg ${attributes} ${accessibility} xmlns="http://www.w3.org/2000/svg"><use xlink:href="#${Handlebars.escapeExpression(
+				iconName,
+			)}" href="#${Handlebars.escapeExpression(iconName)}"></use></svg>`;
+			return new Handlebars.SafeString(svg);
+		},
 	};
 
 	Object.entries(helpers).forEach(([name, fn]) => {

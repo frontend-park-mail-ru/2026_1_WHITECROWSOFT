@@ -6,12 +6,12 @@
 			data-action='toggleSidebar'
 			aria-label='Свернуть боковую панель'
 		>
-			<img src='/icons/menu.svg' alt='' />
+			{{{svgIcon "menu" class="icon" alt="Toggle Sidebar"}}}
 		</button>
 	</div>
 	<div class='sidebar__actionMenu'>
 		<div class='search search--disabled'>
-			<img src='/icons/search.svg' class='icon search__icon' />
+			{{{svgIcon "search" class="icon search__icon" alt="Search"}}}
 			<input
 				type='text'
 				class='search__input input input--disabled'
@@ -23,15 +23,15 @@
 			class='profileButton sidebar__btn'
 			data-action='profile'
 		>
-			<img src='/icons/profile.svg' class='icon' />
+			{{{svgIcon "profile" class="icon" alt="Profile"}}}
 			<span id='profile-username'>{{user.username}}</span>
 		</button>
 		<button id='homeButton' class='homeButton sidebar__btn' data-action='home'>
-			<img src='/icons/home.svg' class='icon' />
+			{{{svgIcon "home" class="icon" alt="Home"}}}
 			Главная
 		</button>
 		<button class='sidebar__btn sidebar__btn--disabled'>
-			<img src='/icons/bookmark.svg' class='icon' />
+			{{{svgIcon "bookmark" class="icon" alt="Library"}}}
 			Библиотека
 		</button>
 	</div>
@@ -42,12 +42,12 @@
 		<div class='sidebar__section' data-section='shared'></div>
 	</div>
 	<button class='sidebar__btn newNoteButton' data-action='newNote'>
-		<img src='/icons/add.svg' class='icon' />
+		{{{svgIcon "add" class="icon" alt="New note"}}}
 		Новая Заметка
 	</button>
 	<hr class='sidebar__barrier' />
 	<button class='sidebar__btn bottom sidebar__btn--disabled'>
-		<img src='/icons/settings.svg' class='icon' />
+		{{{svgIcon "settings" class="icon" alt="Settings"}}}
 		Настройки
 	</button>
 	<div
