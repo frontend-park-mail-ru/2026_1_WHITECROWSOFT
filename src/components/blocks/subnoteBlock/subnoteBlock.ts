@@ -2,6 +2,7 @@ import { store } from '../../../store.js';
 import type { Block } from '../../../types.js';
 import Component from '../../component.js';
 import templateString from './subnoteBlock.hbs?raw';
+import './subnoteBlock.scss';
 
 interface SubnoteBlockOptions {
 	block: Block;
@@ -128,6 +129,11 @@ export default class SubnoteBlock extends Component {
 		if (this.subnoteId && this.domElement) {
 			this.domElement.dataset.noteId = String(this.subnoteId);
 		}
+	}
+
+	updateBlockId(newBlockId: string | number): void {
+		this.block.id = newBlockId;
+		this.domElement?.setAttribute('data-block-id', String(newBlockId));
 	}
 
 	setCursorAtStart(): void {}

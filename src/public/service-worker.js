@@ -1,10 +1,8 @@
-const CACHE_VERSION = 'noterian-v6';
+const CACHE_VERSION = 'noterian-v7';
 const CACHE_NAME = `noterian-static-${CACHE_VERSION}`;
 const ASSETS_TO_CACHE = [
 	'/',
 	'/index.html',
-	'/assets/style/main.scss',
-	'/assets/style/authForm.scss',
 	'/icons/add.svg',
 	'/icons/attach_picture.svg',
 	'/icons/attach_table.svg',
@@ -35,12 +33,20 @@ const ASSETS_TO_CACHE = [
 	'/icons/text_cross.svg',
 	'/icons/text_formula.svg',
 	'/icons/text_italica.svg',
+	'/icons/header_cover.svg',
+	'/icons/header_icon.svg',
+	'/icons/icon_document.svg',
+	'/icons/icon_draft.svg',
+	'/icons/icon_favorite.svg',
+	'/icons/icon_personal.svg',
+	'/icons/icon_shared.svg',
 	'/icons/text_link.svg',
 	'/icons/text_underscore.svg',
 	'/icons/trash.svg',
 	'/icons/validation.svg',
 	'/icons/visibility-off.svg',
 	'/icons/visibility.svg',
+	'/icons/pdf.svg',
 	'/fonts/inter/inter.woff2',
 	'/fonts/inter/inter_italic.woff2',
 	'/fonts/librecaslon/LibreCaslonText-Bold.woff2',

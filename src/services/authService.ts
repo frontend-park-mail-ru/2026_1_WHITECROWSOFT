@@ -75,6 +75,9 @@ export const authService = {
 			store.setActiveBlocks([]);
 			store.setOnline(navigator.onLine);
 
+			localStorage.removeItem('NoterianCookieCSRF');
+			localStorage.removeItem('NoterianCookieJWT');
+
 			await db.clearAllUserData();
 		}
 	},
@@ -99,23 +102,11 @@ export const authService = {
 		}
 		try {
 			const user = await client.get<User>('/profile');
-			let avatarUrl: string | null = null;
-			try {
-				const avatar =
-					await client.get<AvatarUploadResponse>('/profile/avatar');
-				if (avatar?.AvatarURL) {
-					avatarUrl = avatar.AvatarURL;
-					avatarUrl = avatarUrl.replace('http://minio:9000', '/minio');
-					avatarUrl = avatarUrl.replace('/minio/minio/', '/minio/');
-				}
-			} catch (avatarError) {
-				console.warn('[AuthService] Failed to fetch avatar:', avatarError);
-			}
 			const currentUser: User = {
 				id: user.id,
 				username: user.username,
 				email: user.email || null,
-				avatar: avatarUrl || null,
+				avatar: user.avatar || null,
 			};
 			await db.settingsSet('user', currentUser);
 			store.setUser(currentUser);

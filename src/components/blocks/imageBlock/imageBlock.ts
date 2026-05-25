@@ -44,10 +44,7 @@ export default class ImageBlock extends Component {
 				this.block.content.trim() !== '' &&
 				this.block.content !== '{}'
 			) {
-				const imageData = JSON.parse(this.block.content) as {
-					attachmentId: string | number;
-				};
-				const attachmentId = imageData.attachmentId;
+				const attachmentId = this.block.content;
 				const noteId = this.block.note_id || store.getActiveNoteId();
 				if (noteId && attachmentId) {
 					const imageUrl = await attachmentService.getImageUrl(
@@ -96,6 +93,11 @@ export default class ImageBlock extends Component {
 		imgEl.classList.remove('hidden');
 		imgEl.classList.add('loading');
 		void this.loadImage();
+	}
+
+	updateBlockId(newBlockId: string | number): void {
+		this.block.id = newBlockId;
+		this.domElement?.setAttribute('data-block-id', String(newBlockId));
 	}
 
 	private bindEvents(): void {

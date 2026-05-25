@@ -1,0 +1,23 @@
+<div class="iconPopup">
+    <div class="iconPopup__text">Иконка</div>
+    <div class="iconPopup__row">
+        <button class="iconPopup__button {{#if isDocument}}iconPopup__button--active{{/if}}" data-action="document">
+            <img src="/icons/icon_document.svg" class="iconPopup__icon"/>
+        </button>
+        <button class="iconPopup__button {{#if isShared}}iconPopup__button--active{{/if}}" data-action="shared">
+            <img src="/icons/icon_shared.svg" class="iconPopup__icon"/>
+        </button>
+        <button class="iconPopup__button {{#if isFavorite}}iconPopup__button--active{{/if}}" data-action="favorite">
+            <img src="/icons/icon_favorite.svg" class="iconPopup__icon"/>
+        </button>
+        <button class="iconPopup__button {{#if isDraft}}iconPopup__button--active{{/if}}" data-action="draft">
+            <img src="/icons/icon_draft.svg" class="iconPopup__icon"/>
+        </button>
+        <button class="iconPopup__button {{#if isPersonal}}iconPopup__button--active{{/if}}" data-action="personal">
+            <img src="/icons/icon_personal.svg" class="iconPopup__icon"/>
+        </button>
+        <button class="iconPopup__button" data-action="delete">
+            <img src="/icons/trash.svg" class="iconPopup__icon"/>
+        </button>
+    </div>
+</div>

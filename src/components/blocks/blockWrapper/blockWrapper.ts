@@ -1,7 +1,9 @@
+import { db } from '../../../db.js';
 import { router } from '../../../route/router.js';
 import { store } from '../../../store.js';
 import type { Block } from '../../../types.js';
 import Component from '../../component.js';
+import BlockPopup from '../../popups/blockPopup/blockPopup.js';
 import ImageBlock from '../imageBlock/imageBlock.js';
 import MusicBlock from '../musicBlock/musicBlock.js';
 import SubnoteBlock from '../subnoteBlock/subnoteBlock.js';
@@ -50,6 +52,7 @@ export default class BlockWrapper extends Component {
 	private onAddBlock?: (afterBlockId: string) => void;
 	private onDragStart?: (blockId: string, event: DragEvent) => void;
 	private onFocusBlock?: (blockId: string) => void;
+	private blockPopup: BlockPopup | null = null;
 
 	constructor(options: BlockWrapperOptions) {
 		super();
@@ -100,8 +103,22 @@ export default class BlockWrapper extends Component {
 				block: this.block,
 				onDelete: this.onDelete,
 				onOpen: (subnoteId: string | number) => {
-					store.setActiveNoteId(subnoteId);
-					router.push('/');
+					const note = store.getNotes().find((note) => note.ID === subnoteId);
+					if (note) {
+						store.setActiveNote({
+							ID: note.ID,
+							title: note.title,
+							breadcrumb: note.title,
+							text: '',
+							is_public: note.is_public,
+							icon: note.icon,
+							coverUrl: note.coverUrl,
+							section: note.section,
+						});
+						store.setActiveNoteId(subnoteId);
+						db.settingsSet('activeNoteId', subnoteId);
+						router.push(`/?note=${subnoteId}`);
+					}
 				},
 				onFocus: () => this.onFocusBlock?.(String(this.block.id)),
 			});
@@ -162,6 +179,12 @@ export default class BlockWrapper extends Component {
 		this.renderBlockContent();
 	}
 
+	updateBlockId(newBlockId: string | number): void {
+		this.block.id = newBlockId;
+		this.domElement?.setAttribute('data-block-id', String(newBlockId));
+		this.blockComponent?.updateBlockId(newBlockId);
+	}
+
 	private bindEvents(): void {
 		const addBtn = this.domElement?.querySelector('[data-action="add"]');
 		const dragBtn = this.domElement?.querySelector('[data-action="drag"]');
@@ -171,12 +194,35 @@ export default class BlockWrapper extends Component {
 		});
 		if (dragBtn) {
 			dragBtn.addEventListener('dragstart', this.handleDragStart.bind(this));
+			dragBtn.addEventListener('click', this.handleDragBtnClick.bind(this));
 		}
 	}
 
 	private handleDragStart(e: Event): void {
 		const dragEvent = e as DragEvent;
 		this.onDragStart?.(String(this.block.id), dragEvent);
+	}
+
+	private handleDragBtnClick(e: Event): void {
+		e.stopPropagation();
+		if (this.blockPopup) {
+			this.blockPopup.close();
+			this.blockPopup = null;
+			return;
+		}
+		const dragBtn = this.domElement?.querySelector(
+			'[data-action="drag"]',
+		) as HTMLElement | null;
+		if (!dragBtn) return;
+		this.blockPopup = new BlockPopup({
+			blockId: String(this.block.id),
+			anchorElement: dragBtn,
+			onDelete: this.onDelete,
+			onClose: () => {
+				this.blockPopup = null;
+			},
+		});
+		this.blockPopup.open();
 	}
 
 	focus(): void {
@@ -198,6 +244,10 @@ export default class BlockWrapper extends Component {
 	}
 
 	destroy(): void {
+		if (this.blockPopup) {
+			this.blockPopup.close();
+			this.blockPopup = null;
+		}
 		if (this.blockComponent && 'destroy' in this.blockComponent) {
 			(this.blockComponent as { destroy: () => void }).destroy();
 		}

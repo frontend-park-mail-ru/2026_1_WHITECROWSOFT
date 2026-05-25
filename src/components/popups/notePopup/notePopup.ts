@@ -1,7 +1,9 @@
 import '../../../assets/style/genericPopup.scss';
 import { noteService } from '../../../services/noteService.js';
+import { store } from '../../../store.js';
 import { getElementPosition } from '../../../utils/utils.js';
 import Component from '../../component.js';
+import { alertDialog, confirmDialog } from '../confirmDialog/confirmDialog.js';
 import { collabManager } from './../../../utils/collaborativeManager.js';
 import templateString from './notePopup.hbs?raw';
 
@@ -10,6 +12,8 @@ interface NotePopupOptions {
 	anchorElement: HTMLElement;
 	titleElement?: HTMLElement;
 	onRenameComplete?: () => void;
+	onShareComplete?: () => void;
+	onPinComplete?: () => void;
 }
 
 export default class NotePopup extends Component {
@@ -25,7 +29,10 @@ export default class NotePopup extends Component {
 		onRename?: () => void;
 		onRenameComplete?: () => void;
 		onShare?: () => void;
+		onShareComplete?: () => void;
 		onPin?: () => void;
+		onPinComplete?: () => void;
+		onPdf?: () => void;
 	} = {};
 
 	constructor(options: NotePopupOptions) {
@@ -34,6 +41,8 @@ export default class NotePopup extends Component {
 		this.anchorElement = options.anchorElement;
 		this.titleElement = options.titleElement;
 		this.boundHandlers.onRenameComplete = options.onRenameComplete;
+		this.boundHandlers.onShareComplete = options.onShareComplete;
+		this.boundHandlers.onPinComplete = options.onPinComplete;
 	}
 
 	protected getTemplateData() {
@@ -102,6 +111,7 @@ export default class NotePopup extends Component {
 		const renameBtn = this.domElement?.querySelector('[data-action="rename"]');
 		const pinBtn = this.domElement?.querySelector('[data-action="pin"]');
 		const shareBtn = this.domElement?.querySelector('[data-action="share"]');
+		const pdfBtn = this.domElement?.querySelector('[data-action="pdf"]');
 
 		if (deleteBtn) {
 			this.boundHandlers.onDelete = async () => {
@@ -130,6 +140,13 @@ export default class NotePopup extends Component {
 			};
 			shareBtn.addEventListener('click', this.boundHandlers.onShare);
 		}
+
+		if (pdfBtn) {
+			this.boundHandlers.onPdf = () => {
+				this.handlePdf();
+			};
+			pdfBtn.addEventListener('click', this.boundHandlers.onPdf);
+		}
 	}
 
 	private unbindPopupEvents(): void {
@@ -137,6 +154,7 @@ export default class NotePopup extends Component {
 		const renameBtn = this.domElement?.querySelector('[data-action="rename"]');
 		const pinBtn = this.domElement?.querySelector('[data-action="pin"]');
 		const shareBtn = this.domElement?.querySelector('[data-action="share"]');
+		const pdfBtn = this.domElement?.querySelector('[data-action="pdf"]');
 
 		if (deleteBtn && this.boundHandlers.onDelete) {
 			deleteBtn.removeEventListener('click', this.boundHandlers.onDelete);
@@ -150,10 +168,18 @@ export default class NotePopup extends Component {
 		if (shareBtn && this.boundHandlers.onShare) {
 			shareBtn.removeEventListener('click', this.boundHandlers.onShare);
 		}
+		if (pdfBtn && this.boundHandlers.onPdf) {
+			pdfBtn.removeEventListener('click', this.boundHandlers.onPdf);
+		}
 	}
 
 	private async handleDelete(): Promise<void> {
-		const confirmed = confirm('Вы действительно хотите удалить эту заметку?');
+		const confirmed = await confirmDialog({
+			title: 'Удаление заметки',
+			message: 'Вы действительно хотите удалить эту заметку?',
+			confirmText: 'Удалить',
+			danger: true,
+		});
 		if (!confirmed) return;
 
 		try {
@@ -175,14 +201,46 @@ export default class NotePopup extends Component {
 			const shareUrl = `${window.location.origin}/?note=${noteIdStr}`;
 			await navigator.clipboard.writeText(shareUrl);
 			collabManager.startCollab(noteIdStr);
-			alert(
-				'Заметка стала публичной. Ссылка на заметку скопирована в буфер обмена',
-			);
-
+			await alertDialog({
+				title: 'Заметка опубликована',
+				message:
+					'Заметка стала публичной. Ссылка на заметку скопирована в буфер обмена',
+			});
+			this.boundHandlers.onShareComplete?.();
 			this.close();
 		} catch (error) {
 			console.error('Failed to share note:', error);
-			alert('Не удалось сделать заметку публичной');
+			await alertDialog({
+				title: 'Ошибка',
+				message: 'Не удалось сделать заметку публичной',
+			});
+		}
+	}
+
+	private async handlePdf(): Promise<void> {
+		try {
+			const blob = await noteService.exportToPdf(this.noteId);
+
+			const note = store.getNotes().find((n) => n.ID === this.noteId);
+			const filename = `${note?.title || 'note'}.pdf`;
+
+			const blobUrl = window.URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = blobUrl;
+			link.download = filename;
+
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+
+			window.URL.revokeObjectURL(blobUrl);
+			this.close();
+		} catch (error) {
+			console.error('Failed to download PDF:', error);
+			await alertDialog({
+				title: 'Ошибка',
+				message: 'Не удалось экспортировать заметку в PDF',
+			});
 		}
 	}
 
@@ -251,7 +309,19 @@ export default class NotePopup extends Component {
 	}
 
 	private async handlePin(): Promise<void> {
-		console.log('PIN');
+		try {
+			const note = store
+				.getNotes()
+				.filter((note) => note.ID === this.noteId)[0];
+			await noteService.updateNote(this.noteId, {
+				is_favorite: !note.is_favorite,
+				title: this.titleElement?.textContent,
+			});
+			this.boundHandlers.onPinComplete?.();
+			this.close();
+		} catch (error) {
+			console.error('Failed to pinn note:', error);
+		}
 	}
 
 	close(): void {

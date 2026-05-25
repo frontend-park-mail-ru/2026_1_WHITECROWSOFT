@@ -82,7 +82,16 @@ h5 {
 	min-height: 100vh;
 	&__layout {
 		display: grid;
-		grid-template-columns: 250px 1fr;
+		grid-template-columns: var(--sidebar-width, 250px) 1fr;
+
+		&[data-collapsed='true'] {
+			grid-template-columns: 0px 1fr;
+		}
+
+		&[data-resizing='true'] {
+			cursor: col-resize;
+			user-select: none;
+		}
 	}
 	&__mainContainer {
 		grid-column: 2/2;
@@ -90,7 +99,6 @@ h5 {
 		overflow: hidden;
 	}
 	&__sidebarToggle {
-		/* display: none; */
 		position: absolute;
 		bottom: 16px;
 		left: 16px;
@@ -106,10 +114,12 @@ h5 {
 			height: 24px;
 		}
 	}
+	&__layout:not([data-collapsed='true']) + &__sidebarToggle {
+		display: none;
+	}
 }
 
 .input {
-	min-width: 200px;
 	height: 35px;
 	width: 100%;
 	padding: 8px 40px 8px 16px;

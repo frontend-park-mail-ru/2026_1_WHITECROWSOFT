@@ -10,6 +10,7 @@ import { CollaborativeCursorsRenderer } from '../../utils/collaborativeCursorsRe
 import { collabManager } from '../../utils/collaborativeManager.js';
 import { handleAuthError } from '../../utils/handleAuthError.js';
 import { registerHelpers } from '../../utils/utils.js';
+import { router } from './../../route/router.js';
 import templateText from './mainPage.hbs?raw';
 import './mainPage.scss';
 
@@ -46,17 +47,19 @@ export async function initMainPage(
 	}
 
 	const sharedNoteId = data?.query?.note;
+	console.log(sharedNoteId);
 	let savedNoteId = await db.settingsGet<string | number>('activeNoteId');
 
 	if (sharedNoteId) {
 		savedNoteId = sharedNoteId;
-		const newUrl = window.location.pathname;
-		window.history.replaceState({}, '', newUrl);
+		await noteService.getNote(sharedNoteId);
+		router.push(`/?note=${savedNoteId}`);
+		// const newUrl = window.location.pathname;
+		// window.history.replaceState({}, '', newUrl);
 	}
 
-	if (savedNoteId && !activeNote) {
+	if (savedNoteId) {
 		try {
-			await noteService.getNote(savedNoteId);
 			activeNote = store.getActiveNote();
 		} catch (error) {
 			if (handleAuthError(error)) return;
@@ -178,16 +181,6 @@ export async function initMainPage(
 		}
 	}
 	isInitializing = false;
-
-	window.addEventListener('beforeunload', async () => {
-		await noteBody?.saveAllBlocks();
-	});
-
-	document.addEventListener('visibilitychange', () => {
-		if (document.visibilityState === 'hidden') {
-			noteBody?.saveAllBlocks();
-		}
-	});
 }
 
 async function handleAddBlock(afterBlockId: string): Promise<void> {

@@ -46,11 +46,7 @@ export default class MusicBlock extends Component {
 				this.block.content.trim() !== '' &&
 				this.block.content !== '{}'
 			) {
-				const musicData = JSON.parse(this.block.content) as {
-					attachmentId: string | number;
-					url?: string;
-				};
-				const attachmentId = musicData.attachmentId;
+				const attachmentId = this.block.content;
 				const noteId = this.block.note_id || store.getActiveNoteId();
 
 				if (noteId && attachmentId) {
@@ -120,6 +116,11 @@ export default class MusicBlock extends Component {
 		}
 
 		void this.loadAudio();
+	}
+
+	updateBlockId(newBlockId: string | number): void {
+		this.block.id = newBlockId;
+		this.domElement?.setAttribute('data-block-id', String(newBlockId));
 	}
 
 	focus(): void {

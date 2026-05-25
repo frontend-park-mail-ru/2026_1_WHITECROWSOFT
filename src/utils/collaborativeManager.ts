@@ -1,3 +1,4 @@
+import { db } from '../db.js';
 import { wsService } from '../services/websocketService.js';
 import { store } from '../store.js';
 import type {
@@ -27,7 +28,6 @@ export class CollaborativeManager {
 	 * Очищает предыдущих участников и подключается к новому WebSocket
 	 */
 	async startCollab(noteId: string): Promise<void> {
-		// Проверяем, является ли заметка публичной
 		const note = store.getNotes().find((n) => String(n.ID) === noteId);
 		if (!note || !note.is_public) {
 			return;
@@ -70,7 +70,6 @@ export class CollaborativeManager {
 	 * Закрывает соединение и очищает список подключенных пользователей
 	 */
 	stopCollab(): void {
-
 		if (this.unsubscribeWs) {
 			this.unsubscribeWs();
 			this.unsubscribeWs = null;
@@ -257,9 +256,21 @@ export class CollaborativeManager {
 
 		wsService.send({
 			type: 'update_note_title',
-			msg: {
-				title,
-			},
+			msg: title,
+		});
+	}
+
+	sendUploadAttachment(data: {
+		fileName: string;
+		fileData: string;
+		hasPosition: boolean;
+		position: number;
+	}): void {
+		if (!wsService.isConnected()) return;
+
+		wsService.send({
+			type: 'upload_attachment',
+			msg: data,
 		});
 	}
 
@@ -299,6 +310,9 @@ export class CollaborativeManager {
 					break;
 				case 'update_note_title':
 					this.handleUpdateNoteTitle(message);
+					break;
+				case 'upload_attachment':
+					this.handleUploadAttachment(message);
 					break;
 				case 'sync_state':
 					this.handleSyncState(message);
@@ -462,7 +476,7 @@ export class CollaborativeManager {
 
 		block.content = newContent;
 		store.setActiveBlocks([...blocks]);
-		
+
 		window.dispatchEvent(
 			new CustomEvent('collaborativeBlockUpdate', {
 				detail: {
@@ -529,8 +543,8 @@ export class CollaborativeManager {
 	 * Обрабатывает создание нового блока от другого участника
 	 * Вставляет блок в нужную позицию и синхронизирует позиции
 	 */
-	private handleCreateBlock(message: WebSocketMessage): void {
-		// if (message.is_local) return;
+	private async handleCreateBlock(message: WebSocketMessage): Promise<void> {
+		//if (message.is_local) return;
 
 		const msg = message.msg as CreateBlockMsg & {
 			id: string;
@@ -551,7 +565,7 @@ export class CollaborativeManager {
 			b.position = i;
 		});
 		store.setActiveBlocks([...blocks]);
-
+		store.setPendingFocus(newBlock.id, 'start');
 		const activeNoteId = store.getActiveNoteId();
 		if (activeNoteId) {
 			const currentNotes = store.getNotes();
@@ -563,27 +577,18 @@ export class CollaborativeManager {
 				};
 				const updatedNotes = [...currentNotes];
 				updatedNotes[noteIndex] = updatedNote;
-				store.setNotes(updatedNotes);
+				store.setNotesSilently(updatedNotes);
 			}
+			await db.notesUpdateBlocks(activeNoteId, blocks);
 		}
-
-		window.dispatchEvent(
-			new CustomEvent('collaborativeBlockCreate', {
-				detail: {
-					block: newBlock,
-					userId: message.userId,
-					focusBlockId: newBlock.id,
-				},
-			}),
-		);
 	}
 
 	/**
 	 * Обрабатывает удаление блока другим участником
 	 * Удаляет блок из store и пересчитывает позиции
 	 */
-	private handleDeleteBlock(message: WebSocketMessage): void {
-		if (message.is_local) return;
+	private async handleDeleteBlock(message: WebSocketMessage): Promise<void> {
+		// if (message.is_local) return;
 
 		const blockId = message.msg;
 		const blocks = store.getActiveBlocks();
@@ -596,13 +601,20 @@ export class CollaborativeManager {
 			blockIndex < blocks.length - 1 ? blocks[blockIndex + 1].id : null;
 		const blockToFocus = prevBlockId || nextBlockId;
 
-		const focusBlockId = blockToFocus;
+		if (blockToFocus) {
+			const newBlock = blocks.find((b) => b.id === blockToFocus);
+			const position = newBlock?.content?.length || 0;
+			collabManager.sendCursorMove(String(blockToFocus), position);
+		}
 
 		blocks.splice(blockIndex, 1);
 		blocks.forEach((b, i) => {
 			b.position = i;
 		});
 		store.setActiveBlocks([...blocks]);
+		if (blockToFocus) {
+			store.setPendingFocus(blockToFocus, 'end');
+		}
 
 		const activeNoteId = store.getActiveNoteId();
 		if (activeNoteId) {
@@ -615,37 +627,9 @@ export class CollaborativeManager {
 				};
 				const updatedNotes = [...currentNotes];
 				updatedNotes[noteIndex] = updatedNote;
-				store.setNotes(updatedNotes);
+				store.setNotesSilently(updatedNotes);
 			}
-		}
-
-		window.dispatchEvent(
-			new CustomEvent('collaborativeBlockDelete', {
-				detail: {
-					blockId: blockId,
-					userId: message.userId,
-					focusBlockId: focusBlockId,
-				},
-			}),
-		);
-
-		if (focusBlockId) {
-			const blockElement = document.querySelector(
-				`.note__block[data-block-id="${focusBlockId}"]`,
-			);
-			if (blockElement) {
-				const textLength = blockElement.textContent?.length || 0;
-				collabManager.sendCursorMove(String(focusBlockId), textLength);
-				window.dispatchEvent(
-					new CustomEvent('collaborativeFocusBlock', {
-						detail: {
-							blockId: focusBlockId,
-							position: 'end',
-							userId: message.userId,
-						},
-					}),
-				);
-			}
+			await db.notesUpdateBlocks(activeNoteId, blocks);
 		}
 	}
 
@@ -688,23 +672,119 @@ export class CollaborativeManager {
 	 */
 	private handleUpdateNoteTitle(message: WebSocketMessage): void {
 		// if (message.is_local) return;
-
 		const msg = message.msg as { title: string };
-		const activeNote = store.getActiveNote();
-
-		if (!activeNote) return;
-
-		activeNote.title = msg.title;
-		store.setActiveNote(activeNote);
-
-		window.dispatchEvent(
-			new CustomEvent('collaborativeTitleUpdate', {
-				detail: {
-					title: msg.title,
-					userId: message.userId,
-				},
-			}),
+		const currentNotes = store.getNotes();
+		const activeNoteId = store.getActiveNoteId();
+		const activeNote = store
+			.getNotes()
+			.find((note) => note.ID === store.getActiveNoteId());
+		const noteIndex = currentNotes.findIndex(
+			(n) => String(n.ID) === activeNoteId,
 		);
+		if (noteIndex === -1) return;
+		const oldNote = currentNotes[noteIndex];
+		const updatedNote = {
+			...oldNote,
+			title: msg.title,
+			updatedAt: Date.now(),
+		};
+		const updatedNotes = [...currentNotes];
+		updatedNotes[noteIndex] = updatedNote;
+		store.setNotes(updatedNotes);
+		if (activeNote) {
+			store.setActiveNote({
+				ID: activeNote.ID,
+				title: msg.title,
+				text: '',
+				section: activeNote.section,
+				icon: activeNote.icon,
+				is_public: activeNote.is_public,
+				coverUrl: activeNote.coverUrl,
+				breadcrumb: activeNote.title,
+			});
+		}
+		db.notesPut(updatedNote);
+	}
+
+	/**
+	 * Обрабатывает загрузку вложения другим участником
+	 * Блок уже создан на сервере, нужно только добавить его в UI и кэш
+	 */
+	private async handleUploadAttachment(
+		message: WebSocketMessage,
+	): Promise<void> {
+		const msg = message.msg as {
+			id: string;
+			block_id: string;
+			note_id: string;
+			attach_url: string;
+			created_at: string;
+			position: number;
+			mime_type: string;
+		};
+		let blockTypeId = 2;
+		if (msg.mime_type.startsWith('video/')) blockTypeId = 7;
+		else if (msg.mime_type.startsWith('audio/')) blockTypeId = 6;
+		const blocks = store.getActiveBlocks();
+		if (blocks.some((b) => String(b.id) === msg.block_id)) return;
+		const newBlock: Block = {
+			id: msg.block_id,
+			note_id: msg.note_id,
+			block_type_id: blockTypeId,
+			content: msg.id,
+			position: msg.position,
+			created_at: msg.created_at,
+			updated_at: msg.created_at,
+		};
+		const updatedBlocks = [...blocks];
+		updatedBlocks.splice(msg.position, 0, newBlock);
+		updatedBlocks.forEach((block, idx) => {
+			block.position = idx;
+		});
+		store.setActiveBlocks(updatedBlocks);
+		store.setPendingFocus(newBlock.id, 'start');
+		await db.notesUpdateBlocks(msg.note_id, updatedBlocks);
+		const normalizedUrl = msg.attach_url?.replace(
+			'http://minio:9000',
+			'/minio',
+		);
+		this.cacheAttachment(msg.block_id, msg.id, normalizedUrl, blockTypeId);
+	}
+
+	/**
+	 * Кэширует вложение из синхронизации (аналогично _saveToCache в attachmentService)
+	 */
+	private async cacheAttachment(
+		blockId: string,
+		attachmentId: string,
+		url: string,
+		blockTypeId: number,
+	): Promise<void> {
+		const activeNoteId = store.getActiveNoteId();
+		if (!activeNoteId) return;
+		const attachmentData = {
+			id: attachmentId,
+			blockId: blockId,
+			noteId: activeNoteId,
+			url: url,
+			status: 'synced' as const,
+			syncedAt: Date.now(),
+			filename: '',
+			mimeType: '',
+			size: 0,
+		};
+
+		try {
+			if (blockTypeId === 2) {
+				await db.imagesPut(attachmentData);
+			} else if (blockTypeId === 6) {
+				await db.audiosPut(attachmentData);
+			} else if (blockTypeId === 7) {
+				await db.videosPut(attachmentData);
+			}
+		} catch (error) {
+			console.warn('[CollaborativeManager] Failed to cache attachment:', error);
+		}
 	}
 
 	/**

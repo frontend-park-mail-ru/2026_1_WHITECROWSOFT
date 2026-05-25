@@ -3,11 +3,11 @@
         <div class="note-tree-node__indent" style="width: {{level}}px;"></div>
         {{#if hasChildren}}
             <button class="note-tree-node__toggle" data-action="toggle">
-                <img src="/icons/expand.svg" class="icon {{#if isExpanded}}rotated{{/if}}">
+                <img src="/icons/expand.svg" class="note-tree-node__toggle-icon {{#if isExpanded}}note-tree-node__toggle-icon--rotated{{/if}}">
             </button>
-            <img src="/icons/document.svg" class="note-tree-node__icon">
+            <img src="{{#if icon}}{{icon}}{{else}}/icons/document.svg{{/if}}" class="note-tree-node__icon">
         {{else}}
-            <img src="/icons/document.svg" class="icon">
+            <img src="{{#if icon}}{{icon}}{{else}}/icons/document.svg{{/if}}" class="note-tree-node__icon">
         {{/if}}
         
         <span class="note-tree-node__title" data-name="noteTitle">{{title}}</span>

@@ -2,5 +2,17 @@
     <div class="note__breadcrumb">
         <span class="note__breadcrumbItem--current">{{breadcrumb}}</span>
     </div>
+    <div class="note__cover-container" data-cover-container></div>
+    <div class="note__icon-container" data-icon-container></div>
+    <div class="headerButtons">
+        <button id="coverBtn" class="coverButton header__btn" data-action="cover">
+            <img src="/icons/header_cover.svg" class="icon" />
+            Добавить изображение
+        </button>
+        <button id="iconButton" class="iconButton header__btn" data-action="icon">
+            <img src="/icons/header_icon.svg" class="icon" />
+            Добавить иконку
+        </button>
+    </div>
     <input type="text" class="note__title" value="{{title}}" placeholder="Название заметки">
 </div>

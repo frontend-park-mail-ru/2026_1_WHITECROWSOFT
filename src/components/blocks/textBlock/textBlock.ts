@@ -138,10 +138,6 @@ export default class TextBlock extends Component {
 		const blockEl = this.domElement;
 		if (!blockEl) return;
 
-		blockEl.addEventListener('focus', () => {
-			this.updateCursorPosition();
-		});
-
 		blockEl.addEventListener('click', () => {
 			this.updateCursorPosition();
 		});
@@ -299,21 +295,8 @@ export default class TextBlock extends Component {
 	private async handleSplit(blockEl: HTMLElement): Promise<void> {
 		const parts = this.getCaretParts(blockEl);
 		if (!parts) return;
-
-		const activeNoteId = store.getActiveNoteId();
-		const note = store.getNotes().find((n: Note) => n.ID === activeNoteId);
-		const isPublic = note?.is_public === true;
-
 		blockEl.innerHTML = parts.before;
-
-		if (isPublic) {
-			const blocks = store.getActiveBlocks();
-			const currentIndex = blocks.findIndex((b) => b.id === this.block.id);
-			const newPosition = currentIndex + 1;
-			collabManager.sendCreateBlock(1, newPosition);
-		} else {
-			this.onSplit?.(String(this.block.id), parts.before, parts.after);
-		}
+		this.onSplit?.(String(this.block.id), parts.before, parts.after);
 	}
 
 	private async handleJoinBackward(blockEl: HTMLElement): Promise<void> {
@@ -389,6 +372,11 @@ export default class TextBlock extends Component {
 		if (formattingChanged) {
 			this.applyFormatting();
 		}
+	}
+
+	updateBlockId(newBlockId: string | number): void {
+		this.block.id = newBlockId;
+		this.domElement?.setAttribute('data-block-id', String(newBlockId));
 	}
 
 	setCursorAtStart(): void {

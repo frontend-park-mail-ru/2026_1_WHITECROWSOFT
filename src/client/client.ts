@@ -1,10 +1,8 @@
+import { handleAuthError } from '../utils/handleAuthError.js';
 import { AppError, createError } from './appError';
 
 const SERVER_URL = '/api';
 
-/**
- * Параметры HTTP запроса
- */
 interface RequestOptions extends Omit<RequestInit, 'body' | 'headers'> {
 	method?: string;
 	headers?: Record<string, string>;
@@ -13,19 +11,11 @@ interface RequestOptions extends Omit<RequestInit, 'body' | 'headers'> {
 	_retried?: boolean;
 }
 
-/**
- * Ответ сервера с CSRF-токеном
- */
 interface CsrfTokenResponse {
 	csrf_token?: string;
 	token?: string;
 }
 
-/**
- * Клиент для выполнения HTTP-запросов к серверу
- * @class Client
- * @classdesc Предоставляет методы для работы с API (GET, POST, PUT)
- */
 class Client {
 	private readonly serverURL: string;
 	private csrfToken: string | null;
@@ -76,6 +66,21 @@ class Client {
 		this.csrfTokenPromise = null;
 	}
 
+	private getAuthHeaders(): Record<string, string> {
+		const headers: Record<string, string> = {};
+		const token = localStorage.getItem('accessToken');
+		if (token) {
+			headers['Authorization'] = `Bearer ${token}`;
+		}
+		return headers;
+	}
+
+	private handleResponseError(response: Response): void {
+		if (response.status === 401) {
+			handleAuthError({ status: 401 });
+		}
+	}
+
 	async request<T = unknown>(
 		endpoint: string,
 		options: RequestOptions = {},
@@ -86,7 +91,10 @@ class Client {
 			method.toUpperCase(),
 		);
 
-		const headers: Record<string, string> = { ...options.headers };
+		const headers: Record<string, string> = {
+			...this.getAuthHeaders(),
+			...options.headers,
+		};
 
 		if (isMutatingMethod && !options.skipCsrf) {
 			const csrfToken = await this.fetchCsrfToken();
@@ -114,10 +122,19 @@ class Client {
 			}
 
 			let responseData: T | null = null;
-			try {
-				responseData = (await response.json()) as T;
-			} catch {
-				console.log('[CLIENT] Getting response JSON failed *for some reason*');
+			const contentType = response.headers.get('content-type');
+
+			if (contentType?.includes('application/json')) {
+				try {
+					responseData = (await response.json()) as T;
+				} catch {
+					console.log('[CLIENT] Failed to parse JSON response');
+				}
+			}
+
+			if (response.status === 401) {
+				this.handleResponseError(response);
+				throw createError.fromResponse(response, responseData);
 			}
 
 			if (!response.ok) {
@@ -180,6 +197,28 @@ class Client {
 		return this.request<T>(endpoint, {
 			method: 'DELETE',
 		});
+	}
+
+	async getBlob(endpoint: string): Promise<Blob> {
+		const url = `${this.serverURL}${endpoint}`;
+		const headers = this.getAuthHeaders();
+
+		const response = await fetch(url, {
+			credentials: 'include',
+			method: 'GET',
+			headers,
+		});
+
+		if (response.status === 401) {
+			handleAuthError({ status: 401 });
+			throw new Error('Unauthorized');
+		}
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		return response.blob();
 	}
 }
 

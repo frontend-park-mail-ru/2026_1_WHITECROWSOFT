@@ -4,7 +4,11 @@ import NoteTreeNode from '../noteTreeNode/noteTreeNode.js';
 import templateString from './noteTree.hbs?raw';
 interface NoteTreeOptions {
 	notes: SidebarNote[];
-	onNoteClick: (noteId: string | number) => void;
+	section: 'personal' | 'shared' | 'favorite';
+	onNoteClick: (
+		noteId: string | number,
+		section: 'personal' | 'shared' | 'favorite',
+	) => void;
 	onToggle: (noteId: string | number) => void;
 	onAddSubnote: (noteId: string | number) => void;
 	onSettingsClick: (
@@ -41,17 +45,27 @@ export default class NoteTree extends Component {
 		if (!this.container) return;
 		this.container.innerHTML = '';
 		this.nodeComponents.clear();
+
+		const registerComponent = (
+			id: string | number,
+			component: NoteTreeNode,
+		) => {
+			this.nodeComponents.set(id, component);
+		};
+
 		for (const note of this.options.notes) {
 			const container = document.createElement('div');
 			container.setAttribute('data-tree-node', String(note.id));
 			this.container.appendChild(container);
 			const nodeComponent = new NoteTreeNode({
 				note,
+				section: this.options.section,
 				onNoteClick: this.options.onNoteClick,
 				onToggle: this.options.onToggle,
 				onAddSubnote: this.options.onAddSubnote,
 				onSettingsClick: this.options.onSettingsClick,
 				onTitleDoubleClick: this.options.onTitleDoubleClick,
+				registerComponent,
 			});
 			nodeComponent.renderTo(container);
 			this.nodeComponents.set(note.id, nodeComponent);
@@ -67,7 +81,11 @@ export default class NoteTree extends Component {
 		const updateRecursive = (notes: SidebarNote[]): void => {
 			for (const note of notes) {
 				const isActive = String(note.id) === String(noteId);
-				note.isActive = isActive;
+				if (noteId) {
+					note.isActive = isActive;
+				} else {
+					note.isActive = false;
+				}
 				const component = this.nodeComponents.get(note.id);
 				if (component) {
 					component.updateNote(note);
@@ -76,6 +94,26 @@ export default class NoteTree extends Component {
 			}
 		};
 		updateRecursive(this.options.notes);
+	}
+
+	updateNoteId(localId: string | number, serverId: string | number): void {
+		const updateInArray = (notes: SidebarNote[]): void => {
+			for (const note of notes) {
+				if (String(note.id) === String(localId)) {
+					note.id = serverId;
+					return;
+				}
+				updateInArray(note.children);
+			}
+		};
+		updateInArray(this.options.notes);
+		this.nodeComponents.get(localId)?.updateNoteId(localId, serverId);
+		const component = this.nodeComponents.get(localId);
+		if (component) {
+			component.updateNoteId(localId, serverId);
+			this.nodeComponents.set(serverId, component);
+			this.nodeComponents.delete(localId);
+		}
 	}
 
 	getNoteTitleElementById(noteId: string | number): HTMLElement | null {

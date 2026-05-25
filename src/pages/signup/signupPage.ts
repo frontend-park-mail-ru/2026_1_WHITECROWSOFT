@@ -8,6 +8,11 @@ import {
 import { router } from '../../route/router.js';
 import { authService } from '../../services/authService.js';
 import type { FormState } from '../../types.js';
+import {
+	clearAuthRedirect,
+	getAuthRedirectUrl,
+	getRedirectUrlForPage,
+} from '../../utils/authRedirect.js';
 import { createFormRenderer } from '../../utils/formRender/formRenderer.js';
 import { registerHelpers, registerPartials } from '../../utils/utils.js';
 import templateText from './signupPage.hbs?raw';
@@ -27,8 +32,7 @@ export async function initSignupPage(): Promise<void> {
 		return;
 	}
 
-	const urlParams = new URLSearchParams(window.location.search);
-	const redirectUrl = urlParams.get('redirect') || '/';
+	const redirectUrl = getAuthRedirectUrl();
 
 	app.innerHTML = template({
 		formData: { username: '', password: '', passwordConfirm: '' },
@@ -72,15 +76,12 @@ export async function initSignupPage(): Promise<void> {
 			});
 		},
 		onSuccess: () => {
+			clearAuthRedirect();
 			router.replace(redirectUrl);
 		},
 		onNavigate: (link: string) => {
 			if (link === 'signin') {
-				const signinUrl =
-					redirectUrl !== '/'
-						? `/signin?redirect=${encodeURIComponent(redirectUrl)}`
-						: '/signin';
-				router.push(signinUrl);
+				router.push(getRedirectUrlForPage('signup'));
 			}
 		},
 	});

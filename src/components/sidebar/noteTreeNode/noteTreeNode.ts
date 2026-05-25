@@ -4,7 +4,11 @@ import templateString from './noteTreeNode.hbs?raw';
 
 interface NoteTreeNodeOptions {
 	note: SidebarNote;
-	onNoteClick: (noteId: string | number) => void;
+	section: 'personal' | 'shared' | 'favorite';
+	onNoteClick: (
+		noteId: string | number,
+		section: 'personal' | 'shared' | 'favorite',
+	) => void;
 	onToggle: (noteId: string | number) => void;
 	onAddSubnote: (noteId: string | number) => void;
 	onSettingsClick: (
@@ -13,6 +17,7 @@ interface NoteTreeNodeOptions {
 		titleElement: HTMLElement,
 	) => void;
 	onTitleDoubleClick: (noteId: string | number, element: HTMLElement) => void;
+	registerComponent?: (id: string | number, component: NoteTreeNode) => void;
 }
 
 export default class NoteTreeNode extends Component {
@@ -23,6 +28,7 @@ export default class NoteTreeNode extends Component {
 	private titleElement: HTMLElement | null = null;
 	private childrenContainer: HTMLElement | null = null;
 	private contentElement: HTMLElement | null = null;
+	private boundIconChangeHandler?: (e: Event) => void;
 
 	constructor(private options: NoteTreeNodeOptions) {
 		super();
@@ -33,6 +39,7 @@ export default class NoteTreeNode extends Component {
 		return {
 			id: this.note.id,
 			title: this.note.title,
+			icon: this.note.icon,
 			level: this.note.level * 16,
 			hasChildren: this.note.children.length > 0,
 			isExpanded: this.note.isExpanded,
@@ -65,7 +72,7 @@ export default class NoteTreeNode extends Component {
 		this.contentElement?.addEventListener('click', (e) => {
 			const target = e.target as HTMLElement;
 			if (!target.closest('[data-action]')) {
-				this.options.onNoteClick(this.note.id);
+				this.options.onNoteClick(this.note.id, this.options.section);
 			}
 		});
 		this.titleElement?.addEventListener('dblclick', (e) => {
@@ -88,6 +95,22 @@ export default class NoteTreeNode extends Component {
 				this.titleElement as HTMLElement,
 			);
 		});
+		this.boundIconChangeHandler = (e: Event) =>
+			this.handleIconChange(e as CustomEvent);
+		window.addEventListener('noteIconChanged', this.boundIconChangeHandler);
+	}
+
+	private handleIconChange(e: CustomEvent): void {
+		const { noteId, icon } = e.detail;
+		if (String(noteId) === String(this.note.id)) {
+			this.note.icon = icon;
+			const iconEl = this.domElement?.querySelector(
+				'.note-tree-node__icon',
+			) as HTMLImageElement;
+			if (iconEl) {
+				iconEl.src = icon;
+			}
+		}
 	}
 
 	private renderChildren(): void {
@@ -103,14 +126,19 @@ export default class NoteTreeNode extends Component {
 
 			const childComponent = new NoteTreeNode({
 				note: childNote,
+				section: this.options.section,
 				onNoteClick: this.options.onNoteClick,
 				onToggle: this.options.onToggle,
 				onAddSubnote: this.options.onAddSubnote,
 				onSettingsClick: this.options.onSettingsClick,
 				onTitleDoubleClick: this.options.onTitleDoubleClick,
+				registerComponent: this.options.registerComponent,
 			});
 			childComponent.renderTo(container);
 			this.childComponents.set(childNote.id, childComponent);
+			if (this.options.registerComponent) {
+				this.options.registerComponent(childNote.id, childComponent);
+			}
 		}
 	}
 
@@ -119,11 +147,20 @@ export default class NoteTreeNode extends Component {
 		if (this.titleElement) {
 			this.titleElement.textContent = note.title;
 		}
+		const iconEl = this.domElement?.querySelector(
+			'.note-tree-node__doc-icon',
+		) as HTMLImageElement;
+		if (iconEl) {
+			iconEl.src = note.icon || '';
+		}
 		const toggleIcon = this.domElement?.querySelector(
 			'.note-tree-node__toggle-icon',
 		);
 		if (toggleIcon) {
-			toggleIcon.classList.toggle('rotated', note.isExpanded);
+			toggleIcon.classList.toggle(
+				'note-tree-node__toggle-icon--rotated',
+				note.isExpanded,
+			);
 		}
 		if (this.childrenContainer) {
 			this.childrenContainer.style.display = note.isExpanded ? 'block' : 'none';
@@ -137,11 +174,22 @@ export default class NoteTreeNode extends Component {
 		this.renderChildren();
 	}
 
+	updateNoteId(localId: string | number, serverId: string | number): void {
+		this.domElement?.setAttribute('data-note-id', String(serverId));
+		this.contentElement?.setAttribute('data-note-id', String(serverId));
+	}
+
 	getTitleElement(): HTMLElement | null {
 		return this.titleElement;
 	}
 
 	destroy(): void {
+		if (this.boundIconChangeHandler) {
+			window.removeEventListener(
+				'noteIconChanged',
+				this.boundIconChangeHandler,
+			);
+		}
 		this.childComponents.forEach((child) => child.destroy());
 		this.childComponents.clear();
 	}

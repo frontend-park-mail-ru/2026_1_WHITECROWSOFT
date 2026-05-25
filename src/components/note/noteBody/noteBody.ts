@@ -1,10 +1,10 @@
-import { db } from '../../../db.js';
 import { attachmentService } from '../../../services/attachmentService.js';
 import { noteService } from '../../../services/noteService.js';
 import { store } from '../../../store.js';
 import type { Block } from '../../../types.js';
 import BlockWrapper from '../../blocks/blockWrapper/blockWrapper.js';
 import Component from '../../component.js';
+import { confirmDialog } from '../../popups/confirmDialog/confirmDialog.js';
 import FormatPopup from '../../popups/formatPopup/formatPopup.js';
 import templateString from './noteBody.hbs?raw';
 
@@ -19,10 +19,13 @@ export default class NoteBody extends Component {
 	private draggedBlockId: string | null = null;
 	private isRendering = false;
 	private needsRender = false;
+	private phantomBlock: HTMLElement | null = null;
 	private unsubscribeActiveBlocks: (() => void) | null = null;
+	private unsubscribeSyncBlockId: (() => void) | null = null;
 	private unsubscribePendingFocus: (() => void) | null = null;
 	private unsubscribeCollaborativeCreate: (() => void) | null = null;
 	private unsubscribeCollaborativeDelete: (() => void) | null = null;
+	private beforeUnloadHandler: (() => void) | null = null;
 
 	constructor() {
 		super();
@@ -42,15 +45,16 @@ export default class NoteBody extends Component {
 	async onRender(): Promise<void> {
 		this.subscribeToStore();
 		this.subscribeToPendingFocus();
-		this.subscribeToCollaborativeCreate();
-		this.subscribeToCollaborativeDelete();
+		this.subscribeToSyncBlockId();
+		await this.restoreFromSessionStorage();
 		await this.renderBlocks();
+		this.ensurePhantomBlock();
 		this.bindEvents();
+		this.bindBeforeUnload();
 	}
 
 	private subscribeToStore(): void {
 		this.unsubscribeActiveBlocks = store.subscribe('activeBlocks', () => {
-			console.log('render')
 			this.renderBlocks();
 		});
 	}
@@ -66,41 +70,19 @@ export default class NoteBody extends Component {
 		);
 	}
 
-	private subscribeToCollaborativeCreate(): void {
-		const handleBlockCreate = ((e: CustomEvent) => {
-			const { userId, focusBlockId } = e.detail;
-			const currentUserId = store.getUser()?.id;
-			if (userId === currentUserId) {
-				store.setPendingFocus(focusBlockId, 'start');
-				return;
+	private subscribeToSyncBlockId(): void {
+		const handleSync = ((e: CustomEvent) => {
+			const { serverId, localId } = e.detail;
+			const oldWrapper = this.blockWrappers.get(localId);
+			if (oldWrapper) {
+				this.blockWrappers.delete(localId);
+				oldWrapper.updateBlockId(serverId);
+				this.blockWrappers.set(serverId, oldWrapper);
 			}
-			this.renderBlocks();
-			store.setPendingFocus(focusBlockId, 'start');
 		}) as EventListener;
-		window.addEventListener('collaborativeBlockCreate', handleBlockCreate);
-		this.unsubscribeCollaborativeCreate = () => {
-			window.removeEventListener('collaborativeBlockCreate', handleBlockCreate);
-		};
-	}
-
-	private subscribeToCollaborativeDelete(): void {
-		const handleBlockDelete = ((e: CustomEvent) => {
-			const { blockId, userId, focusBlockId } = e.detail;
-			const currentUserId = store.getUser()?.id;
-			if (userId === currentUserId) {
-				return;
-			}
-			const blocks = store.getActiveBlocks();
-			const updatedBlocks = blocks.filter((b) => String(b.id) !== blockId);
-			updatedBlocks.forEach((block, idx) => {
-				block.position = idx;
-			});
-			store.setActiveBlocks(updatedBlocks);
-			store.setPendingFocus(focusBlockId, 'end');
-		}) as EventListener;
-		window.addEventListener('collaborativeBlockDelete', handleBlockDelete);
-		this.unsubscribeCollaborativeDelete = () => {
-			window.removeEventListener('collaborativeBlockDelete', handleBlockDelete);
+		window.addEventListener('syncBlockId', handleSync);
+		this.unsubscribeSyncBlockId = () => {
+			window.removeEventListener('syncBlockId', handleSync);
 		};
 	}
 
@@ -133,7 +115,7 @@ export default class NoteBody extends Component {
 	}
 
 	private async renderBlocks(): Promise<void> {
-		console.log(store.getActiveBlocks())
+		console.log('render body:', store.getActiveBlocks());
 		if (this.isRendering) {
 			this.needsRender = true;
 			return;
@@ -174,6 +156,7 @@ export default class NoteBody extends Component {
 			}
 		} finally {
 			this.isRendering = false;
+			this.updatePhantomState();
 		}
 	}
 
@@ -202,14 +185,6 @@ export default class NoteBody extends Component {
 		this.blockWrappers.set(String(block.id), wrapper);
 	}
 
-	private clearBlocks(container: HTMLElement): void {
-		for (const wrapper of this.blockWrappers.values()) {
-			if (wrapper.destroy) wrapper.destroy();
-		}
-		this.blockWrappers.clear();
-		container.innerHTML = '';
-	}
-
 	private async handleContentChange(
 		blockId: string,
 		content: string,
@@ -228,17 +203,20 @@ export default class NoteBody extends Component {
 		if (!activeNoteId) return;
 		const blocks = store.getActiveBlocks();
 		const block = blocks.find((b) => String(b.id) === blockId);
-		console.log(block, blockId, blocks);
 		if (!block) return;
 
 		if (block.block_type_id === 5 && block.content) {
 			const subnoteId = block.content;
 			const subnote = store.getNotes().find((n) => n.ID === subnoteId);
 			const subnoteTitle = subnote?.title || 'эту подзаметку';
-			const confirmed = confirm(
-				`Вы действительно хотите удалить подзаметку "${subnoteTitle}"?\n\n` +
+			const confirmed = await confirmDialog({
+				title: 'Удаление подзаметки',
+				message:
+					`Вы действительно хотите удалить подзаметку "${subnoteTitle}"?\n\n` +
 					`Внимание: Подзаметка и все её содержимое будут удалены без возможности восстановления.`,
-			);
+				confirmText: 'Удалить',
+				danger: true,
+			});
 			if (!confirmed) return;
 			try {
 				await noteService.deleteNote(subnoteId);
@@ -279,12 +257,9 @@ export default class NoteBody extends Component {
 		}
 	}
 
-	private async handleSplitBlock(
-		blockId: string,
-	): Promise<void> {
+	private async handleSplitBlock(blockId: string): Promise<void> {
 		const activeNoteId = store.getActiveNoteId();
 		if (!activeNoteId) return;
-		console.log(activeNoteId);
 		await noteService.createBlockAfter(
 			activeNoteId,
 			{ note_id: activeNoteId, block_type_id: 1 },
@@ -347,9 +322,12 @@ export default class NoteBody extends Component {
 		const draggedElement = this.draggedBlockWrapper;
 		if (afterElement) {
 			container.insertBefore(draggedElement, afterElement);
+		} else if (this.phantomBlock && container.contains(this.phantomBlock)) {
+			container.insertBefore(draggedElement, this.phantomBlock);
 		} else {
 			container.appendChild(draggedElement);
 		}
+		this.updatePhantomState();
 	};
 
 	private getDragAfterElement(
@@ -432,7 +410,89 @@ export default class NoteBody extends Component {
 		);
 		container.addEventListener('drop', this.handleDrop as EventListener);
 		container.addEventListener('dragend', this.handleDragEnd as EventListener);
+		container.addEventListener(
+			'input',
+			this.handleContainerInput as EventListener,
+		);
 	}
+
+	private ensurePhantomBlock(): void {
+		const container = this.domElement?.querySelector(
+			'.note__body-container',
+		) as HTMLElement | null;
+		if (!container) return;
+		if (this.phantomBlock && container.contains(this.phantomBlock)) {
+			this.updatePhantomState();
+			return;
+		}
+		const phantom = document.createElement('div');
+		phantom.className = 'note__phantom-block';
+		phantom.setAttribute('aria-hidden', 'true');
+		phantom.addEventListener('click', this.handlePhantomClick);
+		container.appendChild(phantom);
+		this.phantomBlock = phantom;
+		this.updatePhantomState();
+	}
+
+	private updatePhantomState(): void {
+		if (!this.phantomBlock) return;
+		const container = this.domElement?.querySelector(
+			'.note__body-container',
+		) as HTMLElement | null;
+		if (!container) return;
+		if (container.lastElementChild !== this.phantomBlock) {
+			container.appendChild(this.phantomBlock);
+		}
+		const wrapperEls = container.querySelectorAll('.note__block-wrapper');
+		const lastWrapperEl = wrapperEls[wrapperEls.length - 1] as
+			| HTMLElement
+			| undefined;
+		let shouldShow = !!lastWrapperEl;
+		if (shouldShow && lastWrapperEl) {
+			const lastBlockId = lastWrapperEl.dataset.blockId;
+			const block = store
+				.getActiveBlocks()
+				.find((b) => String(b.id) === lastBlockId);
+			if (block && block.block_type_id === 1) {
+				const blockEl = lastWrapperEl.querySelector(
+					'.note__block',
+				) as HTMLElement | null;
+				const text = blockEl
+					? blockEl.innerText
+					: (block.content || '').replace(/<[^>]*>/g, '');
+				if (text.replace(/ /g, '').trim() === '') {
+					shouldShow = false;
+				}
+			}
+		}
+		this.phantomBlock.classList.toggle(
+			'note__phantom-block--hidden',
+			!shouldShow,
+		);
+	}
+
+	private handlePhantomClick = async (): Promise<void> => {
+		const activeNoteId = store.getActiveNoteId();
+		if (!activeNoteId) return;
+		const blocks = store.getActiveBlocks();
+		if (blocks.length === 0) return;
+		const lastBlock = blocks[blocks.length - 1];
+		try {
+			await noteService.createBlockAfter(
+				activeNoteId,
+				{ note_id: activeNoteId, block_type_id: 1 },
+				String(lastBlock.id),
+			);
+		} catch (error) {
+			console.error('Failed to create block from phantom:', error);
+		}
+	};
+
+	private handleContainerInput = (e: Event): void => {
+		const target = e.target as HTMLElement | null;
+		if (!target?.closest('.note__block')) return;
+		this.updatePhantomState();
+	};
 
 	private handleContextMenu = (e: Event): void => {
 		e.preventDefault();
@@ -482,33 +542,61 @@ export default class NoteBody extends Component {
 		}
 	};
 
-	async saveAllBlocks(): Promise<void> {
-		const activeNoteId = store.getActiveNoteId();
-		if (!activeNoteId) return;
-		const blocks = store.getActiveBlocks();
-		const savePromises: Promise<Block | void>[] = [];
-		for (const block of blocks) {
-			if (block.block_type_id !== 2) {
-				const wrapper = this.blockWrappers.get(String(block.id));
-				const currentContent = wrapper?.getBlockComponent()?.getContent?.();
-				if (currentContent !== undefined && block.content !== currentContent) {
-					savePromises.push(
-						noteService
-							.updateBlockContent(
-								activeNoteId,
-								String(block.id),
-								currentContent,
-							)
-							.catch((error) => {
-								console.error('Failed to save block:', error);
-								return undefined;
-							}),
+	private bindBeforeUnload(): void {
+		this.beforeUnloadHandler = () => {
+			const activeNoteId = store.getActiveNoteId();
+			if (!activeNoteId) return;
+
+			const container = this.domElement?.querySelector('.note__body-container');
+			if (!container) return;
+
+			const blocks = store.getActiveBlocks();
+			for (const block of blocks) {
+				if (block.block_type_id === 1) {
+					const blockElement = container.querySelector(
+						`.note__block-wrapper[data-block-id="${block.id}"] .note__block`,
 					);
+					if (blockElement) {
+						const currentContent = blockElement.innerHTML;
+						if (currentContent && block.content !== currentContent) {
+							sessionStorage.setItem(
+								`pending_block_${activeNoteId}_${block.id}`,
+								currentContent,
+							);
+						}
+					}
 				}
 			}
-		}
-		if (savePromises.length > 0) {
-			await Promise.all(savePromises);
+		};
+		window.addEventListener('beforeunload', this.beforeUnloadHandler);
+	}
+
+	private async restoreFromSessionStorage(): Promise<void> {
+		const activeNoteId = store.getActiveNoteId();
+		if (!activeNoteId) return;
+
+		const blocks = store.getActiveBlocks();
+		for (const block of blocks) {
+			if (block.block_type_id === 1) {
+				const key = `pending_block_${activeNoteId}_${block.id}`;
+				const savedContent = sessionStorage.getItem(key);
+				if (
+					savedContent &&
+					block.block_type_id === 1 &&
+					block.content !== savedContent
+				) {
+					try {
+						await noteService.updateBlockContent(
+							activeNoteId,
+							String(block.id),
+							savedContent,
+						);
+						sessionStorage.removeItem(key);
+					} catch (error) {
+						console.error('Failed to restore block content:', error);
+					}
+				}
+			}
 		}
 	}
 
@@ -529,6 +617,11 @@ export default class NoteBody extends Component {
 			if (wrapper.destroy) wrapper.destroy();
 		}
 		this.blockWrappers.clear();
+		if (this.phantomBlock) {
+			this.phantomBlock.removeEventListener('click', this.handlePhantomClick);
+			this.phantomBlock.remove();
+			this.phantomBlock = null;
+		}
 		this.draggedBlockWrapper = null;
 		this.draggedBlockId = null;
 		this.isDraggingSelection = false;
@@ -536,5 +629,9 @@ export default class NoteBody extends Component {
 		this.unsubscribePendingFocus?.();
 		this.unsubscribeCollaborativeCreate?.();
 		this.unsubscribeCollaborativeDelete?.();
+		this.unsubscribeSyncBlockId?.();
+		if (this.beforeUnloadHandler) {
+			window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+		}
 	}
 }

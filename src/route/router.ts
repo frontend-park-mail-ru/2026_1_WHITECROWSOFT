@@ -1,6 +1,5 @@
-import { authService } from '../services/authService.js';
-import type { UserSession } from '../types.js';
 import { Layout } from './../layout.js';
+import { store } from './../store.js';
 import { getRoute } from './routes.js';
 
 const modules = import.meta.glob<{ default?: unknown; [key: string]: unknown }>(
@@ -51,16 +50,14 @@ export const router = {
 	},
 
 	push(path: string): void {
-		const pathWithoutQuery = path.split('?')[0];
-		if (pathWithoutQuery === this._currentPath) return;
-		history.pushState({ path: pathWithoutQuery }, '', path);
+		if (path === this._currentPath) return;
+		history.pushState({ path: path }, '', path);
 		this.handleRoute(path);
 	},
 
 	replace(path: string): void {
-		const pathWithoutQuery = path.split('?')[0];
-		if (pathWithoutQuery === this._currentPath) return;
-		history.replaceState({ path: pathWithoutQuery }, '', path);
+		if (path === this._currentPath) return;
+		history.replaceState({ path: path }, '', path);
 		this.handleRoute(path);
 	},
 
@@ -85,7 +82,7 @@ export const router = {
 		const pathWithoutQuery = fullPath.split('?')[0];
 		const queryParams = this.getQueryParams(fullPath);
 
-		this._currentPath = pathWithoutQuery;
+		this._currentPath = fullPath;
 		this._pendingQuery = queryParams;
 
 		const route = getRoute(pathWithoutQuery);
@@ -131,21 +128,15 @@ export const router = {
 			return;
 		}
 
-		let session: UserSession;
-		try {
-			session = await authService.getUserSession();
-		} catch (err) {
-			console.error('Failed to get user session:', err);
-			session = { isAuthenticated: false, user: null };
-		}
+		const isAuthenticated = store.getUser();
 
-		if (route.protected && !session.isAuthenticated) {
+		if (route.protected && !isAuthenticated) {
 			const redirectUrl = `/signin?redirect=${encodeURIComponent(fullPath)}`;
 			this.replace(redirectUrl);
 			return;
 		}
 
-		if (route.guest && session.isAuthenticated) {
+		if (route.guest && isAuthenticated) {
 			this.replace('/');
 			return;
 		}
@@ -170,7 +161,6 @@ export const router = {
 						this._currentLayout = new Layout();
 						await this._currentLayout.init(false);
 					}
-
 					await this._currentLayout.setPage(initFn, {
 						query: this._pendingQuery,
 					});

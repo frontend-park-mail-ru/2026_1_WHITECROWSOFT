@@ -8,31 +8,33 @@ export interface User {
 export interface Note {
 	ID: string | number;
 	title: string;
-	icon: string | null;
+	icon?: string | null;
 	updatedAt: string | number;
 	blocks?: Block[];
 	parent_id?: string | number | null;
 	isLocal?: boolean;
 	is_public?: boolean;
+	is_favorite?: boolean;
 	breadcrumb?: string;
+	coverUrl?: string | null;
+	section?: 'personal' | 'shared' | 'favorite';
 }
 
 export interface ActiveNote {
 	ID: string | number;
 	title: string;
+	icon?: string | null;
+	is_public?: boolean;
 	breadcrumb: string;
 	text: string;
-}
-
-export interface RecentNote {
-	noteId: string | number;
-	lastOpenedAt: number;
-	title: string;
+	coverUrl?: string | null;
+	section?: 'personal' | 'shared' | 'favorite';
 }
 
 export interface SidebarNote {
 	id: string | number;
 	title: string;
+	icon?: string | null;
 	parentId: string | number | null;
 	children: SidebarNote[];
 	isExpanded: boolean;
@@ -63,13 +65,6 @@ export interface FormattingRange {
 	bold: boolean | null;
 	italic: boolean | null;
 	underline: boolean | null;
-}
-
-export interface ActiveNote {
-	ID: string | number;
-	title: string;
-	breadcrumb: string;
-	text: string;
 }
 
 export interface ImageAttachment {
@@ -122,7 +117,7 @@ export interface VideoAttachment {
 
 export interface QueueFile {
 	id: string;
-	blockId: string | number;
+	blockId?: string | number;
 	noteId: string | number;
 	blob: Blob;
 	filename: string;
@@ -138,10 +133,23 @@ export interface QueuedRequest {
 	body?: unknown | null;
 	formData?: FormData | null;
 	localId?: string | null;
+	localBlockId?: string | null;
 	type?: string | null;
 	silent?: boolean;
 	queuedAt: number;
 	retryCount: number;
+}
+
+export interface GetNoteResponse {
+	note: {
+		id: string | number;
+		title: string;
+		updated_at: string;
+		parent_id?: string | number | null;
+		is_public?: boolean;
+		is_favorite?: boolean;
+	};
+	blocks: Block[];
 }
 
 /**
@@ -179,6 +187,7 @@ export type WebSocketMessageType =
 	| 'delete_block' // Удаление блока
 	| 'move_block' // Перемещение блока
 	| 'update_note_title' // Обновление заголовка заметки
+	| 'upload_attachment'
 	| 'update_note_public' // Изменение публичности заметки
 	| 'delete_note' // Удаление заметки
 	| 'note_private' // Заметка стала приватной
@@ -255,7 +264,6 @@ export interface StoreState {
 	activeNote: ActiveNote | null;
 	activeBlocks: Block[];
 	online: boolean;
-	recentNotes: RecentNote[];
 	pendingFocus: {
 		blockId: string | number | null;
 		offset: number | 'start' | 'end' | null;
@@ -274,7 +282,10 @@ export interface NoteApiResponse {
 	title: string;
 	updated_at?: string;
 	parent_id?: string | number | null;
+	icon?: string;
+	header_url?: string;
 	is_public?: boolean;
+	is_favorite?: boolean;
 }
 
 export interface BlockApiResponse {
@@ -287,11 +298,11 @@ export interface BlockApiResponse {
 }
 
 export interface AttachmentApiResponse {
-	id: string | number;
+	id: string;
+	block_id: string;
 	attach_url: string;
 	minio_key?: string;
-	size?: number;
-	mime_type?: string;
+	created_at: string;
 }
 
 export interface UserSession {
@@ -323,3 +334,22 @@ export type FormAction =
 	| { type: 'VALIDATION_ERROR'; payload: Record<string, string> }
 	| { type: 'CLEAR_ERROR'; payload: string }
 	| { type: 'TOGGLE_PASSWORD'; payload: 'password' | 'passwordConfirm' };
+
+export enum RequestEvents {
+	NOTE_CREATE = 'NOTE_CREATE',
+	BLOCK_CREATE = 'BLOCK_CREATE',
+}
+
+export interface Cover {
+	id: string | number;
+	noteId: string | number;
+	blob?: Blob;
+	url?: string;
+	filename: string;
+	mimeType: string;
+	size: number;
+	status: 'pending' | 'synced';
+	createdAt?: number;
+	syncedAt?: number;
+	isLocal?: boolean;
+}

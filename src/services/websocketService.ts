@@ -1,4 +1,5 @@
 import type { WebSocketMessage } from '../types.js';
+import { handleAuthError } from '../utils/handleAuthError.js';
 
 type MessageHandler = (message: WebSocketMessage) => void;
 
@@ -54,9 +55,17 @@ export class WebSocketService {
 
 				this.ws.onclose = (event) => {
 					this.clearHeartbeat();
+					if (event.code === 1006) {
+						const token = localStorage.getItem('accessToken');
+						if (!token) {
+							handleAuthError({ status: 401 });
+							this.shouldReconnect = false;
+							return;
+						}
+					}
+
 					if (this.shouldReconnect) {
 						this.attemptReconnect(noteId);
-					} else {
 					}
 				};
 			} catch (error) {
