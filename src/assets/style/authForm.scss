@@ -87,7 +87,13 @@
         gap: 8px;
         transition: color 0.2s ease;
     }
-    &__requirementIcon {
+    &__icon {
         width: 12px;
+        &--met {
+            color: var(--cornflower);
+        }
+        &--unmet {
+            color: var(--danger-red);
+        }
     }
 }

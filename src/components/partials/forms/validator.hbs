@@ -1,7 +1,7 @@
 <ul class="validator__list">
     {{#each requirements}}
         <li class="validator__requirement">
-            {{{svgIcon (ternary isMet "req_yes" "req_no") class="icon" alt="Requirement status"}}}
+            {{{svgIcon (ternary isMet "req_yes" "req_no") class=(ternary isMet "validator__icon validator__icon--met icon" "validator__icon validator__icon--unmet icon") alt="Requirement status"}}}
             {{label}}
         </li>
     {{/each}}
