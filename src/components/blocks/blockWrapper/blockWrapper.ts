@@ -1,3 +1,4 @@
+import { db } from '../../../db.js';
 import { router } from '../../../route/router.js';
 import { store } from '../../../store.js';
 import type { Block } from '../../../types.js';
@@ -115,6 +116,7 @@ export default class BlockWrapper extends Component {
 							section: note.section,
 						});
 						store.setActiveNoteId(subnoteId);
+						db.settingsSet('activeNoteId', subnoteId);
 						router.push(`/?note=${subnoteId}`);
 					}
 				},
