@@ -484,6 +484,13 @@ export const queueService = {
 			return;
 		}
 
+		const urlParams = new URLSearchParams(window.location.search);
+		const currentNoteId = urlParams.get('note');
+		if (currentNoteId === localId) {
+			const newUrl = `${window.location.pathname}?note=${newNoteId}`;
+			window.history.replaceState({}, '', newUrl);
+		}
+
 		const childNotes = await db.notesGetByParentId(localId);
 		for (const childNote of childNotes) {
 			const updatedChild = { ...childNote, parent_id: newNoteId };
