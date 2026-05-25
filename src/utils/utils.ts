@@ -129,6 +129,10 @@ function buildSvgAttributes(hash: Record<string, unknown>): string {
 		.join(' ');
 }
 
+interface SvgOptions {
+	hash?: Record<string, unknown>;
+}
+
 /**
  * Регистрирует Handlebars helpers для использования в шаблонах
  */
@@ -140,7 +144,7 @@ export function registerHelpers(): void {
 		or: (a: unknown, b: unknown) => !!(a || b),
 		ternary: (condition: unknown, truthy: unknown, falsy: unknown) =>
 			condition ? truthy : falsy,
-		svgIcon: (name: unknown, options: any) => {
+		svgIcon: (name: unknown, options: SvgOptions) => {
 			const iconName = normalizeIconName(String(name || ''));
 			const hash = options?.hash || {};
 			const alt =
