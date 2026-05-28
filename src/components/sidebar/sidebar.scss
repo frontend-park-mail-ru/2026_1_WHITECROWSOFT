@@ -314,6 +314,7 @@
 		height: 15px;
 		transition: transform 0.2s ease;
 		transform: rotate(-90deg);
+		color: var(--faint-a);
 
 		&--rotated {
 			transform: rotate(0deg);

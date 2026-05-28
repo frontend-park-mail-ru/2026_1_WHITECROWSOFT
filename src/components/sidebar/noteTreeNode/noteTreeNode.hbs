@@ -3,7 +3,11 @@
         <div class="note-tree-node__indent" style="width: {{level}}px;"></div>
         {{#if hasChildren}}
             <button class="note-tree-node__toggle" data-action="toggle">
-                {{{svgIcon "expand" class="note-tree-node__toggle-icon {{#if isExpanded}}note-tree-node__toggle-icon--rotated{{/if}}" alt="Toggle"}}}
+                {{#if isExpanded}}
+                {{{svgIcon "expand" class="note-tree-node__toggle-icon note-tree-node__toggle-icon--rotated" alt="Toggle"}}}
+                {{else}}
+                {{{svgIcon "expand" class="note-tree-node__toggle-icon" alt="Toggle"}}}
+                {{/if}}
             </button>
             {{{svgIcon (ternary icon icon "document") class="note-tree-node__icon" alt="Note icon"}}}
         {{else}}
