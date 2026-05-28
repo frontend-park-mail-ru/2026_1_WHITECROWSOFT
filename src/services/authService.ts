@@ -35,6 +35,12 @@ export const authService = {
 	async signUp(data: AuthCredentials): Promise<AuthResponse> {
 		const result = await client.post<AuthResponse>('/signup', data);
 		if (result?.id) {
+			await db.clearAllUserData();
+			store.setUser(null);
+			store.setNotes([]);
+			store.setActiveNote(null);
+			store.setActiveNoteId(null);
+			store.setActiveBlocks([]);
 			const user: User = {
 				id: result.id,
 				username: result.username,
@@ -50,6 +56,17 @@ export const authService = {
 	async signIn(data: AuthCredentials): Promise<AuthResponse> {
 		const result = await client.post<AuthResponse>('/signin', data);
 		if (result?.id) {
+			const previousUser = await db.settingsGet<User>('user');
+			const shouldClear =
+				previousUser && String(previousUser.id) !== String(result.id);
+			if (shouldClear) {
+				await db.clearAllUserData();
+				store.setUser(null);
+				store.setNotes([]);
+				store.setActiveNote(null);
+				store.setActiveNoteId(null);
+				store.setActiveBlocks([]);
+			}
 			const user: User = {
 				id: result.id,
 				username: result.username,
@@ -68,24 +85,41 @@ export const authService = {
 		} catch (error) {
 			console.debug('[Auth] Logout error:', error);
 		} finally {
-			store.setUser(null);
-			store.setNotes([]);
-			store.setActiveNote(null);
-			store.setActiveNoteId(null);
-			store.setActiveBlocks([]);
-			store.setOnline(navigator.onLine);
+			await this.invalidateSession();
+		}
+	},
 
-			localStorage.removeItem('NoterianCookieCSRF');
-			localStorage.removeItem('NoterianCookieJWT');
+	async invalidateSession(): Promise<void> {
+		store.setUser(null);
+		store.setNotes([]);
+		store.setActiveNote(null);
+		store.setActiveNoteId(null);
+		store.setActiveBlocks([]);
+		store.setOnline(navigator.onLine);
 
+		localStorage.removeItem('NoterianCookieCSRF');
+		localStorage.removeItem('NoterianCookieJWT');
+		sessionStorage.removeItem('authRedirectUrl');
+
+		try {
 			await db.clearAllUserData();
+		} catch (error) {
+			console.error('[Auth] Failed to clear local session data:', error);
+		}
+
+		if (
+			window.location.pathname !== '/signin' &&
+			window.location.pathname !== '/signup'
+		) {
+			window.history.replaceState({ path: '/' }, '', '/');
 		}
 	},
 
 	async getUserSession(): Promise<UserSession> {
 		const isOnline = store.getOnline();
+		const cachedUser = await db.settingsGet<User>('user');
+
 		if (!isOnline) {
-			const cachedUser = await db.settingsGet<User>('user');
 			if (cachedUser) {
 				store.setUser(cachedUser);
 				return {
@@ -95,11 +129,13 @@ export const authService = {
 					isStale: true,
 				};
 			}
+			await this.invalidateSession();
 			return {
 				isAuthenticated: false,
 				user: null,
 			};
 		}
+
 		try {
 			const user = await client.get<User>('/profile');
 			const currentUser: User = {
@@ -108,6 +144,16 @@ export const authService = {
 				email: user.email || null,
 				avatar: user.avatar || null,
 			};
+			const hasDifferentCachedUser =
+				cachedUser && String(cachedUser.id) !== String(currentUser.id);
+			if (hasDifferentCachedUser) {
+				await db.clearAllUserData();
+				store.setUser(null);
+				store.setNotes([]);
+				store.setActiveNote(null);
+				store.setActiveNoteId(null);
+				store.setActiveBlocks([]);
+			}
 			await db.settingsSet('user', currentUser);
 			store.setUser(currentUser);
 			return {
@@ -118,15 +164,13 @@ export const authService = {
 		} catch (error: unknown) {
 			const err = error as { status?: number };
 			if (err?.status === 401) {
-				await db.settingsSet('user', null);
-				store.setUser(null);
+				await this.invalidateSession();
 				return {
 					isAuthenticated: false,
 					user: null,
 					requiresRedirect: true,
 				};
 			}
-			const cachedUser = await db.settingsGet<User>('user');
 			if (cachedUser) {
 				store.setUser(cachedUser);
 				return {
@@ -135,6 +179,8 @@ export const authService = {
 					isStale: true,
 				};
 			}
+			await db.clearAllUserData();
+			store.setUser(null);
 			return {
 				isAuthenticated: false,
 				user: null,

@@ -12,13 +12,15 @@ export function handleAuthError(error: unknown): boolean {
 	if (authError?.status === 401 && !isRedirecting) {
 		isRedirecting = true;
 
-		const currentUrl = window.location.pathname + window.location.search;
-		const isAuthPage =
-			currentUrl.includes('/signin') || currentUrl.includes('/signup');
+		const currentPath = window.location.pathname;
+		const isAuthPage = currentPath === '/signin' || currentPath === '/signup';
 
 		if (!isAuthPage) {
-			const redirectUrl = `/signin?redirect=${encodeURIComponent(currentUrl)}`;
-			router.replace(redirectUrl);
+			router.replace('/signin');
+		} else {
+			const url = new URL(window.location.href);
+			url.search = '';
+			window.history.replaceState({}, '', url.toString());
 		}
 
 		if (redirectTimeout) {

@@ -82,6 +82,12 @@ export const router = {
 		const pathWithoutQuery = fullPath.split('?')[0];
 		const queryParams = this.getQueryParams(fullPath);
 
+		const currentPathWithoutQuery = this._currentPath?.split('?')[0];
+		if (currentPathWithoutQuery === pathWithoutQuery && this._currentLayout) {
+			this._pendingQuery = queryParams;
+			return;
+		}
+
 		this._currentPath = fullPath;
 		this._pendingQuery = queryParams;
 

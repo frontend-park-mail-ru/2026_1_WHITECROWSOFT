@@ -63,6 +63,9 @@ export const noteService = {
 					total?: number;
 				}>('/notes');
 				const notesArray = response.notes || [];
+				const serverNoteIds = new Set(
+					notesArray.map((note) => String(note.id)),
+				);
 				const notes: Note[] = notesArray.map((note) => ({
 					ID: note.id,
 					title: note.title,
@@ -77,7 +80,18 @@ export const noteService = {
 						await db.notesPut(note);
 					}
 				}
-				store.setNotesSilently(notes);
+				store.setNotes(notes);
+				const activeNoteId = store.getActiveNoteId();
+				if (
+					activeNoteId &&
+					!serverNoteIds.has(String(activeNoteId)) &&
+					!String(activeNoteId).startsWith('local-')
+				) {
+					store.setActiveNote(null);
+					store.setActiveBlocks([]);
+					store.setActiveNoteId(null);
+					await db.settingsSet('activeNoteId', null);
+				}
 				return notes;
 			} catch (error) {
 				handleAuthError(error);
@@ -285,26 +299,6 @@ export const noteService = {
 			} catch (error) {
 				console.warn(`[noteService] Network failed, queueing create request`);
 				if (handleAuthError(error)) throw error;
-				await db.notesPut(localNote);
-				const currentNotes = store.getNotes();
-				store.setNotes([localNote, ...currentNotes]);
-				const section: 'personal' | 'shared' | 'favorite' = 'personal';
-				const activeNote = {
-					ID: localNoteId,
-					title: localNote.title,
-					breadcrumb: localNote.title,
-					text: '',
-					section: section,
-				};
-				await this._setActiveNoteState(activeNote);
-				store.setActiveBlocks([]);
-				await queueService.enqueueRequest({
-					method: 'POST',
-					endpoint: '/notes',
-					body: data,
-					localId: localNoteId,
-				});
-
 				return localNote;
 			}
 		}
@@ -678,6 +672,7 @@ export const noteService = {
 				if (handleAuthError(error)) {
 					throw error;
 				}
+				return localBlock;
 			}
 		}
 		await this._updateCachedBlocksWithPosition(noteID, localBlock, 'add');

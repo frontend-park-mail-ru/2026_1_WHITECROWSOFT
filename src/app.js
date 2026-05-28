@@ -1,6 +1,8 @@
 import 'virtual:svg-icons-register';
 import { db } from './db.js';
 import { router } from './route/router.js';
+import { authService } from './services/authService.js';
+import { noteService } from './services/noteService.js';
 import { queueService } from './services/requestQueueService.js';
 import { store } from './store.js';
 import { registerHelpers } from './utils/utils.js';
@@ -28,25 +30,32 @@ async function bootstrap() {
 			store.setOnline(false);
 		});
 
-		const cachedNotes = await db.notesGetAll();
-		if (cachedNotes && cachedNotes.length > 0) {
-			const notesWithFormatting = [];
-			for (const note of cachedNotes) {
-				const formattingMap = await db.formattingGetByNoteId(note.ID);
-				const blocksWithFormatting = (note.blocks || []).map((block) => ({
-					...block,
-					formatting: formattingMap[block.id]
-						? { ranges: formattingMap[block.id] }
-						: block.formatting || { ranges: [] },
-				}));
-				notesWithFormatting.push({
-					...note,
-					blocks: blocksWithFormatting,
-				});
-			}
-			store.setNotesSilently(notesWithFormatting);
-			for (const note of notesWithFormatting) {
-				await db.notesPut(note);
+		const session = await authService.getUserSession();
+
+		if (!session.isAuthenticated) {
+			await db.clearAllUserData();
+		} else {
+			await noteService.getNotes();
+			const cachedNotes = await db.notesGetAll();
+			if (cachedNotes && cachedNotes.length > 0) {
+				const notesWithFormatting = [];
+				for (const note of cachedNotes) {
+					const formattingMap = await db.formattingGetByNoteId(note.ID);
+					const blocksWithFormatting = (note.blocks || []).map((block) => ({
+						...block,
+						formatting: formattingMap[block.id]
+							? { ranges: formattingMap[block.id] }
+							: block.formatting || { ranges: [] },
+					}));
+					notesWithFormatting.push({
+						...note,
+						blocks: blocksWithFormatting,
+					});
+				}
+				store.setNotesSilently(notesWithFormatting);
+				for (const note of notesWithFormatting) {
+					await db.notesPut(note);
+				}
 			}
 		}
 
@@ -74,13 +83,9 @@ async function bootstrap() {
 						? { ranges: formattingMap[block.id] }
 						: block.formatting || { ranges: [] },
 				}));
-				store.setActiveBlocks(blocksWithFormatting);
+				store.setActiveBlocksSilently(blocksWithFormatting);
+				console.log(store.getActiveBlocks());
 			}
-		}
-
-		const cachedUser = await db.settingsGet('user');
-		if (cachedUser) {
-			store.setUser(cachedUser);
 		}
 	} catch (error) {
 		console.error('[App] Bootstrap error:', error);

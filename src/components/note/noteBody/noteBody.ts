@@ -18,7 +18,6 @@ export default class NoteBody extends Component {
 	private draggedBlockWrapper: HTMLElement | null = null;
 	private draggedBlockId: string | null = null;
 	private isRendering = false;
-	private needsRender = false;
 	private phantomBlock: HTMLElement | null = null;
 	private unsubscribeActiveBlocks: (() => void) | null = null;
 	private unsubscribeSyncBlockId: (() => void) | null = null;
@@ -117,7 +116,6 @@ export default class NoteBody extends Component {
 	private async renderBlocks(): Promise<void> {
 		console.log('render body:', store.getActiveBlocks());
 		if (this.isRendering) {
-			this.needsRender = true;
 			return;
 		}
 		this.isRendering = true;

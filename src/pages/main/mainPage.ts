@@ -10,7 +10,6 @@ import { CollaborativeCursorsRenderer } from '../../utils/collaborativeCursorsRe
 import { collabManager } from '../../utils/collaborativeManager.js';
 import { handleAuthError } from '../../utils/handleAuthError.js';
 import { registerHelpers } from '../../utils/utils.js';
-import { router } from './../../route/router.js';
 import templateText from './mainPage.hbs?raw';
 import './mainPage.scss';
 
@@ -22,7 +21,6 @@ let noteBody: NoteBody | null = null;
 let refreshNoteBodyHandler: ((e: Event) => void) | null = null;
 let cursorsRenderer: CollaborativeCursorsRenderer | null = null;
 let currentNoteId: string | number | null = null;
-let isInitializing = false;
 
 export async function initMainPage(
 	container: HTMLElement,
@@ -34,7 +32,6 @@ export async function initMainPage(
 
 	const template = Handlebars.compile(templateText);
 	let notes = store.getNotes();
-	let activeNote = store.getActiveNote();
 
 	if (notes.length === 0) {
 		try {
@@ -45,36 +42,16 @@ export async function initMainPage(
 			console.error('Failed to load notes:', error);
 		}
 	}
-
 	const sharedNoteId = data?.query?.note;
-	console.log(sharedNoteId);
-	let savedNoteId = await db.settingsGet<string | number>('activeNoteId');
-
+	let noteIdToOpen: string | number | undefined | null = null;
 	if (sharedNoteId) {
-		savedNoteId = sharedNoteId;
-		await noteService.getNote(sharedNoteId);
-		router.push(`/?note=${savedNoteId}`);
-		// const newUrl = window.location.pathname;
-		// window.history.replaceState({}, '', newUrl);
+		noteIdToOpen = sharedNoteId;
+	} else {
+		noteIdToOpen = await db.settingsGet<string>('activeNoteId');
 	}
 
-	if (savedNoteId) {
-		try {
-			activeNote = store.getActiveNote();
-		} catch (error) {
-			if (handleAuthError(error)) return;
-			console.error('Failed to load saved note:', error);
-		}
-	}
-
-	if (!activeNote && notes[0]?.ID) {
-		try {
-			await noteService.getNote(notes[0].ID);
-			activeNote = store.getActiveNote();
-		} catch (error) {
-			if (handleAuthError(error)) return;
-			console.error('Failed to load note:', error);
-		}
+	if (!noteIdToOpen && notes[0]?.ID) {
+		noteIdToOpen = notes[0].ID;
 	}
 
 	const html = template({});
@@ -110,7 +87,6 @@ export async function initMainPage(
 		async (noteId: string | number | null) => {
 			if (!noteId) return;
 			if (noteId === currentNoteId) return;
-			if (isInitializing) return;
 
 			currentNoteId = noteId;
 
@@ -148,39 +124,11 @@ export async function initMainPage(
 		},
 	);
 	unsubscribeFunctions.push(unsubActiveNote);
-
 	setVisibility(!!store.getActiveNote());
-
-	isInitializing = true;
-
-	let targetNoteId = store.getActiveNoteId();
-	if (
-		sharedNoteId &&
-		(!targetNoteId || String(targetNoteId) !== sharedNoteId)
-	) {
-		targetNoteId = sharedNoteId;
+	console.log('noteIdToOpen', noteIdToOpen);
+	if (noteIdToOpen) {
+		store.setActiveNoteId(noteIdToOpen);
 	}
-
-	if (targetNoteId) {
-		currentNoteId = targetNoteId;
-		const note = store.getNotes().find((n: Note) => n.ID === targetNoteId);
-		const isPublic = note?.is_public === true;
-		const noteBodyElement = noteBody?.getElement();
-		if (noteBodyElement && isPublic) {
-			cursorsRenderer = new CollaborativeCursorsRenderer(noteBodyElement);
-			await collabManager.startCollab(String(targetNoteId)).catch((err) => {
-				console.warn(
-					'[MainPage] Failed to start collaborative editing on init:',
-					err,
-				);
-			});
-		}
-
-		if (sharedNoteId && store.getActiveNoteId() !== targetNoteId) {
-			store.setActiveNoteId(targetNoteId);
-		}
-	}
-	isInitializing = false;
 }
 
 async function handleAddBlock(afterBlockId: string): Promise<void> {
@@ -233,5 +181,4 @@ export async function cleanupMainPage(): Promise<void> {
 		currentContainer = null;
 	}
 	currentNoteId = null;
-	isInitializing = false;
 }
