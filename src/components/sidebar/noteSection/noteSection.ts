@@ -7,6 +7,7 @@ interface NoteSectionOptions {
 	title: string;
 	notes: SidebarNote[];
 	emptyMessage?: string;
+	hideWhenEmpty?: boolean;
 	section: 'personal' | 'shared' | 'favorite';
 	onNoteClick: (
 		noteId: string | number,
@@ -31,9 +32,11 @@ export default class NoteSection extends Component {
 	}
 
 	protected getTemplateData() {
+		const hasNotes = this.options.notes.length > 0;
 		return {
 			title: this.options.title,
-			hasNotes: this.options.notes.length > 0,
+			hasNotes,
+			hideSection: !!this.options.hideWhenEmpty && !hasNotes,
 			emptyMessage: this.options.emptyMessage || 'Нет заметок',
 		};
 	}
@@ -83,6 +86,9 @@ export default class NoteSection extends Component {
 		if (emptyEl && treeEl) {
 			emptyEl.classList.toggle('hidden', notes.length > 0);
 			treeEl.classList.toggle('hidden', notes.length === 0);
+		}
+		if (this.options.hideWhenEmpty && this.domElement) {
+			this.domElement.classList.toggle('hidden', notes.length === 0);
 		}
 	}
 

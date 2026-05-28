@@ -501,14 +501,16 @@ export const noteService = {
 				return updatedNote;
 			}
 
+			const serverPayload = { icon: updatedNote.icon, ...data };
+
 			if (isOnline) {
 				try {
-					await client.put(`/notes/${noteID}`, data);
+					await client.put(`/notes/${noteID}`, serverPayload);
 				} catch {
 					await queueService.enqueueRequest({
 						method: 'PUT',
 						endpoint: `/notes/${noteID}`,
-						body: data,
+						body: serverPayload,
 						localId: String(noteID),
 					});
 				}
@@ -516,7 +518,7 @@ export const noteService = {
 				await queueService.enqueueRequest({
 					method: 'PUT',
 					endpoint: `/notes/${noteID}`,
-					body: data,
+					body: serverPayload,
 					localId: String(noteID),
 				});
 			}
