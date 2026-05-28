@@ -1,6 +1,11 @@
 import { authService } from '../../../services/authService.js';
 import { store } from '../../../store.js';
 import type { User } from '../../../types.js';
+import {
+	DEFAULT_AVATAR_URL,
+	getAvatarUrl,
+	hasCustomAvatar,
+} from '../../../utils/avatar.js';
 import Component from '../../component.js';
 import templateString from './avatar.hbs?raw';
 
@@ -15,7 +20,6 @@ export default class ProfileAvatar extends Component {
 	private user: User | null;
 	private onAvatarUpdate?: (avatarUrl: string) => void;
 	private fileInput: HTMLInputElement | null = null;
-	private static readonly DEFAULT_AVATAR = '/icons/avatarBig.svg';
 
 	constructor(options: ProfileAvatarOptions) {
 		super();
@@ -24,13 +28,9 @@ export default class ProfileAvatar extends Component {
 	}
 
 	protected getTemplateData() {
-		let avatarUrl = this.user?.avatar || ProfileAvatar.DEFAULT_AVATAR;
-		avatarUrl = avatarUrl.replace('http://minio:9000', '/minio');
 		return {
-			avatarUrl: avatarUrl,
-			hasAvatar:
-				!!this.user?.avatar &&
-				this.user.avatar !== ProfileAvatar.DEFAULT_AVATAR,
+			avatarUrl: getAvatarUrl(this.user),
+			hasAvatar: hasCustomAvatar(this.user),
 		};
 	}
 
@@ -104,14 +104,14 @@ export default class ProfileAvatar extends Component {
 	private async handleDeleteAvatar(): Promise<void> {
 		try {
 			await authService.deleteAvatar();
-			this.updateAvatarImage(ProfileAvatar.DEFAULT_AVATAR);
+			this.updateAvatarImage(DEFAULT_AVATAR_URL);
 			const currentUser = store.getUser();
 			if (currentUser) {
 				const updatedUser: User = { ...currentUser, avatar: null };
 				store.setUser(updatedUser);
 				this.user = updatedUser;
 			}
-			this.onAvatarUpdate?.(ProfileAvatar.DEFAULT_AVATAR);
+			this.onAvatarUpdate?.(DEFAULT_AVATAR_URL);
 			this.clearError();
 			this.updateDeleteButtonVisibility(false);
 		} catch (error) {

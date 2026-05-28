@@ -144,6 +144,15 @@
 		transition: all 0.2s ease;
 	}
 
+	&__avatar {
+		width: 15px;
+		height: 15px;
+		border-radius: 50%;
+		border: 1px solid var(--faint-a);
+		object-fit: cover;
+		flex-shrink: 0;
+	}
+
 	&__barrier {
 		width: 85%;
 		align-self: center;

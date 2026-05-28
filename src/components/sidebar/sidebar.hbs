@@ -23,7 +23,12 @@
 			class='profileButton sidebar__btn'
 			data-action='profile'
 		>
-			{{{svgIcon "profile" class="icon" alt="Profile"}}}
+			<img
+				src='{{user.avatarUrl}}'
+				alt='Profile'
+				class='sidebar__avatar'
+				data-sidebar-avatar
+			/>
 			<span id='profile-username'>{{user.username}}</span>
 		</button>
 	</div>

@@ -5,6 +5,7 @@ import { sidebarService } from '../../services/sidebarService.js';
 import { subnoteService } from '../../services/subnoteService.js';
 import { store } from '../../store.js';
 import type { User } from '../../types.js';
+import { getAvatarUrl } from '../../utils/avatar.js';
 import Component from '../component.js';
 import NotePopup from '../popups/notePopup/notePopup.js';
 import NoteSection from './noteSection/noteSection.js';
@@ -34,6 +35,7 @@ export default class Sidebar extends Component {
 		return {
 			user: {
 				username: user?.username || 'Пользователь',
+				avatarUrl: getAvatarUrl(user),
 			},
 		};
 	}
@@ -259,6 +261,12 @@ export default class Sidebar extends Component {
 			const usernameSpan = this.domElement?.querySelector('#profile-username');
 			if (usernameSpan && user) {
 				usernameSpan.textContent = user.username || 'Пользователь';
+			}
+			const avatarImg = this.domElement?.querySelector(
+				'[data-sidebar-avatar]',
+			) as HTMLImageElement | null;
+			if (avatarImg) {
+				avatarImg.src = getAvatarUrl(user);
 			}
 		});
 	}
