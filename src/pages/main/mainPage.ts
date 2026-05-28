@@ -43,7 +43,7 @@ export async function initMainPage(
 		}
 	}
 	const sharedNoteId = data?.query?.note;
-	let noteIdToOpen: string | number | undefined | null = null;
+	let noteIdToOpen: string | number | undefined | null;
 	if (sharedNoteId) {
 		noteIdToOpen = sharedNoteId;
 	} else {

@@ -2,4 +2,11 @@
 	white-space: inherit !important;
 	user-select: none;
 	-webkit-user-select: none;
+	&:hover {
+		cursor: pointer;
+	}
+}
+
+.subnote-block__icon {
+	margin-right: 5px;
 }
