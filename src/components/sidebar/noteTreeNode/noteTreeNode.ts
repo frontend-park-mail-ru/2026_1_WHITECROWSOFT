@@ -104,13 +104,19 @@ export default class NoteTreeNode extends Component {
 		const { noteId, icon } = e.detail;
 		if (String(noteId) === String(this.note.id)) {
 			this.note.icon = icon;
-			const iconEl = this.domElement?.querySelector(
-				'.note-tree-node__icon',
-			) as HTMLImageElement;
-			if (iconEl) {
-				iconEl.src = icon;
-			}
+			this.applyIcon(icon);
 		}
+	}
+
+	private applyIcon(icon: string | null | undefined): void {
+		const useEl = this.domElement?.querySelector(
+			'.note-tree-node__icon use',
+		) as SVGUseElement | null;
+		if (!useEl) return;
+		const match = icon ? icon.match(/([^/\\]+)\.svg$/) : null;
+		const iconName = icon ? (match ? match[1] : icon) : 'document';
+		useEl.setAttribute('href', `#${iconName}`);
+		useEl.setAttribute('xlink:href', `#${iconName}`);
 	}
 
 	private renderChildren(): void {
@@ -147,12 +153,7 @@ export default class NoteTreeNode extends Component {
 		if (this.titleElement) {
 			this.titleElement.textContent = note.title;
 		}
-		const iconEl = this.domElement?.querySelector(
-			'.note-tree-node__doc-icon',
-		) as HTMLImageElement;
-		if (iconEl) {
-			iconEl.src = note.icon || '';
-		}
+		this.applyIcon(note.icon);
 		const toggleIcon = this.domElement?.querySelector(
 			'.note-tree-node__toggle-icon',
 		);

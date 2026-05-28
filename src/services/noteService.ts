@@ -71,6 +71,8 @@ export const noteService = {
 					title: note.title,
 					parent_id: note.parent_id || null,
 					updatedAt: note.updated_at || Date.now(),
+					icon: note.icon,
+					coverUrl: note.header_url,
 					is_public: note.is_public || false,
 					is_favorite: note.is_favorite || false,
 				}));
