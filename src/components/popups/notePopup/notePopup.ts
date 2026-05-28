@@ -46,8 +46,10 @@ export default class NotePopup extends Component {
 	}
 
 	protected getTemplateData() {
+		const note = store.getNotes().find((n) => n.ID === this.noteId);
 		return {
 			noteId: this.noteId,
+			isFavorite: note?.is_favorite === true,
 		};
 	}
 

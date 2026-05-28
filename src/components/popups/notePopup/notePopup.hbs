@@ -3,8 +3,11 @@
         <h3>Заметка</h3>
         <div class="popup__operations">
             <button class="popup__button" data-action="pin">
-                {{{svgIcon "pin" class="popup__icon" alt="Pin"}}}
-                В избранное
+                {{#if isFavorite}}
+                {{{svgIcon "unpin" class="popup__icon" alt="Unpin"}}} Убрать из избранного
+                {{else}}
+                {{{svgIcon "pin" class="popup__icon" alt="Pin"}}} В избранное
+                {{/if}}
             </button>
             <button class="popup__button" data-action="rename">
                 {{{svgIcon "rename" class="popup__icon" alt="Rename"}}}
