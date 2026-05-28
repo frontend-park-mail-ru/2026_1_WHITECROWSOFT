@@ -244,6 +244,11 @@ export const authService = {
 	}): Promise<void> {
 		console.warn('[AuthService] changePassword not implemented yet', data);
 	},
+
+	async deleteAccount(): Promise<void> {
+		await client.delete('/profile');
+		await this.invalidateSession();
+	},
 };
 
 export type {

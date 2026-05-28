@@ -1,6 +1,9 @@
 import Handlebars from 'handlebars';
 import '../../assets/style/authForm.scss';
-import { confirmDialog } from '../../components/popups/confirmDialog/confirmDialog.js';
+import {
+	alertDialog,
+	confirmDialog,
+} from '../../components/popups/confirmDialog/confirmDialog.js';
 import ProfileAvatar from '../../components/profile/avatar/avatar.js';
 import ProfileForm from '../../components/profile/form/form.js';
 import { db } from '../../db.js';
@@ -112,7 +115,31 @@ async function handleDeleteAccount(): Promise<void> {
 		confirmText: 'Удалить',
 		danger: true,
 	});
-	if (confirmed) {
-		console.log('Delete account');
+	if (!confirmed) {
+		return;
+	}
+
+	const deleteBtn = document.querySelector(
+		'[data-action="deleteAccount"]',
+	) as HTMLButtonElement | null;
+	const originalText = deleteBtn?.textContent;
+	if (deleteBtn) {
+		deleteBtn.disabled = true;
+		deleteBtn.textContent = 'Удаление...';
+	}
+
+	try {
+		await authService.deleteAccount();
+		router.replace('/signin');
+	} catch (error) {
+		console.error('Failed to delete account:', error);
+		if (deleteBtn) {
+			deleteBtn.disabled = false;
+			deleteBtn.textContent = originalText || 'Удалить аккаунт';
+		}
+		await alertDialog({
+			title: 'Ошибка',
+			message: 'Не удалось удалить аккаунт. Попробуйте ещё раз.',
+		});
 	}
 }
