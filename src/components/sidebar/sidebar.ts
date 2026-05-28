@@ -47,6 +47,7 @@ export default class Sidebar extends Component {
 		await this.restoreSidebarWidth();
 		this.subscribeToStore();
 		this.subscribeToSyncEvents();
+		sidebarService.expandAncestors(store.getActiveNoteId());
 		this.updatePersonalNotes();
 		this.updateSharedNotes();
 		this.updatefavoriteNotes();
@@ -253,6 +254,16 @@ export default class Sidebar extends Component {
 					this.favoriteSection?.updateActiveNote(noteId);
 				} else {
 					this.personalSection?.updateActiveNote(noteId);
+				}
+
+				if (sidebarService.expandAncestors(noteId)) {
+					if (section === 'shared') {
+						this.updateSharedNotes();
+					} else if (section === 'favorite') {
+						this.updatefavoriteNotes();
+					} else {
+						this.updatePersonalNotes();
+					}
 				}
 			},
 		);

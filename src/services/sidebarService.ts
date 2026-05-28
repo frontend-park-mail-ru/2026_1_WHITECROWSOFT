@@ -101,6 +101,29 @@ export const sidebarService = {
 		return this.expandedState.get(noteId) ?? false;
 	},
 
+	expandAncestors(noteId: string | number | null | undefined): boolean {
+		if (!noteId) return false;
+		const notesMap = new Map(store.getNotes().map((n) => [String(n.ID), n]));
+		let currentId: string | number | null | undefined = noteId;
+		const visited = new Set<string>();
+		let changed = false;
+		while (currentId) {
+			const key = String(currentId);
+			if (visited.has(key)) break;
+			visited.add(key);
+			const note = notesMap.get(key);
+			if (!note) break;
+			const parentId = note.parent_id;
+			if (!parentId) break;
+			if (this.expandedState.get(parentId) !== true) {
+				this.expandedState.set(parentId, true);
+				changed = true;
+			}
+			currentId = parentId;
+		}
+		return changed;
+	},
+
 	expandAll(): void {
 		const notes = store.getNotes();
 		for (const note of notes) {
