@@ -196,7 +196,6 @@ export default class Sidebar extends Component {
 	private bindNavigationEvents(): void {
 		if (!this.domElement) return;
 		const profileBtn = this.domElement.querySelector('[data-action="profile"]');
-		const homeBtn = this.domElement.querySelector('[data-action="home"]');
 		const newNoteBtn = this.domElement.querySelector('[data-action="newNote"]');
 		const toggleSidebarBtn = this.domElement.querySelector(
 			'[data-action="toggleSidebar"]',
@@ -205,10 +204,6 @@ export default class Sidebar extends Component {
 		profileBtn?.addEventListener('click', (e) => {
 			e.preventDefault();
 			router.push('/profile');
-		});
-		homeBtn?.addEventListener('click', (e) => {
-			e.preventDefault();
-			router.push('/');
 		});
 		newNoteBtn?.addEventListener('click', async (e) => {
 			e.preventDefault();
