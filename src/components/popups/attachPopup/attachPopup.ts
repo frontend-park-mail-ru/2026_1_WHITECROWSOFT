@@ -131,18 +131,23 @@ export default class AttachPopup extends Component {
 
 		if (textBtn) {
 			this.boundHandlers.onTextClick = async () => {
-				const activeNoteId = store.getActiveNoteId();
-				if (activeNoteId) {
-					await noteService.createBlockAfter(
-						activeNoteId,
-						{
-							note_id: activeNoteId,
-							block_type_id: 1,
-						},
-						this.afterBlockId,
-					);
+				try {
+					const activeNoteId = store.getActiveNoteId();
+					if (activeNoteId) {
+						await noteService.createBlockAfter(
+							activeNoteId,
+							{
+								note_id: activeNoteId,
+								block_type_id: 1,
+							},
+							this.afterBlockId,
+						);
+					}
+				} catch (error) {
+					console.error('Failed to create block:', error);
+				} finally {
+					this.close();
 				}
-				this.close();
 			};
 			textBtn.addEventListener('click', this.boundHandlers.onTextClick);
 		}

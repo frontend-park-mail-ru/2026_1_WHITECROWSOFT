@@ -77,7 +77,13 @@ export default class NoteTree extends Component {
 		this.renderNodes();
 	}
 
-	updateActiveNote(noteId: string | number | null): void {
+	updateActiveNote(
+		noteId: string | number | null,
+		section?: 'personal' | 'shared' | 'favorite',
+	): void {
+		if (section && this.options.section !== section) {
+			return;
+		}
 		const updateRecursive = (notes: SidebarNote[]): void => {
 			for (const note of notes) {
 				const isActive = String(note.id) === String(noteId);

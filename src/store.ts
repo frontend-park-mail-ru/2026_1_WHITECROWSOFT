@@ -115,6 +115,7 @@ class Store {
 	}
 
 	setActiveNoteId(noteId: string | number | null): void {
+		console.log(noteId);
 		this.state.activeNoteId = noteId;
 		this._notify('activeNoteId', noteId);
 	}

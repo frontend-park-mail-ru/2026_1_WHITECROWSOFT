@@ -120,23 +120,25 @@ export default class IconPopup extends Component {
 					const action = btn.getAttribute('data-action') as IconType;
 					if (action) {
 						const icon = `/icons/icon_${action}.svg`;
-						await noteService.updateNote(this.noteId, {
+						const result = await noteService.updateNote(this.noteId, {
 							title: store.getActiveNote()?.title,
 							icon,
 						});
-						const activeNote = store.getActiveNote();
-						if (activeNote && activeNote.ID === this.noteId) {
-							store.setActiveNote({
-								...activeNote,
-								icon: icon,
-							});
+						if (result) {
+							const activeNote = store.getActiveNote();
+							if (activeNote && activeNote.ID === this.noteId) {
+								store.setActiveNote({
+									...activeNote,
+									icon: icon,
+								});
+							}
+							window.dispatchEvent(
+								new CustomEvent('noteIconChanged', {
+									detail: { noteId: this.noteId, icon },
+								}),
+							);
+							this.onSelect?.(action);
 						}
-						window.dispatchEvent(
-							new CustomEvent('noteIconChanged', {
-								detail: { noteId: this.noteId, icon },
-							}),
-						);
-						this.onSelect?.(action);
 						this.close();
 					}
 				}

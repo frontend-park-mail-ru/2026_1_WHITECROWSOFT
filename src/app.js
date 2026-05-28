@@ -60,6 +60,8 @@ async function bootstrap() {
 		}
 
 		const activeNodeId = await db.settingsGet('activeNoteId');
+		const activeNoteSection = await db.settingsGet('activeNoteSection');
+		console.log(activeNoteSection);
 		if (activeNodeId) {
 			const note = await db.notesGet(activeNodeId);
 			const activenote = {
@@ -68,12 +70,12 @@ async function bootstrap() {
 				breadcrumb: note.title,
 				text: '',
 				parent_id: note.parent_id || null,
-				section: note.section,
+				section: activeNoteSection,
 				coverUrl: note.coverUrl,
 				icon: note.icon,
 			};
-			store.setActiveNote(activenote);
-			store.setActiveNoteId(activeNodeId);
+			store.setActiveNoteSilently(activenote);
+			store.setActiveNoteIdSilently(activeNodeId);
 			const activeNote = await db.notesGet(activeNodeId);
 			if (activeNote && activeNote.blocks && activeNote.blocks.length > 0) {
 				const formattingMap = await db.formattingGetByNoteId(activeNodeId);

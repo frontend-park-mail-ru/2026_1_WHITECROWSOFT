@@ -194,21 +194,22 @@ export default class NotePopup extends Component {
 
 	private async handleShare(): Promise<void> {
 		try {
-			await noteService.updateNote(this.noteId, {
+			const result = await noteService.updateNote(this.noteId, {
 				is_public: true,
 				title: this.titleElement?.textContent,
 			});
-
-			const noteIdStr = String(this.noteId);
-			const shareUrl = `${window.location.origin}/?note=${noteIdStr}`;
-			await navigator.clipboard.writeText(shareUrl);
-			collabManager.startCollab(noteIdStr);
-			await alertDialog({
-				title: 'Заметка опубликована',
-				message:
-					'Заметка стала публичной. Ссылка на заметку скопирована в буфер обмена',
-			});
-			this.boundHandlers.onShareComplete?.();
+			if (result) {
+				const noteIdStr = String(this.noteId);
+				const shareUrl = `${window.location.origin}/?note=${noteIdStr}`;
+				await navigator.clipboard.writeText(shareUrl);
+				collabManager.startCollab(noteIdStr);
+				await alertDialog({
+					title: 'Заметка опубликована',
+					message:
+						'Заметка стала публичной. Ссылка на заметку скопирована в буфер обмена',
+				});
+				this.boundHandlers.onShareComplete?.();
+			}
 			this.close();
 		} catch (error) {
 			console.error('Failed to share note:', error);
@@ -222,27 +223,29 @@ export default class NotePopup extends Component {
 	private async handlePdf(): Promise<void> {
 		try {
 			const blob = await noteService.exportToPdf(this.noteId);
-
-			const note = store.getNotes().find((n) => n.ID === this.noteId);
-			const filename = `${note?.title || 'note'}.pdf`;
-
-			const blobUrl = window.URL.createObjectURL(blob);
-			const link = document.createElement('a');
-			link.href = blobUrl;
-			link.download = filename;
-
-			document.body.appendChild(link);
-			link.click();
-			document.body.removeChild(link);
-
-			window.URL.revokeObjectURL(blobUrl);
+			if (blob) {
+				const note = store.getNotes().find((n) => n.ID === this.noteId);
+				const filename = `${note?.title || 'note'}.pdf`;
+				const blobUrl = window.URL.createObjectURL(blob);
+				const link = document.createElement('a');
+				link.href = blobUrl;
+				link.download = filename;
+				document.body.appendChild(link);
+				link.click();
+				document.body.removeChild(link);
+				window.URL.revokeObjectURL(blobUrl);
+			}
 			this.close();
 		} catch (error) {
-			console.error('Failed to download PDF:', error);
-			await alertDialog({
-				title: 'Ошибка',
-				message: 'Не удалось экспортировать заметку в PDF',
-			});
+			const err = error as Error;
+			if (err.message !== 'Unauthorized') {
+				console.error('Failed to download PDF:', error);
+				await alertDialog({
+					title: 'Ошибка',
+					message: 'Не удалось экспортировать заметку в PDF',
+				});
+			}
+			this.close();
 		}
 	}
 

@@ -68,13 +68,6 @@ export async function initMainPage(
 		noteHeader = new NoteHeader();
 		noteHeader.renderTo(headerContainer as HTMLElement);
 	}
-	if (bodyContainer) {
-		noteBody = new NoteBody();
-		noteBody.renderTo(bodyContainer as HTMLElement);
-		noteBody.getElement()?.addEventListener('addBlock', ((e: CustomEvent) => {
-			handleAddBlock(e.detail.afterBlockId);
-		}) as EventListener);
-	}
 
 	function setVisibility(hasNote: boolean): void {
 		if (!emptyState || !noteContainer) return;
@@ -94,8 +87,16 @@ export async function initMainPage(
 				collabManager.stopCollab();
 				cursorsRenderer?.cleanup();
 				cursorsRenderer = null;
-
 				await noteService.getNote(noteId);
+				if (bodyContainer && !noteBody) {
+					noteBody = new NoteBody();
+					noteBody.renderTo(bodyContainer as HTMLElement);
+					noteBody.getElement()?.addEventListener('addBlock', ((
+						e: CustomEvent,
+					) => {
+						handleAddBlock(e.detail.afterBlockId);
+					}) as EventListener);
+				}
 				const activeNoteData = store.getActiveNote();
 				setVisibility(!!activeNoteData);
 

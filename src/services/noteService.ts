@@ -93,6 +93,7 @@ export const noteService = {
 					store.setActiveBlocks([]);
 					store.setActiveNoteId(null);
 					await db.settingsSet('activeNoteId', null);
+					await db.settingsSet('activeNoteSection', null);
 				}
 				return notes;
 			} catch (error) {
@@ -210,7 +211,7 @@ export const noteService = {
 				updatedNotes = [...currentNotes];
 				updatedNotes[existingIndex] = note;
 			}
-			store.setNotes(updatedNotes);
+			store.setNotesSilently(updatedNotes);
 			for (const block of serverBlocks) {
 				if (block.formatting && block.formatting.ranges) {
 					await db.formattingPut({
@@ -250,6 +251,7 @@ export const noteService = {
 		store.setActiveNote(activeNote);
 		store.setActiveNoteId(activeNote.ID);
 		await db.settingsSet('activeNoteId', activeNote.ID);
+		await db.settingsSet('activeNoteSection', activeNote.section);
 	},
 
 	async createNote(data: CreateNoteData): Promise<Note> {
@@ -342,14 +344,6 @@ export const noteService = {
 				console.warn(
 					`[noteService] Network failed (${error}), queueing delete request`,
 				);
-				if (handleAuthError(error)) {
-					throw error;
-				}
-				await queueService.enqueueRequest({
-					method: 'DELETE',
-					endpoint: `/notes/${noteID}`,
-					body: null,
-				});
 			}
 		} else if (!isOnline && !isLocal) {
 			await queueService.enqueueRequest({
@@ -421,6 +415,7 @@ export const noteService = {
 		const activeNoteId = store.getActiveNoteId();
 		if (activeNoteId && idsToDelete.includes(activeNoteId)) {
 			await db.settingsSet('activeNoteId', null);
+			await db.settingsSet('activeNoteSection', null);
 			if (currentNotes.length > 0) {
 				const firstNote = currentNotes[0];
 				const activeNote = {
@@ -436,12 +431,15 @@ export const noteService = {
 				store.setActiveNote(activeNote);
 				store.setActiveNoteId(currentNotes[0].ID);
 				db.settingsSet('activeNoteId', activeNote.ID);
+				db.settingsSet('activeNoteSection', activeNote.section);
+				
 			} else {
 				router.push(`/`);
 				store.setActiveNote(null);
 				store.setActiveBlocks([]);
 				store.setActiveNoteId(null);
 				db.settingsSet('activeNoteId', null);
+				db.settingsSet('activeNoteSection', null);
 			}
 		}
 	},
@@ -453,8 +451,30 @@ export const noteService = {
 	): Promise<Note | null> {
 		const currentNotes = store.getNotes();
 		const noteIndex = currentNotes.findIndex((n) => n.ID === noteID);
-
 		if (noteIndex !== -1) {
+			const note = currentNotes[noteIndex];
+			const isOnline = store.getOnline();
+			const isPublic = note.is_public === true;
+			if (isPublic && isOnline) {
+				if (data.title) {
+					collabManager.sendUpdateNoteTitle(data.title);
+				}
+			}
+			if (isOnline) {
+				try {
+					await client.put(`/notes/${noteID}`, data);
+				} catch (error){
+					console.log(error);
+					return null;
+				}
+			} else {
+				await queueService.enqueueRequest({
+					method: 'PUT',
+					endpoint: `/notes/${noteID}`,
+					body: data,
+					localId: String(noteID),
+				});
+			}
 			const updatedNote = {
 				...currentNotes[noteIndex],
 				...data,
@@ -462,6 +482,7 @@ export const noteService = {
 				parent_id: currentNotes[noteIndex].parent_id ?? null,
 			};
 			await db.notesPut(updatedNote);
+			db.settingsSet('activeNoteSection', 'favorite');
 			const updatedNotes = [...currentNotes];
 			updatedNotes[noteIndex] = updatedNote;
 			if (silence === false) {
@@ -489,43 +510,8 @@ export const noteService = {
 				store.setActiveNote(activeNote);
 				store.setActiveNoteId(updatedNote.ID);
 			}
-
-			const note = currentNotes[noteIndex];
-			const isOnline = store.getOnline();
-			const isPublic = note.is_public === true;
-
-			if (isPublic && isOnline) {
-				if (data.title) {
-					collabManager.sendUpdateNoteTitle(data.title);
-				}
-				return updatedNote;
-			}
-
-			const serverPayload = { icon: updatedNote.icon, ...data };
-
-			if (isOnline) {
-				try {
-					await client.put(`/notes/${noteID}`, serverPayload);
-				} catch {
-					await queueService.enqueueRequest({
-						method: 'PUT',
-						endpoint: `/notes/${noteID}`,
-						body: serverPayload,
-						localId: String(noteID),
-					});
-				}
-			} else {
-				await queueService.enqueueRequest({
-					method: 'PUT',
-					endpoint: `/notes/${noteID}`,
-					body: serverPayload,
-					localId: String(noteID),
-				});
-			}
-
 			return updatedNote;
 		}
-
 		return null;
 	},
 
@@ -1106,7 +1092,12 @@ export const noteService = {
 		}
 	},
 
-	async exportToPdf(noteId: string | number): Promise<Blob> {
-		return client.getBlob(`/notes/${noteId}/pdf`);
+	async exportToPdf(noteId: string | number): Promise<Blob | null> {
+		try {
+			return client.getBlob(`/notes/${noteId}/pdf`);
+		} catch (error){
+			console.log(error);
+			return null;
+		}
 	},
 };

@@ -117,6 +117,7 @@ export default class BlockWrapper extends Component {
 						});
 						store.setActiveNoteId(subnoteId);
 						db.settingsSet('activeNoteId', subnoteId);
+						db.settingsSet('activeNoteSection', note.section);
 						router.push(`/?note=${subnoteId}`);
 					}
 				},

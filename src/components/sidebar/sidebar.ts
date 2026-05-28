@@ -51,6 +51,23 @@ export default class Sidebar extends Component {
 		this.updatePersonalNotes();
 		this.updateSharedNotes();
 		this.updatefavoriteNotes();
+		this.setActiveNoteInCorrectSection();
+	}
+
+	private setActiveNoteInCorrectSection(): void {
+		const activeNoteId = store.getActiveNoteId();
+		const activeNote = store.getActiveNote();
+		const section = activeNote?.section;
+		this.personalSection?.updateActiveNote(null);
+		this.sharedSection?.updateActiveNote(null);
+		this.favoriteSection?.updateActiveNote(null);
+		if (section === 'shared' && activeNoteId) {
+			this.sharedSection?.updateActiveNote(activeNoteId);
+		} else if (section === 'favorite' && activeNoteId) {
+			this.favoriteSection?.updateActiveNote(activeNoteId);
+		} else if (activeNoteId) {
+			this.personalSection?.updateActiveNote(activeNoteId);
+		}
 	}
 
 	private async restoreSidebarWidth(): Promise<void> {
@@ -312,6 +329,7 @@ export default class Sidebar extends Component {
 		store.setActiveNote(activeNote);
 		store.setActiveNoteId(noteId);
 		db.settingsSet('activeNoteId', noteId);
+		db.settingsSet('activeNoteSection', activeNote.section);
 	};
 
 	private handleToggle = (noteId: string | number): void => {
