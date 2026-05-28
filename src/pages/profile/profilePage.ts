@@ -53,63 +53,6 @@ function setupProfileComponents(app: HTMLElement): void {
 		});
 		usernameForm.renderTo(usernameContainer as HTMLElement);
 	}
-	const emailContainer = app.querySelector('[data-email-form]');
-	if (emailContainer) {
-		const emailForm = new ProfileForm({
-			formId: 'emailForm',
-			fields: [
-				{
-					name: 'email',
-					label: 'Email',
-					type: 'email',
-					value: user?.email || undefined,
-					placeholder: 'Ваша почта',
-					autocomplete: 'email',
-					disabled: true,
-				},
-			],
-			buttonText: 'Сохранить',
-			onSubmit: async (formData) => {
-				return await authService.updateProfile({
-					email: formData.email as string,
-				});
-			},
-		});
-		emailForm.renderTo(emailContainer as HTMLElement);
-	}
-	const passwordContainer = app.querySelector('[data-password-form]');
-	if (passwordContainer) {
-		const passwordForm = new ProfileForm({
-			formId: 'passwordForm',
-			fields: [
-				{
-					name: 'newPassword',
-					label: 'Новый пароль',
-					type: 'password',
-					placeholder: 'Введите новый пароль',
-					autocomplete: 'new-password',
-					disabled: true,
-				},
-			],
-			buttonText: 'Изменить',
-			onSubmit: async (formData) => {
-				const currentPassword = prompt('Введите текущий пароль:');
-				if (!currentPassword) {
-					throw new Error('Текущий пароль обязателен');
-				}
-				return await authService.changePassword({
-					oldPassword: currentPassword,
-					newPassword: formData.newPassword as string,
-				});
-			},
-			onSuccess: () => {
-				(
-					document.getElementById('passwordForm') as HTMLFormElement | null
-				)?.reset();
-			},
-		});
-		passwordForm.renderTo(passwordContainer as HTMLElement);
-	}
 	const logoutBtn = app.querySelector(
 		'.logoutButton',
 	) as HTMLButtonElement | null;
