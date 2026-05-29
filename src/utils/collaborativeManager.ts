@@ -10,6 +10,7 @@ import type {
 	DeleteCharMsg,
 	InsertCharMsg,
 	MoveBlockMsg,
+	Note,
 	WebSocketMessage,
 } from '../types.js';
 
@@ -85,7 +86,7 @@ export class CollaborativeManager {
 	 * Отправляет позицию курсора текущего пользователя на сервер
 	 * Это позволяет другим участникам видеть движение курсора
 	 */
-	sendCursorMove(blockId: string, position: number): void {
+	sendCursorMove(blockId: string, startPos: number, endPos: number): void {
 		if (!wsService.isConnected()) {
 			console.warn(
 				'[CollaborativeManager] Not connected, cannot send cursor move',
@@ -97,7 +98,8 @@ export class CollaborativeManager {
 			type: 'cursor_move',
 			msg: {
 				blockId,
-				position,
+				endPosition: endPos,
+				startPosition: startPos,
 			},
 		});
 	}
@@ -107,6 +109,7 @@ export class CollaborativeManager {
 	 * Сервер может применить эту операцию и разослать её остальным
 	 */
 	sendInsertChar(blockId: string, position: number, char: string): void {
+		console.log(blockId, position, char);
 		if (!wsService.isConnected()) {
 			console.warn(
 				'[CollaborativeManager] Not connected, cannot send insert char',
@@ -115,7 +118,7 @@ export class CollaborativeManager {
 		}
 
 		wsService.send({
-			type: 'insert_char',
+			type: 'insert_chars',
 			msg: {
 				blockId,
 				position,
@@ -129,7 +132,7 @@ export class CollaborativeManager {
 	 * Отправляет запрос на удаление символа
 	 * Другие участники увидят, как символ исчезает из блока
 	 */
-	sendDeleteChar(blockId: string, position: number): void {
+	sendDeleteChar(blockId: string, startPos: number, endPos: number): void {
 		if (!wsService.isConnected()) {
 			console.warn(
 				'[CollaborativeManager] Not connected, cannot send delete char',
@@ -138,10 +141,11 @@ export class CollaborativeManager {
 		}
 
 		wsService.send({
-			type: 'delete_char',
+			type: 'delete_chars',
 			msg: {
 				blockId,
-				position,
+				endPosition: endPos,
+				startPosition: startPos,
 				uniqueId: `${Date.now()}-${Math.random()}`,
 			},
 		});
@@ -274,6 +278,15 @@ export class CollaborativeManager {
 		});
 	}
 
+	sendUploadCover(data: { fileName: string; fileData: string }): void {
+		if (!wsService.isConnected()) return;
+
+		wsService.send({
+			type: 'upload_header',
+			msg: data,
+		});
+	}
+
 	/**
 	 * Обрабатывает входящее WebSocket-сообщение
 	 * Выбирает нужный метод на основе типа сообщения
@@ -290,10 +303,10 @@ export class CollaborativeManager {
 				case 'cursor_move':
 					this.handleCursorMove(message);
 					break;
-				case 'insert_char':
+				case 'insert_chars':
 					this.handleInsertChar(message);
 					break;
-				case 'delete_char':
+				case 'delete_chars':
 					this.handleDeleteChar(message);
 					break;
 				case 'apply_formatting':
@@ -313,6 +326,9 @@ export class CollaborativeManager {
 					break;
 				case 'upload_attachment':
 					this.handleUploadAttachment(message);
+					break;
+				case 'upload_header':
+					this.handleUploadCover(message);
 					break;
 				case 'sync_state':
 					this.handleSyncState(message);
@@ -355,7 +371,8 @@ export class CollaborativeManager {
 			userName: message.userName,
 			cursor: {
 				blockId: '',
-				position: 0,
+				endPosition: 0,
+				startPosition: 0,
 				timestamp: message.timestamp,
 			},
 		};
@@ -411,12 +428,14 @@ export class CollaborativeManager {
 
 	private handleCursorMove(message: WebSocketMessage): void {
 		const msg = message.msg as CollaborativeUser[];
+		console.log(msg[0].cursor.blockId);
 		const users: CollaborativeUser[] = msg.map((userData) => ({
 			userId: userData.userId,
 			userName: userData.userName,
 			cursor: {
 				blockId: userData.cursor.blockId,
-				position: userData.cursor.position,
+				endPosition: userData.cursor.endPosition,
+				startPosition: userData.cursor.startPosition,
 				timestamp: userData.cursor.timestamp || Date.now(),
 			},
 		}));
@@ -477,32 +496,17 @@ export class CollaborativeManager {
 	 * Обновляет содержимое блока и уведомляет UI
 	 */
 	private handleDeleteChar(message: WebSocketMessage): void {
-		// if (message.isLocal) return;
-
 		const msg = message.msg as DeleteCharMsg;
 		const blocks = store.getActiveBlocks();
 		const blockIndex = blocks.findIndex((b) => b.id === msg.blockId);
 
-		if (blockIndex === -1) {
-			console.warn('[CollaborativeManager] handleDeleteChar: block not found', {
-				blockId: msg.blockId,
-			});
-			return;
-		}
+		if (blockIndex === -1) return;
 
 		const block = blocks[blockIndex];
-		const position = msg.position ?? 0;
-		if (position < 0 || position >= block.content.length) {
-			console.warn(
-				'[CollaborativeManager] handleDeleteChar: position out of bounds',
-				{ position, contentLength: block.content.length },
-			);
-			return;
-		}
-
+		const startPos = msg.startPosition;
+		const endPos = msg.endPosition;
 		const newContent =
-			block.content.slice(0, msg.position) +
-			block.content.slice(msg.position + 1);
+			block.content.slice(0, startPos) + block.content.slice(endPos);
 
 		block.content = newContent;
 		store.setActiveBlocks([...blocks]);
@@ -512,7 +516,8 @@ export class CollaborativeManager {
 				detail: {
 					blockId: msg.blockId,
 					content: newContent,
-					position: position,
+					startPosition: startPos,
+					endPosition: startPos,
 					userId: message.userId,
 					isInsert: false,
 				},
@@ -595,7 +600,6 @@ export class CollaborativeManager {
 			b.position = i;
 		});
 		store.setActiveBlocks([...blocks]);
-		store.setPendingFocus(newBlock.id, 'start');
 		const activeNoteId = store.getActiveNoteId();
 		if (activeNoteId) {
 			const currentNotes = store.getNotes();
@@ -634,7 +638,7 @@ export class CollaborativeManager {
 		if (blockToFocus) {
 			const newBlock = blocks.find((b) => b.id === blockToFocus);
 			const position = newBlock?.content?.length || 0;
-			collabManager.sendCursorMove(String(blockToFocus), position);
+			collabManager.sendCursorMove(String(blockToFocus), position, position);
 		}
 
 		blocks.splice(blockIndex, 1);
@@ -642,9 +646,6 @@ export class CollaborativeManager {
 			b.position = i;
 		});
 		store.setActiveBlocks([...blocks]);
-		if (blockToFocus) {
-			store.setPendingFocus(blockToFocus, 'end');
-		}
 
 		const activeNoteId = store.getActiveNoteId();
 		if (activeNoteId) {
@@ -815,6 +816,69 @@ export class CollaborativeManager {
 		} catch (error) {
 			console.warn('[CollaborativeManager] Failed to cache attachment:', error);
 		}
+	}
+
+	private async handleUploadCover(message: WebSocketMessage): Promise<void> {
+		const msg = message.msg as {
+			id: string;
+			note_id: string;
+			header_url: string;
+			created_at: string;
+			mime_type: string;
+		};
+		const oldCover = await db.coverGetByNoteId(msg.note_id);
+		if (oldCover) {
+			await db.coverDelete(oldCover.id);
+		}
+		await this.cacheCover(msg.note_id, msg.id, msg.header_url);
+		const currentNote = await db.notesGet(msg.note_id);
+		if (!currentNote) return;
+		const updatedNote: Note = {
+			ID: currentNote.ID,
+			title: currentNote.title,
+			updatedAt: Date.now(),
+			coverUrl: msg.header_url,
+			icon: currentNote.icon || null,
+			blocks: currentNote.blocks || [],
+			parent_id: currentNote.parent_id || null,
+			isLocal: currentNote.isLocal || false,
+			is_public: currentNote.is_public || false,
+			is_favorite: currentNote.is_favorite || false,
+			section: currentNote.section || 'personal',
+		};
+		await db.notesPut(updatedNote);
+		const currentNotes = store.getNotes();
+		const noteIndex = currentNotes.findIndex((n) => n.ID === msg.note_id);
+		if (noteIndex !== -1) {
+			const updatedNotes = [...currentNotes];
+			updatedNotes[noteIndex] = updatedNote;
+			store.setNotesSilently(updatedNotes);
+		}
+		const activeNote = store.getActiveNote();
+		if (activeNote) {
+			store.setActiveNote({
+				...activeNote,
+				coverUrl: msg.header_url,
+			});
+		}
+	}
+
+	private async cacheCover(
+		noteId: string | number,
+		coverId: string | number,
+		url: string | undefined,
+	): Promise<void> {
+		const coverData = {
+			id: coverId,
+			noteId: noteId,
+			filename: '',
+			mimeType: '',
+			size: 0,
+			url: url,
+			status: 'synced' as const,
+			syncedAt: Date.now(),
+		};
+		await db.coverPut(coverData);
 	}
 
 	/**

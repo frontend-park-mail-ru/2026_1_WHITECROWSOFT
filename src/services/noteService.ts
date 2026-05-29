@@ -344,6 +344,7 @@ export const noteService = {
 				console.warn(
 					`[noteService] Network failed (${error}), queueing delete request`,
 				);
+				return;
 			}
 		} else if (!isOnline && !isLocal) {
 			await queueService.enqueueRequest({
@@ -862,7 +863,7 @@ export const noteService = {
 			if (blockToFocus) {
 				const newBlock = updatedBlocks.find((b) => b.id === blockToFocus);
 				const position = newBlock?.content?.length || 0;
-				collabManager.sendCursorMove(String(blockToFocus), position);
+				collabManager.sendCursorMove(String(blockToFocus), position, position);
 			}
 			if (updatedBlocks.length === 0) {
 				collabManager.sendCreateBlock(1, 0);

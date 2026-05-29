@@ -74,7 +74,7 @@ async function bootstrap() {
 				coverUrl: note.coverUrl,
 				icon: note.icon,
 			};
-			store.setActiveNoteSilently(activenote);
+			store.setActiveNote(activenote);
 			store.setActiveNoteIdSilently(activeNodeId);
 			const activeNote = await db.notesGet(activeNodeId);
 			if (activeNote && activeNote.blocks && activeNote.blocks.length > 0) {

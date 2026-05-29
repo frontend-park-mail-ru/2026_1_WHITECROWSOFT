@@ -252,13 +252,19 @@ export default class NoteHeader extends Component {
 		}
 		if (activeNoteId && newTitle !== this.savedTitle) {
 			try {
-				await noteService.updateNote(activeNoteId, { title: newTitle }, false);
-				const activeNote = store.getActiveNote();
-				if (activeNote) {
-					const breadcrumb = sidebarService.getBreadcrumb(activeNoteId);
-					store.setActiveNote({ ...activeNote, title: newTitle, breadcrumb });
+				const result = await noteService.updateNote(
+					activeNoteId,
+					{ title: newTitle },
+					false,
+				);
+				if (result) {
+					const activeNote = store.getActiveNote();
+					if (activeNote) {
+						const breadcrumb = sidebarService.getBreadcrumb(activeNoteId);
+						store.setActiveNote({ ...activeNote, title: newTitle, breadcrumb });
+					}
+					this.updateBreadcrumbDisplay();
 				}
-				this.updateBreadcrumbDisplay();
 			} catch (error) {
 				console.error('Error renaming note:', error);
 				input.value = this.savedTitle;

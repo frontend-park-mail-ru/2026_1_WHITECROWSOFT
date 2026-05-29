@@ -65,7 +65,9 @@ export default class TextBlock extends Component {
 
 	private applyRemoteUpdate(detail: {
 		content: string;
-		position: number;
+		startPosition?: number;
+		endPosition?: number;
+		position?: number;
 		char?: string;
 		isInsert?: boolean;
 	}): void {
@@ -96,17 +98,11 @@ export default class TextBlock extends Component {
 		this.block.content = detail.content;
 
 		if (wasFocused) {
-			let newCursorPosition = oldCursorPosition;
-			if (detail.isInsert && detail.position !== undefined) {
-				if (detail.position <= oldCursorPosition) {
-					newCursorPosition = oldCursorPosition + 1;
-				}
-			} else if (!detail.isInsert && detail.position !== undefined) {
-				if (detail.position < oldCursorPosition) {
-					newCursorPosition = oldCursorPosition - 1;
-				}
-			}
+			let newCursorPosition =
+				detail.endPosition ?? detail.position ?? oldCursorPosition;
 			if (newCursorPosition < 0) newCursorPosition = 0;
+			if (newCursorPosition > detail.content.length)
+				newCursorPosition = detail.content.length;
 			this.setCursorAtOffset(newCursorPosition);
 		}
 	}
@@ -161,6 +157,29 @@ export default class TextBlock extends Component {
 		});
 	}
 
+	private getSelectionRange(blockEl: HTMLElement): {
+		start: number;
+		end: number;
+	} {
+		const selection = window.getSelection();
+		if (!selection || selection.rangeCount === 0) {
+			return { start: 0, end: 0 };
+		}
+
+		const range = selection.getRangeAt(0);
+		const preRange = document.createRange();
+		preRange.setStart(blockEl, 0);
+		preRange.setEnd(range.startContainer, range.startOffset);
+		const start = preRange.toString().length;
+
+		const endRange = document.createRange();
+		endRange.setStart(blockEl, 0);
+		endRange.setEnd(range.endContainer, range.endOffset);
+		const end = endRange.toString().length;
+
+		return { start, end };
+	}
+
 	private handleBeforeInput(e: InputEvent, blockEl: HTMLElement): void {
 		if (!e.inputType) return;
 
@@ -170,62 +189,112 @@ export default class TextBlock extends Component {
 
 		if (!isPublic) return;
 
-		const selection = window.getSelection();
-		if (!selection || selection.rangeCount === 0) return;
+		const { start, end } = this.getSelectionRange(blockEl);
+		const hasSelection = start !== end;
 
-		const range = selection.getRangeAt(0);
-		const preRange = document.createRange();
-		preRange.setStart(blockEl, 0);
-		preRange.setEnd(range.startContainer, range.startOffset);
-		const cursorPosition = preRange.toString().length;
-
-		const blockId = String(this.block.id);
+		let textToInsert: string | null = null;
 
 		if (e.inputType === 'insertText' && e.data) {
-			const newContent =
-				this.block.content.slice(0, cursorPosition) +
-				e.data +
-				this.block.content.slice(cursorPosition);
+			textToInsert = e.data;
+		} else if (e.inputType === 'insertFromPaste') {
+			e.preventDefault();
+			textToInsert =
+				e.dataTransfer?.getData('text/plain') ||
+				(e as any).clipboardData?.getData('text/plain') ||
+				'';
+		}
+
+		if (textToInsert !== null) {
+			e.preventDefault();
+
+			let newContent: string;
+			let cursorPos: number;
+
+			if (hasSelection) {
+				newContent =
+					this.block.content.slice(0, start) +
+					textToInsert +
+					this.block.content.slice(end);
+				cursorPos = start + textToInsert.length;
+				collabManager.sendDeleteChar(String(this.block.id), start - 1, end - 1);
+				collabManager.sendInsertChar(
+					String(this.block.id),
+					start,
+					textToInsert,
+				);
+			} else {
+				newContent =
+					this.block.content.slice(0, start) +
+					textToInsert +
+					this.block.content.slice(start);
+				cursorPos = start + textToInsert.length;
+				collabManager.sendInsertChar(
+					String(this.block.id),
+					start,
+					textToInsert,
+				);
+			}
+
 			this.block.content = newContent;
+			blockEl.innerHTML = newContent;
+			this.applyFormatting();
+			this.setCursorAtOffset(cursorPos);
+			return;
+		}
 
-			const blocks = store.getActiveBlocks();
-			const blockIndex = blocks.findIndex((b) => b.id === this.block.id);
-			if (blockIndex !== -1) {
-				blocks[blockIndex] = { ...blocks[blockIndex], content: newContent };
-				store.setActiveBlocks([...blocks]);
+		if (e.inputType === 'deleteContentBackward') {
+			e.preventDefault();
+
+			let newContent: string;
+			let cursorPos: number;
+
+			if (hasSelection) {
+				newContent =
+					this.block.content.slice(0, start) + this.block.content.slice(end);
+				cursorPos = start;
+				collabManager.sendDeleteChar(String(this.block.id), start - 1, end - 1);
+			} else if (start > 0) {
+				newContent =
+					this.block.content.slice(0, start - 1) +
+					this.block.content.slice(start);
+				cursorPos = start - 1;
+				collabManager.sendDeleteChar(String(this.block.id), start - 1, start);
+			} else {
+				return;
 			}
 
-			collabManager.sendInsertChar(blockId, cursorPosition, e.data);
-		} else if (e.inputType === 'deleteContentBackward') {
-			if (cursorPosition > 0) {
-				const newContent =
-					this.block.content.slice(0, cursorPosition - 1) +
-					this.block.content.slice(cursorPosition);
-				this.block.content = newContent;
-
-				const blocks = store.getActiveBlocks();
-				const blockIndex = blocks.findIndex((b) => b.id === this.block.id);
-				if (blockIndex !== -1) {
-					blocks[blockIndex] = { ...blocks[blockIndex], content: newContent };
-					store.setActiveBlocks([...blocks]);
-				}
-
-				collabManager.sendDeleteChar(blockId, cursorPosition - 1);
-			}
+			this.block.content = newContent;
+			blockEl.innerHTML = newContent;
+			this.applyFormatting();
+			this.setCursorAtOffset(cursorPos);
 		} else if (e.inputType === 'deleteContentForward') {
-			const newContent =
-				this.block.content.slice(0, cursorPosition) +
-				this.block.content.slice(cursorPosition + 1);
-			this.block.content = newContent;
+			e.preventDefault();
 
-			const blocks = store.getActiveBlocks();
-			const blockIndex = blocks.findIndex((b) => b.id === this.block.id);
-			if (blockIndex !== -1) {
-				blocks[blockIndex] = { ...blocks[blockIndex], content: newContent };
-				store.setActiveBlocks([...blocks]);
+			let newContent: string;
+			let cursorPos: number;
+
+			if (hasSelection) {
+				newContent =
+					this.block.content.slice(0, start) + this.block.content.slice(end);
+				cursorPos = start;
+				collabManager.sendDeleteChar(String(this.block.id), start - 1, end - 1);
+			} else if (start < this.block.content.length) {
+				newContent =
+					this.block.content.slice(0, start) +
+					this.block.content.slice(start + 1);
+				cursorPos = start;
+				collabManager.sendDeleteChar(String(this.block.id), start - 1, start);
+			} else {
+				return;
 			}
 
-			collabManager.sendDeleteChar(blockId, cursorPosition);
+			this.block.content = newContent;
+			blockEl.innerHTML = newContent;
+			this.applyFormatting();
+			this.setCursorAtOffset(cursorPos);
+		} else if (e.inputType === 'insertParagraph') {
+			e.preventDefault();
+			this.handleSplit(blockEl);
 		}
 	}
 
@@ -239,15 +308,8 @@ export default class TextBlock extends Component {
 		const blockEl = this.domElement;
 		if (!blockEl) return;
 
-		const selection = window.getSelection();
-		if (!selection || selection.rangeCount === 0) return;
-
-		const range = selection.getRangeAt(0);
-		const preRange = document.createRange();
-		preRange.setStart(blockEl, 0);
-		preRange.setEnd(range.startContainer, range.startOffset);
-		const cursorPosition = preRange.toString().length;
-		collabManager.sendCursorMove(String(this.block.id), cursorPosition);
+		const { start, end } = this.getSelectionRange(blockEl);
+		collabManager.sendCursorMove(String(this.block.id), start, end);
 	}
 
 	private async saveContent(): Promise<void> {
@@ -295,25 +357,26 @@ export default class TextBlock extends Component {
 	private async handleSplit(blockEl: HTMLElement): Promise<void> {
 		const parts = this.getCaretParts(blockEl);
 		if (!parts) return;
+		const activeNoteId = store.getActiveNoteId();
+		const note = store.getNotes().find((n: Note) => n.ID === activeNoteId);
+		const isPublic = note?.is_public === true;
+		if (!isPublic) {
+			const currentContent = blockEl.innerHTML;
+			if (this.block.content !== currentContent) {
+				this.block.content = currentContent;
+				this.onContentChange?.(String(this.block.id), currentContent);
+			}
+		}
 		blockEl.innerHTML = parts.before;
-		this.onSplit?.(String(this.block.id), parts.before, parts.after);
-	}
-
-	private async handleJoinBackward(blockEl: HTMLElement): Promise<void> {
-		const wrapper = blockEl.closest('.note__block-wrapper');
-		if (!wrapper) return;
-		const prevWrapper = wrapper.previousElementSibling as HTMLElement;
-		const prevBlockEl = prevWrapper?.querySelector(
-			'.note__block',
-		) as HTMLElement;
-		if (!prevBlockEl || prevBlockEl.contentEditable !== 'true') return;
-		await this.saveContent();
-		const joinOffset = prevBlockEl.innerText.length;
-		this.onJoin?.(
-			String(this.block.id),
-			String(prevWrapper.dataset.blockId),
-			joinOffset,
-		);
+		this.applyFormatting();
+		if (isPublic) {
+			const blocks = store.getActiveBlocks();
+			const currentIndex = blocks.findIndex((b) => b.id === this.block.id);
+			const newPosition = currentIndex + 1;
+			collabManager.sendCreateBlock(1, newPosition);
+		} else {
+			this.onSplit?.(String(this.block.id), parts.before, parts.after);
+		}
 	}
 
 	private getCaretParts(
@@ -337,15 +400,26 @@ export default class TextBlock extends Component {
 		};
 	}
 
+	private async handleJoinBackward(blockEl: HTMLElement): Promise<void> {
+		const wrapper = blockEl.closest('.note__block-wrapper');
+		if (!wrapper) return;
+		const prevWrapper = wrapper.previousElementSibling as HTMLElement;
+		const prevBlockEl = prevWrapper?.querySelector(
+			'.note__block',
+		) as HTMLElement;
+		if (!prevBlockEl || prevBlockEl.contentEditable !== 'true') return;
+		await this.saveContent();
+		const joinOffset = prevBlockEl.innerText.length;
+		this.onJoin?.(
+			String(this.block.id),
+			String(prevWrapper.dataset.blockId),
+			joinOffset,
+		);
+	}
+
 	private isCaretAtStart(blockEl: HTMLElement): boolean {
-		const selection = window.getSelection();
-		if (!selection || !selection.isCollapsed || selection.rangeCount === 0)
-			return false;
-		const range = selection.getRangeAt(0);
-		const beforeRange = document.createRange();
-		beforeRange.setStart(blockEl, 0);
-		beforeRange.setEnd(range.startContainer, range.startOffset);
-		return beforeRange.toString().length === 0;
+		const { start, end } = this.getSelectionRange(blockEl);
+		return start === 0 && end === 0;
 	}
 
 	focus(): void {

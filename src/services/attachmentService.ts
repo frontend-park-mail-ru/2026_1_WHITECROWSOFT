@@ -831,12 +831,32 @@ export const attachmentService = {
 	},
 
 	async createCover(noteId: string | number, file: File): Promise<Note | null> {
+		const isPublic =
+			store.getNotes().find((note) => note.ID === noteId)?.is_public === true;
+		if (isPublic && store.getOnline()) {
+			return await this._createCoverViaWebSocket(noteId, file);
+		}
 		const isOnline = store.getOnline();
 		if (isOnline) {
 			return await this._createCoverOnline(noteId, file);
 		} else {
 			return await this._createCoverOffline(noteId, file);
 		}
+	},
+
+	async _createCoverViaWebSocket(
+		noteId: string | number,
+		file: File,
+	): Promise<Note | null> {
+		const cachedNote = await db.notesGet(noteId);
+		const arrayBuffer = await file.arrayBuffer();
+		const base64 = this._arrayBufferToBase64(arrayBuffer);
+		collabManager.sendUploadCover({
+			fileName: file.name,
+			fileData: base64,
+		});
+		if (!cachedNote) return null;
+		return cachedNote;
 	},
 
 	async _createCoverOnline(

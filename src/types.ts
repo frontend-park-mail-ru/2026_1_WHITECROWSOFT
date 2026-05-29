@@ -166,7 +166,8 @@ export interface CollaborativeUser {
  */
 export interface CursorPosition {
 	blockId: string; // ID блока, в котором находится курсор
-	position: number; // Позиция курсора в тексте блока
+	endPosition: number;
+	startPosition: number;
 	timestamp: number; // Время последнего обновления позиции
 }
 
@@ -180,14 +181,15 @@ export type WebSocketMessageType =
 	| 'sync_state' // Синхронизация состояния при подключении
 	| 'heartbeat' // Проверка соединения
 	| 'cursor_move' // Движение курсора
-	| 'insert_char' // Вставка символа
-	| 'delete_char' // Удаление символа
+	| 'insert_chars' // Вставка символа
+	| 'delete_chars' // Удаление символа
 	| 'apply_formatting' // Применение форматирования
 	| 'create_block' // Создание блока
 	| 'delete_block' // Удаление блока
 	| 'move_block' // Перемещение блока
 	| 'update_note_title' // Обновление заголовка заметки
 	| 'upload_attachment'
+	| 'upload_header'
 	| 'update_note_public' // Изменение публичности заметки
 	| 'delete_note' // Удаление заметки
 	| 'note_private' // Заметка стала приватной
@@ -222,7 +224,8 @@ export interface InsertCharMsg {
  */
 export interface DeleteCharMsg {
 	blockId: string; // ID блока
-	position: number; // Позиция удаления
+	endPosition: number;
+	startPosition: number;
 	uniqueId: string; // Уникальный ID операции
 }
 

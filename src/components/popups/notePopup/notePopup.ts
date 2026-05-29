@@ -4,6 +4,7 @@ import { store } from '../../../store.js';
 import { getElementPosition } from '../../../utils/utils.js';
 import Component from '../../component.js';
 import { alertDialog, confirmDialog } from '../confirmDialog/confirmDialog.js';
+import { db } from './../../../db.js';
 import { collabManager } from './../../../utils/collaborativeManager.js';
 import templateString from './notePopup.hbs?raw';
 
@@ -199,6 +200,7 @@ export default class NotePopup extends Component {
 				title: this.titleElement?.textContent,
 			});
 			if (result) {
+				db.settingsSet('activeNoteSection', 'shared');
 				const noteIdStr = String(this.noteId);
 				const shareUrl = `${window.location.origin}/?note=${noteIdStr}`;
 				await navigator.clipboard.writeText(shareUrl);
@@ -272,7 +274,12 @@ export default class NotePopup extends Component {
 			const newTitle = input.value.trim();
 			if (newTitle && newTitle !== currentTitle) {
 				try {
-					await noteService.updateNote(this.noteId, { title: newTitle });
+					const result = await noteService.updateNote(this.noteId, {
+						title: newTitle,
+					});
+					if (!result) {
+						throw new Error('Failed to rename note');
+					}
 					titleElement.textContent = newTitle;
 					this.boundHandlers.onRenameComplete?.();
 				} catch (error) {
