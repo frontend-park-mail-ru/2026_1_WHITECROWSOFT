@@ -375,13 +375,27 @@ export const noteService = {
 				(b) => b.block_type_id === 5 && b.content === String(noteID),
 			);
 			if (linkBlock) {
-				await client.delete(`/notes/${parentNote.ID}/blocks/${linkBlock.id}`);
+				if (isOnline) {
+					await client.delete(`/notes/${parentNote.ID}/blocks/${linkBlock.id}`);
+				}
 				const updatedBlocks = (parentNote.blocks || []).filter(
 					(b) => b.id !== linkBlock.id,
 				);
 				updatedBlocks.forEach((b, idx) => {
 					b.position = idx;
 				});
+				if (updatedBlocks.length === 0) {
+					const blockData: CreateBlockData = {
+						note_id: parentNote.ID,
+						block_type_id: 1,
+						position: 0,
+					};
+					const block = await client.post<BlockApiResponse>(
+						`/notes/${parentNote.ID}/blocks`,
+						blockData,
+					);
+					updatedBlocks.push(block);
+				}
 
 				const updatedNote = { ...parentNote, blocks: updatedBlocks };
 				const updatedNotes = store
@@ -432,7 +446,6 @@ export const noteService = {
 				store.setActiveNoteId(currentNotes[0].ID);
 				db.settingsSet('activeNoteId', activeNote.ID);
 				db.settingsSet('activeNoteSection', activeNote.section);
-				
 			} else {
 				router.push(`/`);
 				store.setActiveNote(null);
@@ -463,7 +476,7 @@ export const noteService = {
 			if (isOnline) {
 				try {
 					await client.put(`/notes/${noteID}`, data);
-				} catch (error){
+				} catch (error) {
 					console.log(error);
 					return null;
 				}
@@ -851,6 +864,9 @@ export const noteService = {
 				const position = newBlock?.content?.length || 0;
 				collabManager.sendCursorMove(String(blockToFocus), position);
 			}
+			if (updatedBlocks.length === 0) {
+				collabManager.sendCreateBlock(1, 0);
+			}
 			return;
 		}
 		if (isOnline && !isLocal) {
@@ -887,6 +903,15 @@ export const noteService = {
 		updatedBlocks.forEach((block, idx) => {
 			block.position = idx;
 		});
+		if (updatedBlocks.length === 0) {
+			const blockData: CreateBlockData = {
+				note_id: noteID,
+				block_type_id: 1,
+				position: 0,
+			};
+			const block = await this.createBlock(noteID, blockData, true);
+			updatedBlocks.push(block);
+		}
 		store.setActiveBlocks(updatedBlocks);
 		const currentNotes = store.getNotes();
 		const noteIndex = currentNotes.findIndex((n) => n.ID === noteID);
@@ -1095,7 +1120,7 @@ export const noteService = {
 	async exportToPdf(noteId: string | number): Promise<Blob | null> {
 		try {
 			return client.getBlob(`/notes/${noteId}/pdf`);
-		} catch (error){
+		} catch (error) {
 			console.log(error);
 			return null;
 		}

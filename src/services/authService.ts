@@ -118,7 +118,6 @@ export const authService = {
 	async getUserSession(): Promise<UserSession> {
 		const isOnline = store.getOnline();
 		const cachedUser = await db.settingsGet<User>('user');
-
 		if (!isOnline) {
 			if (cachedUser) {
 				store.setUser(cachedUser);

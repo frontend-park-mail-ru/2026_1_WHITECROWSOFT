@@ -232,9 +232,7 @@ export default class NoteBody extends Component {
 			}
 		}
 
-		if (blocks.length > 1) {
-			await noteService.deleteBlock(activeNoteId, blockId);
-		}
+		await noteService.deleteBlock(activeNoteId, blockId);
 
 		const wrapper = this.blockWrappers.get(blockId);
 		if (wrapper) {

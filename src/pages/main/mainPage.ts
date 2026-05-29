@@ -84,9 +84,11 @@ export async function initMainPage(
 			currentNoteId = noteId;
 
 			try {
-				collabManager.stopCollab();
-				cursorsRenderer?.cleanup();
-				cursorsRenderer = null;
+				if (store.getActiveNote()?.is_public) {
+					collabManager.stopCollab();
+					cursorsRenderer?.cleanup();
+					cursorsRenderer = null;
+				}
 				await noteService.getNote(noteId);
 				if (bodyContainer && !noteBody) {
 					noteBody = new NoteBody();

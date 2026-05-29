@@ -377,25 +377,55 @@ export class CollaborativeManager {
 	 * Обновляет позицию курсора другого пользователя
 	 * Данные обновляются в store и визуально рендерятся в UI
 	 */
+
+	// 	{
+	//     "type": "cursor_move",
+	//     "msg": [
+	//         {
+	//             "userId": "22222222-2222-2222-2222-222222222222",
+	//             "userName": "testuser2",
+	//             "cursor": {
+	//                 "blockId": "f1111111-1111-1111-1111-111111111111",
+	//                 "startPosition": 0,
+	//                 "endPosition": 0,
+	//                 "userId": "22222222-2222-2222-2222-222222222222",
+	//                 "userName": "testuser2",
+	//                 "timestamp": 1780055178090976049
+	//             }
+	//         },
+	//         {
+	//             "userId": "11111111-1111-1111-1111-111111111111",
+	//             "userName": "testuser1",
+	//             "cursor": {
+	//                 "blockId": "f1111111-1111-1111-1111-111111111111",
+	//                 "startPosition": 1,
+	//                 "endPosition": 1,
+	//                 "userId": "11111111-1111-1111-1111-111111111111",
+	//                 "userName": "testuser1",
+	//                 "timestamp": 1780055209845340176
+	//             }
+	//         }
+	//     ],
+	//     "timestamp": 0
+	// }
+
 	private handleCursorMove(message: WebSocketMessage): void {
-		if (!message.userId || !message.userName || message.is_local) return;
-
-		const msg = message.msg as CursorPosition;
-		const user: CollaborativeUser = {
-			userId: message.userId,
-			userName: message.userName,
+		const msg = message.msg as CollaborativeUser[];
+		const users: CollaborativeUser[] = msg.map((userData) => ({
+			userId: userData.userId,
+			userName: userData.userName,
 			cursor: {
-				blockId: msg.blockId,
-				position: msg.position,
-				timestamp: message.timestamp,
+				blockId: userData.cursor.blockId,
+				position: userData.cursor.position,
+				timestamp: userData.cursor.timestamp || Date.now(),
 			},
-		};
-
-		store.updateCollaborativeUser(message.userId, user);
-
+		}));
+		for (const user of users) {
+			store.updateCollaborativeUser(user.userId, user);
+		}
 		window.dispatchEvent(
 			new CustomEvent('collaborativeCursorMove', {
-				detail: user,
+				detail: users,
 			}),
 		);
 	}

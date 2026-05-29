@@ -1,5 +1,6 @@
 import type { WebSocketMessage } from '../types.js';
 import { handleAuthError } from '../utils/handleAuthError.js';
+import { authService } from './../services/authService.js';
 
 type MessageHandler = (message: WebSocketMessage) => void;
 
@@ -53,11 +54,12 @@ export class WebSocketService {
 					reject(new Error('WebSocket connection failed'));
 				};
 
-				this.ws.onclose = (event) => {
+				this.ws.onclose = async (event) => {
 					this.clearHeartbeat();
 					if (event.code === 1006) {
-						const token = localStorage.getItem('accessToken');
-						if (!token) {
+						const session = await authService.getUserSession();
+						if (!session.isAuthenticated) {
+							console.log('ХУЙНЯ ПРОИСХОДИТ');
 							handleAuthError({ status: 401 });
 							this.shouldReconnect = false;
 							return;

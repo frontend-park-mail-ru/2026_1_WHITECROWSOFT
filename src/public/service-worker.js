@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'noterian-v7';
+const CACHE_VERSION = 'noterian-v8';
 const CACHE_NAME = `noterian-static-${CACHE_VERSION}`;
 const ASSETS_TO_CACHE = [
 	'/',
