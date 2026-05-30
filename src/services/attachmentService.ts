@@ -1029,8 +1029,11 @@ export const attachmentService = {
 	async deleteCover(noteId: string | number): Promise<void> {
 		const isOnline = store.getOnline();
 		const currentNote = await db.notesGet(noteId);
+		const isPublic = currentNote?.is_public === true;
 		if (!currentNote) return;
-		if (isOnline) {
+		if (isPublic && isOnline) {
+			collabManager.sendDeleteCover();
+		} else if (isOnline) {
 			try {
 				await client.delete(`/notes/${noteId}/header`);
 			} catch (error) {

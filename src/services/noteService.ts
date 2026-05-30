@@ -181,6 +181,7 @@ export const noteService = {
 			const data = await client.get<GetNoteResponse>(`/notes/${noteID}`);
 			const serverNote = data.note;
 			const serverBlocks = data.blocks || [];
+			const section = serverNote.is_public ? 'shared' : 'personal';
 			const note: Note = {
 				ID: serverNote.id,
 				title: serverNote.title,
@@ -189,18 +190,10 @@ export const noteService = {
 				updatedAt: serverNote.updated_at,
 				icon: serverNote.icon,
 				coverUrl: serverNote.header_url,
+				section: section,
 				is_public: serverNote.is_public || false,
 				is_favorite: serverNote.is_favorite || false,
 			};
-			store.setActiveNote({
-				ID: note.ID,
-				title: note.title,
-				breadcrumb: note.title,
-				icon: note.icon,
-				coverUrl: note.coverUrl,
-				text: '',
-				section: note.section,
-			});
 			await db.notesPut(note);
 			const currentNotes = store.getNotes();
 			const existingIndex = currentNotes.findIndex((n) => n.ID === note.ID);
@@ -211,7 +204,23 @@ export const noteService = {
 				updatedNotes = [...currentNotes];
 				updatedNotes[existingIndex] = note;
 			}
-			store.setNotesSilently(updatedNotes);
+			const currentActiveNoteId = store.getActiveNoteId();
+			store.setNotes(updatedNotes);
+			store.setActiveNote({
+				ID: note.ID,
+				title: note.title,
+				breadcrumb: note.title,
+				icon: note.icon,
+				coverUrl: note.coverUrl,
+				text: '',
+				section: section,
+			});
+			if (
+				currentActiveNoteId &&
+				store.getActiveNoteId() !== currentActiveNoteId
+			) {
+				store.setActiveNoteId(currentActiveNoteId);
+			}
 			for (const block of serverBlocks) {
 				if (block.formatting && block.formatting.ranges) {
 					await db.formattingPut({
@@ -223,8 +232,10 @@ export const noteService = {
 					});
 				}
 			}
+
 			store.setActiveBlocks(serverBlocks);
 			await db.settingsSet('activeNoteId', noteID);
+			await db.settingsSet('activeNoteSection', section);
 			return {
 				note: serverNote,
 				blocks: serverBlocks,
@@ -470,11 +481,12 @@ export const noteService = {
 			const isOnline = store.getOnline();
 			const isPublic = note.is_public === true;
 			if (isPublic && isOnline) {
-				if (data.title) {
+				if (data.icon !== undefined) {
+					collabManager.sendUpdateNoteIcon(String(data.icon));
+				} else if (data.title) {
 					collabManager.sendUpdateNoteTitle(data.title);
 				}
-			}
-			if (isOnline) {
+			} else if (isOnline) {
 				try {
 					await client.put(`/notes/${noteID}`, data);
 				} catch (error) {
@@ -801,8 +813,12 @@ export const noteService = {
 		if (!existingBlock) {
 			throw new Error(`Block ${blockID} not found`);
 		}
+		const note = store.getNotes().find((n) => n.ID === noteID);
+		const isPublic = note?.is_public === true;
 		const shouldQueue = isLocalBlock || isLocalNote || !isOnline;
-		if (isOnline && !isLocalBlock && !isLocalNote) {
+		if (isPublic && isOnline && !isLocalBlock && !isLocalNote) {
+			collabManager.sendMoveBlock(String(blockID), newPosition);
+		} else if (isOnline && !isLocalBlock && !isLocalNote) {
 			try {
 				await client.put<BlockApiResponse>(
 					`/notes/${noteID}/blocks/${blockID}/move`,
@@ -817,7 +833,7 @@ export const noteService = {
 				}
 			}
 		}
-		if (shouldQueue) {
+		if (shouldQueue && !isPublic) {
 			await queueService.enqueueRequest({
 				method: 'PUT',
 				endpoint: `/notes/${noteID}/blocks/${blockID}/move`,
@@ -831,7 +847,6 @@ export const noteService = {
 		await this._updateCachedBlocksWithPosition(noteID, block, 'move');
 		return block;
 	},
-
 	async deleteBlock(
 		noteID: string | number,
 		blockID: string | number,
@@ -1004,6 +1019,8 @@ export const noteService = {
 	): Promise<FormattingResponse> {
 		const isOnline = store.getOnline();
 		const isLocal = String(blockId).startsWith('local-');
+		const note = store.getNotes().find((n) => n.ID === noteId);
+		const isPublic = note?.is_public === true;
 		const payload: FormattingPayload = {
 			start_pos: startPos,
 			end_pos: endPos,
@@ -1012,6 +1029,11 @@ export const noteService = {
 			underline: formatting.underline ?? null,
 		};
 		const endpoint = `/notes/${noteId}/blocks/${blockId}/formatting`;
+		if (isPublic && isOnline && !isLocal) {
+			collabManager.sendApplyFormatting(String(blockId), formatting);
+			await this._saveFormattingToCache(noteId, blockId, payload, false);
+			return { block_id: blockId, ranges: [payload] };
+		}
 		if (isOnline && !isLocal) {
 			try {
 				const result = await client.put<FormattingResponse>(endpoint, payload);

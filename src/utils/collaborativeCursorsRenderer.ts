@@ -1,4 +1,3 @@
-import { store } from '../store.js';
 import type { CollaborativeUser } from '../types.js';
 
 /**
@@ -24,22 +23,19 @@ export class CollaborativeCursorsRenderer {
 	 * Настраивает подписки на события курсора и изменения пользователей
 	 */
 	private setupSubscriptions(): void {
-		// Исправлено: событие передает МАССИВ пользователей
-		window.addEventListener('collaborativeCursorMove', ((e: CustomEvent) => {
-			const users = e.detail as CollaborativeUser[];
-			if (Array.isArray(users)) {
-				for (const user of users) {
-					this.updateUserCursor(user);
-				}
-			} else {
-				// fallback для обратной совместимости
-				this.updateUserCursor(e.detail as CollaborativeUser);
-			}
-		}) as EventListener);
-
-		this.unsubscribeCursors = store.subscribe('collaborativeUsers', (users) => {
-			this.syncCursors(users);
-		});
+		// window.addEventListener('collaborativeCursorMove', ((e: CustomEvent) => {
+		// 	const users = e.detail as CollaborativeUser[];
+		// 	if (Array.isArray(users)) {
+		// 		for (const user of users) {
+		// 			this.updateUserCursor(user);
+		// 		}
+		// 	} else {
+		// 		this.updateUserCursor(e.detail as CollaborativeUser);
+		// 	}
+		// }) as EventListener);
+		// this.unsubscribeCursors = store.subscribe('collaborativeUsers', (users) => {
+		// 	this.syncCursors(users);
+		// });
 	}
 
 	/**

@@ -190,6 +190,8 @@ export type WebSocketMessageType =
 	| 'update_note_title' // Обновление заголовка заметки
 	| 'upload_attachment'
 	| 'upload_header'
+	| 'delete_header'
+	| 'change_icon'
 	| 'update_note_public' // Изменение публичности заметки
 	| 'delete_note' // Удаление заметки
 	| 'note_private' // Заметка стала приватной
@@ -245,6 +247,11 @@ export interface ApplyFormattingMsg {
 export interface CreateBlockMsg {
 	block_type_id: number;
 	position: number;
+}
+
+export interface DeleteCoverMsg {
+	note_id: string;
+	user_id: string;
 }
 
 export interface MoveBlockMsg {
@@ -355,4 +362,12 @@ export interface Cover {
 	createdAt?: number;
 	syncedAt?: number;
 	isLocal?: boolean;
+}
+
+export interface FormattingPayload {
+	start_pos: number;
+	end_pos: number;
+	bold?: boolean | null;
+	italic?: boolean | null;
+	underline?: boolean | null;
 }

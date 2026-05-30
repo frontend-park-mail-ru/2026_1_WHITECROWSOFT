@@ -8,6 +8,8 @@ import type {
 	CreateBlockMsg,
 	CursorPosition,
 	DeleteCharMsg,
+	DeleteCoverMsg,
+	FormattingPayload,
 	InsertCharMsg,
 	MoveBlockMsg,
 	Note,
@@ -219,8 +221,6 @@ export class CollaborativeManager {
 	 */
 	sendApplyFormatting(
 		blockId: string,
-		startPos: number,
-		endPos: number,
 		formatting: {
 			bold?: boolean | null;
 			italic?: boolean | null;
@@ -239,8 +239,6 @@ export class CollaborativeManager {
 			type: 'apply_formatting',
 			msg: {
 				blockId,
-				startPos,
-				endPos,
 				...formatting,
 			},
 		});
@@ -264,6 +262,20 @@ export class CollaborativeManager {
 		});
 	}
 
+	sendUpdateNoteIcon(icon: string): void {
+		if (!wsService.isConnected()) {
+			console.warn(
+				'[CollaborativeManager] Not connected, cannot send update title',
+			);
+			return;
+		}
+
+		wsService.send({
+			type: 'change_icon',
+			msg: icon,
+		});
+	}
+
 	sendUploadAttachment(data: {
 		fileName: string;
 		fileData: string;
@@ -284,6 +296,20 @@ export class CollaborativeManager {
 		wsService.send({
 			type: 'upload_header',
 			msg: data,
+		});
+	}
+
+	sendDeleteCover(): void {
+		if (!wsService.isConnected()) {
+			console.warn(
+				'[CollaborativeManager] Not connected, cannot send delete block',
+			);
+			return;
+		}
+
+		wsService.send({
+			type: 'delete_header',
+			msg: {},
 		});
 	}
 
@@ -330,6 +356,10 @@ export class CollaborativeManager {
 				case 'upload_header':
 					this.handleUploadCover(message);
 					break;
+				case 'delete_header':
+					this.handleDeleteCover(message);
+				case 'change_icon':
+					this.handleChangeIcon(message);
 				case 'sync_state':
 					this.handleSyncState(message);
 					break;
@@ -394,38 +424,6 @@ export class CollaborativeManager {
 	 * Обновляет позицию курсора другого пользователя
 	 * Данные обновляются в store и визуально рендерятся в UI
 	 */
-
-	// 	{
-	//     "type": "cursor_move",
-	//     "msg": [
-	//         {
-	//             "userId": "22222222-2222-2222-2222-222222222222",
-	//             "userName": "testuser2",
-	//             "cursor": {
-	//                 "blockId": "f1111111-1111-1111-1111-111111111111",
-	//                 "startPosition": 0,
-	//                 "endPosition": 0,
-	//                 "userId": "22222222-2222-2222-2222-222222222222",
-	//                 "userName": "testuser2",
-	//                 "timestamp": 1780055178090976049
-	//             }
-	//         },
-	//         {
-	//             "userId": "11111111-1111-1111-1111-111111111111",
-	//             "userName": "testuser1",
-	//             "cursor": {
-	//                 "blockId": "f1111111-1111-1111-1111-111111111111",
-	//                 "startPosition": 1,
-	//                 "endPosition": 1,
-	//                 "userId": "11111111-1111-1111-1111-111111111111",
-	//                 "userName": "testuser1",
-	//                 "timestamp": 1780055209845340176
-	//             }
-	//         }
-	//     ],
-	//     "timestamp": 0
-	// }
-
 	private handleCursorMove(message: WebSocketMessage): void {
 		const msg = message.msg as CollaborativeUser[];
 		console.log(msg[0].cursor.blockId);
@@ -440,13 +438,11 @@ export class CollaborativeManager {
 			},
 		}));
 		for (const user of users) {
+			if (user.userId === store.getUser()?.id) {
+				store.setPendingFocus(user.cursor.blockId, user.cursor.startPosition);
+			}
 			store.updateCollaborativeUser(user.userId, user);
 		}
-		window.dispatchEvent(
-			new CustomEvent('collaborativeCursorMove', {
-				detail: users,
-			}),
-		);
 	}
 
 	/**
@@ -530,8 +526,6 @@ export class CollaborativeManager {
 	 * Добавляет или обновляет форматирование в блоке
 	 */
 	private handleApplyFormatting(message: WebSocketMessage): void {
-		// if (message.is_local) return;
-
 		const msg = message.msg as ApplyFormattingMsg;
 		const blocks = store.getActiveBlocks();
 		const blockIndex = blocks.findIndex((b) => b.id === msg.blockId);
@@ -551,6 +545,14 @@ export class CollaborativeManager {
 			if (msg.bold !== undefined) existingRange.bold = msg.bold;
 			if (msg.italic !== undefined) existingRange.italic = msg.italic;
 			if (msg.underline !== undefined) existingRange.underline = msg.underline;
+
+			const hasAnyFormatting =
+				existingRange.bold || existingRange.italic || existingRange.underline;
+			if (!hasAnyFormatting) {
+				block.formatting.ranges = block.formatting.ranges.filter(
+					(r) => r !== existingRange,
+				);
+			}
 		} else {
 			block.formatting.ranges.push({
 				start_pos: msg.startPos,
@@ -560,9 +562,22 @@ export class CollaborativeManager {
 				underline: msg.underline ?? null,
 			});
 		}
-
 		store.setActiveBlocks([...blocks]);
-
+		console.log([...blocks]);
+		const payload: FormattingPayload = {
+			start_pos: msg.startPos,
+			end_pos: msg.endPos,
+			bold: msg.bold,
+			italic: msg.italic,
+			underline: msg.underline,
+		};
+		db.formattingPut({
+			blockId: msg.blockId,
+			noteId: store.getActiveNoteId()!,
+			formatting: { ranges: block.formatting.ranges },
+			synced: true,
+			updatedAt: Date.now(),
+		});
 		window.dispatchEvent(
 			new CustomEvent('collaborativeFormattingUpdate', {
 				detail: {
@@ -737,6 +752,42 @@ export class CollaborativeManager {
 		db.notesPut(updatedNote);
 	}
 
+	private handleChangeIcon(message: WebSocketMessage): void {
+		// if (message.is_local) return;
+		const msg = message.msg as { icon: string };
+		const currentNotes = store.getNotes();
+		const activeNoteId = store.getActiveNoteId();
+		const activeNote = store
+			.getNotes()
+			.find((note) => note.ID === store.getActiveNoteId());
+		const noteIndex = currentNotes.findIndex(
+			(n) => String(n.ID) === activeNoteId,
+		);
+		if (noteIndex === -1) return;
+		const oldNote = currentNotes[noteIndex];
+		const updatedNote = {
+			...oldNote,
+			icon: msg.icon === 'null' ? null : msg.icon,
+			updatedAt: Date.now(),
+		};
+		const updatedNotes = [...currentNotes];
+		updatedNotes[noteIndex] = updatedNote;
+		store.setNotes(updatedNotes);
+		if (activeNote) {
+			store.setActiveNote({
+				ID: activeNote.ID,
+				title: activeNote.title,
+				text: '',
+				section: activeNote.section,
+				icon: msg.icon === 'null' ? null : msg.icon,
+				is_public: activeNote.is_public,
+				coverUrl: activeNote.coverUrl,
+				breadcrumb: activeNote.title,
+			});
+		}
+		db.notesPut(updatedNote);
+	}
+
 	/**
 	 * Обрабатывает загрузку вложения другим участником
 	 * Блок уже создан на сервере, нужно только добавить его в UI и кэш
@@ -879,6 +930,44 @@ export class CollaborativeManager {
 			syncedAt: Date.now(),
 		};
 		await db.coverPut(coverData);
+	}
+
+	private async handleDeleteCover(message: WebSocketMessage): Promise<void> {
+		const msg = message.msg as DeleteCoverMsg;
+		const coverRecord = await db.coverGetByNoteId(msg.note_id);
+		if (coverRecord) {
+			await db.coverDelete(coverRecord.id);
+		}
+		const currentNote = await db.notesGet(msg.note_id);
+		if (!currentNote) return;
+		const updatedNote: Note = {
+			ID: currentNote.ID,
+			title: currentNote.title,
+			updatedAt: Date.now(),
+			coverUrl: null,
+			icon: currentNote.icon || null,
+			blocks: currentNote.blocks || [],
+			parent_id: currentNote.parent_id || null,
+			isLocal: currentNote.isLocal || false,
+			is_public: currentNote.is_public || false,
+			is_favorite: currentNote.is_favorite || false,
+			section: currentNote.section || 'personal',
+		};
+		await db.notesPut(updatedNote);
+		const currentNotes = store.getNotes();
+		const noteIndex = currentNotes.findIndex((n) => n.ID === msg.note_id);
+		if (noteIndex !== -1) {
+			const updatedNotes = [...currentNotes];
+			updatedNotes[noteIndex] = updatedNote;
+			store.setNotesSilently(updatedNotes);
+		}
+		const activeNote = store.getActiveNote();
+		if (activeNote && activeNote.ID === msg.note_id) {
+			store.setActiveNote({
+				...activeNote,
+				coverUrl: null,
+			});
+		}
 	}
 
 	/**
