@@ -86,7 +86,6 @@ async function bootstrap() {
 						: block.formatting || { ranges: [] },
 				}));
 				store.setActiveBlocksSilently(blocksWithFormatting);
-				console.log(store.getActiveBlocks());
 			}
 		}
 	} catch (error) {

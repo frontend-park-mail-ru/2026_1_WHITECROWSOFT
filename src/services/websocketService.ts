@@ -59,7 +59,6 @@ export class WebSocketService {
 					if (event.code === 1006) {
 						const session = await authService.getUserSession();
 						if (!session.isAuthenticated) {
-							console.log('ХУЙНЯ ПРОИСХОДИТ');
 							handleAuthError({ status: 401 });
 							this.shouldReconnect = false;
 							return;

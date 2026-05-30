@@ -143,7 +143,6 @@ export async function initMainPage(
 	);
 	unsubscribeFunctions.push(unsubActiveNote);
 	setVisibility(!!store.getActiveNote());
-	console.log('noteIdToOpen', noteIdToOpen);
 	if (noteIdToOpen) {
 		store.setActiveNoteId(noteIdToOpen);
 	}

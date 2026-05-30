@@ -61,7 +61,6 @@ export default class NoteSection extends Component {
 
 	updateNotes(notes: SidebarNote[]): void {
 		this.options.notes = notes;
-		console.log('render sidebar:', notes);
 		if (this.noteTree) {
 			this.noteTree.updateNotes(notes);
 		} else if (notes.length > 0) {

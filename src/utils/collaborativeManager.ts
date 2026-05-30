@@ -111,7 +111,6 @@ export class CollaborativeManager {
 	 * Сервер может применить эту операцию и разослать её остальным
 	 */
 	sendInsertChar(blockId: string, position: number, char: string): void {
-		console.log(blockId, position, char);
 		if (!wsService.isConnected()) {
 			console.warn(
 				'[CollaborativeManager] Not connected, cannot send insert char',
@@ -426,7 +425,6 @@ export class CollaborativeManager {
 	 */
 	private handleCursorMove(message: WebSocketMessage): void {
 		const msg = message.msg as CollaborativeUser[];
-		console.log(msg[0].cursor.blockId);
 		const users: CollaborativeUser[] = msg.map((userData) => ({
 			userId: userData.userId,
 			userName: userData.userName,
