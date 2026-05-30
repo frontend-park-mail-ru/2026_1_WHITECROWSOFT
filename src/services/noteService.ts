@@ -66,7 +66,12 @@ export const noteService = {
 				const serverNoteIds = new Set(
 					notesArray.map((note) => String(note.id)),
 				);
-				const notes: Note[] = notesArray.map((note) => ({
+				const currentNotes = store.getNotes();
+				const sharedNotes = currentNotes.filter(
+					(note) =>
+						note.is_public === true && !serverNoteIds.has(String(note.ID)),
+				);
+				const myNotes: Note[] = notesArray.map((note) => ({
 					ID: note.id,
 					title: note.title,
 					parent_id: note.parent_id || null,
@@ -76,18 +81,19 @@ export const noteService = {
 					is_public: note.is_public || false,
 					is_favorite: note.is_favorite || false,
 				}));
-				await db.notesClear();
-				for (const note of notes) {
+				for (const note of myNotes) {
 					if (note.ID) {
 						await db.notesPut(note);
 					}
 				}
-				store.setNotes(notes);
+				const allNotes = [...myNotes, ...sharedNotes];
+				store.setNotes(allNotes);
 				const activeNoteId = store.getActiveNoteId();
 				if (
 					activeNoteId &&
 					!serverNoteIds.has(String(activeNoteId)) &&
-					!String(activeNoteId).startsWith('local-')
+					!String(activeNoteId).startsWith('local-') &&
+					!sharedNotes.some((n) => String(n.ID) === String(activeNoteId))
 				) {
 					store.setActiveNote(null);
 					store.setActiveBlocks([]);
@@ -95,7 +101,7 @@ export const noteService = {
 					await db.settingsSet('activeNoteId', null);
 					await db.settingsSet('activeNoteSection', null);
 				}
-				return notes;
+				return allNotes;
 			} catch (error) {
 				handleAuthError(error);
 			}
@@ -242,6 +248,10 @@ export const noteService = {
 			};
 		} catch (error) {
 			console.warn('[noteService] Network fetch failed:', error);
+			const err = error as { status?: number; response?: { status?: number } };
+			if (err?.status === 403 || err?.response?.status === 403) {
+				throw error;
+			}
 			handleAuthError(error);
 			return null;
 		}

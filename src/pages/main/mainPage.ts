@@ -10,6 +10,7 @@ import { CollaborativeCursorsRenderer } from '../../utils/collaborativeCursorsRe
 import { collabManager } from '../../utils/collaborativeManager.js';
 import { handleAuthError } from '../../utils/handleAuthError.js';
 import { registerHelpers } from '../../utils/utils.js';
+import { alertDialog } from './../../components/popups/confirmDialog/confirmDialog.js';
 import templateText from './mainPage.hbs?raw';
 import './mainPage.scss';
 
@@ -111,7 +112,21 @@ export async function initMainPage(
 						await collabManager.startCollab(String(noteId));
 					}
 				}
-			} catch (error) {
+			} catch (error: any) {
+				if (error?.status === 403 || error?.response?.status === 403) {
+					await alertDialog({
+						title: 'Ошибка',
+						message: 'Не удалось открыть заметку. У вас нет доступа.',
+					});
+					const notesList = store.getNotes();
+					if (notesList.length > 0) {
+						const firstNote = notesList[0];
+						store.setActiveNoteId(firstNote.ID);
+					} else {
+						store.setActiveNoteId(null);
+					}
+					return;
+				}
 				if (handleAuthError(error)) return;
 				console.error('Failed to load note:', error);
 			}

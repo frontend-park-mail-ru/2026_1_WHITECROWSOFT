@@ -116,6 +116,7 @@ export default class NoteBody extends Component {
 	private async renderBlocks(): Promise<void> {
 		console.log('render body:', store.getActiveBlocks());
 		if (this.isRendering) {
+			console.log('here');
 			return;
 		}
 		this.isRendering = true;

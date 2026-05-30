@@ -329,6 +329,8 @@ export default class TextBlock extends Component {
 		const isEnter = e.key === 'Enter';
 		const isBackspace = e.key === 'Backspace';
 		const isDelete = e.key === 'Delete';
+		const isArrowLeft = e.key === 'ArrowLeft';
+		const isArrowRight = e.key === 'ArrowRight';
 		if (isEnter && !e.shiftKey) {
 			e.preventDefault();
 			this.isProcessing = true;
@@ -351,6 +353,9 @@ export default class TextBlock extends Component {
 			await this.handleJoinBackward(blockEl);
 			this.isProcessing = false;
 			return;
+		}
+		if (isArrowLeft || isArrowRight) {
+			this.updateCursorPosition();
 		}
 	}
 
@@ -436,6 +441,15 @@ export default class TextBlock extends Component {
 		const formattingChanged =
 			JSON.stringify(this.block.formatting) !==
 			JSON.stringify(newBlock.formatting);
+
+		console.log('[TextBlock] updateBlock:', {
+			blockId: this.block.id,
+			contentChanged,
+			formattingChanged,
+			oldFormatting: this.block.formatting,
+			newFormatting: newBlock.formatting,
+		});
+
 		this.block = newBlock;
 
 		if (!this.domElement || (!contentChanged && !formattingChanged)) {

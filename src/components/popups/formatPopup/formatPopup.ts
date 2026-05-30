@@ -230,10 +230,14 @@ export default class FormatPopup extends Component {
 	private async applyFormatting(action: string, value: boolean): Promise<void> {
 		if (!this.selectionData) return;
 		const { blockEl, start, end, noteId, blockId } = this.selectionData;
+		const note = store.getNotes().find((n) => n.ID === noteId);
+		const isPublic = note?.is_public === true;
 		updateFormattingInRange(blockEl, start, end, action, value);
 		const newContent = blockEl.innerHTML;
 		try {
-			await noteService.updateBlockContent(noteId, blockId, newContent);
+			if (!isPublic) {
+				await noteService.updateBlockContent(noteId, blockId, newContent);
+			}
 			const formattingPayload: {
 				bold?: boolean;
 				italic?: boolean;

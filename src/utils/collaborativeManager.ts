@@ -9,12 +9,12 @@ import type {
 	CursorPosition,
 	DeleteCharMsg,
 	DeleteCoverMsg,
-	FormattingPayload,
 	InsertCharMsg,
 	MoveBlockMsg,
 	Note,
 	WebSocketMessage,
 } from '../types.js';
+import { applyFormattingToRanges } from './formattingUtils.js';
 
 /**
  * Менеджер совместного редактирования заметок
@@ -529,60 +529,39 @@ export class CollaborativeManager {
 		const msg = message.msg as ApplyFormattingMsg;
 		const blocks = store.getActiveBlocks();
 		const blockIndex = blocks.findIndex((b) => b.id === msg.blockId);
-
 		if (blockIndex === -1) return;
-
-		const block = blocks[blockIndex];
-		if (!block.formatting) {
-			block.formatting = { ranges: [] };
-		}
-
-		const existingRange = block.formatting.ranges.find(
-			(r) => r.start_pos === msg.startPos && r.end_pos === msg.endPos,
-		);
-
-		if (existingRange) {
-			if (msg.bold !== undefined) existingRange.bold = msg.bold;
-			if (msg.italic !== undefined) existingRange.italic = msg.italic;
-			if (msg.underline !== undefined) existingRange.underline = msg.underline;
-
-			const hasAnyFormatting =
-				existingRange.bold || existingRange.italic || existingRange.underline;
-			if (!hasAnyFormatting) {
-				block.formatting.ranges = block.formatting.ranges.filter(
-					(r) => r !== existingRange,
-				);
-			}
-		} else {
-			block.formatting.ranges.push({
-				start_pos: msg.startPos,
-				end_pos: msg.endPos,
-				bold: msg.bold ?? null,
-				italic: msg.italic ?? null,
-				underline: msg.underline ?? null,
-			});
-		}
-		store.setActiveBlocks([...blocks]);
-		console.log([...blocks]);
-		const payload: FormattingPayload = {
+		const oldBlock = blocks[blockIndex];
+		const existingRanges = oldBlock.formatting?.ranges || [];
+		const newRange = {
 			start_pos: msg.startPos,
 			end_pos: msg.endPos,
-			bold: msg.bold,
-			italic: msg.italic,
-			underline: msg.underline,
+			bold: msg.bold ?? null,
+			italic: msg.italic ?? null,
+			underline: msg.underline ?? null,
 		};
-		db.formattingPut({
-			blockId: msg.blockId,
-			noteId: store.getActiveNoteId()!,
-			formatting: { ranges: block.formatting.ranges },
-			synced: true,
-			updatedAt: Date.now(),
-		});
+		const newRanges = applyFormattingToRanges(existingRanges, newRange);
+		const newBlock = {
+			...oldBlock,
+			formatting: { ranges: newRanges },
+		};
+		const newBlocks = [...blocks];
+		newBlocks[blockIndex] = newBlock;
+		store.setActiveBlocks(newBlocks);
+		const activeNoteId = store.getActiveNoteId();
+		if (activeNoteId) {
+			db.formattingPut({
+				blockId: msg.blockId,
+				noteId: activeNoteId,
+				formatting: { ranges: newRanges },
+				synced: true,
+				updatedAt: Date.now(),
+			});
+		}
 		window.dispatchEvent(
 			new CustomEvent('collaborativeFormattingUpdate', {
 				detail: {
 					blockId: msg.blockId,
-					formatting: block.formatting,
+					formatting: { ranges: newRanges },
 					userId: message.userId,
 				},
 			}),
@@ -977,6 +956,19 @@ export class CollaborativeManager {
 	private handleSyncState(message: WebSocketMessage): void {
 		const msg = message.msg as {
 			blocks?: Block[];
+			block_formattings?: {
+				[blockId: string]: {
+					block_id: string;
+					ranges: Array<{
+						start_pos: number;
+						end_pos: number;
+						bold: boolean | null;
+						italic: boolean | null;
+						underline: boolean | null;
+						text_align: number | null;
+					}>;
+				};
+			};
 			connectedUsers?: Array<{
 				userId: string;
 				userName: string;
@@ -985,9 +977,42 @@ export class CollaborativeManager {
 		};
 
 		if (msg.blocks && Array.isArray(msg.blocks)) {
-			store.setActiveBlocks(msg.blocks);
+			let blocks = msg.blocks;
+			if (msg.block_formattings) {
+				blocks = blocks.map((block) => {
+					const blockFormatting = msg.block_formattings?.[String(block.id)];
+					if (blockFormatting && blockFormatting.ranges) {
+						return {
+							...block,
+							formatting: { ranges: blockFormatting.ranges },
+						};
+					}
+					return {
+						...block,
+						formatting: { ranges: [] },
+					};
+				});
+			}
+			store.setActiveBlocks(blocks);
+			const activeNoteId = store.getActiveNoteId();
+			if (activeNoteId) {
+				for (const block of blocks) {
+					if (
+						block.formatting &&
+						block.formatting.ranges &&
+						block.formatting.ranges.length > 0
+					) {
+						db.formattingPut({
+							blockId: block.id,
+							noteId: activeNoteId,
+							formatting: block.formatting,
+							synced: true,
+							updatedAt: Date.now(),
+						});
+					}
+				}
+			}
 		}
-
 		if (msg.connectedUsers && Array.isArray(msg.connectedUsers)) {
 			const users = new Map<string, CollaborativeUser>();
 			msg.connectedUsers.forEach((u) => {
@@ -1000,7 +1025,6 @@ export class CollaborativeManager {
 			store.setCollaborativeUsers(users);
 		}
 	}
-
 	/**
 	 * Обрабатывает ситуацию, когда заметка перестает быть публичной
 	 * Разрывает соединение и уведомляет приложение

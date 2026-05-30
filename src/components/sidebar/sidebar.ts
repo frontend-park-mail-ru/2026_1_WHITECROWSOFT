@@ -8,6 +8,7 @@ import type { User } from '../../types.js';
 import { getAvatarUrl } from '../../utils/avatar.js';
 import Component from '../component.js';
 import NotePopup from '../popups/notePopup/notePopup.js';
+import { alertDialog } from './../popups/confirmDialog/confirmDialog.js';
 import NoteSection from './noteSection/noteSection.js';
 import templateString from './sidebar.hbs?raw';
 import './sidebar.scss';
@@ -314,9 +315,18 @@ export default class Sidebar extends Component {
 		noteId: string | number,
 		section: 'personal' | 'shared' | 'favorite',
 	): Promise<void> => {
-		router.push(`/?note=${noteId}`);
 		const note = store.getNotes().find((n) => n.ID === noteId);
+		const isOnline = store.getOnline();
+		if (section === 'shared' && !isOnline) {
+			await alertDialog({
+				title: 'Ошибка',
+				message:
+					'Не удалось открыть совместную заметку. Проверьте соединение с интернетом',
+			});
+			return;
+		}
 		if (!note) return;
+		router.push(`/?note=${noteId}`);
 		const activeNote = {
 			ID: noteId,
 			title: note.title,
