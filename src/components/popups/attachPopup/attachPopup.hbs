@@ -18,10 +18,12 @@
 				{{{svgIcon "attach_video" class="popup__icon" alt="Video"}}}
 				Видео
 			</button>
+			{{#unless isShared}}
 			<button id="subnoteBtn" class="popup__button" data-action="subnote">
 				{{{svgIcon "document" class="popup__icon" alt="Subnote"}}}
 				Подзаметка
 			</button>
+			{{/unless}}
 		</div>
 	</div>
 </div>

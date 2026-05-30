@@ -51,6 +51,8 @@ export default class NotePopup extends Component {
 		return {
 			noteId: this.noteId,
 			isFavorite: note?.is_favorite === true,
+      canShare: store.getOnline() && !note?.is_public,
+			isOnline: store.getOnline(),
 		};
 	}
 

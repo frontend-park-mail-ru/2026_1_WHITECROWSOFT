@@ -43,7 +43,11 @@ export default class AttachPopup extends Component {
 	}
 
 	protected getTemplateData() {
-		return {};
+    const activeNote = store.getActiveNote();
+    console.log(activeNote?.is_public)
+		return {
+			isShared: activeNote?.is_public === true,
+		};
 	}
 
 	renderTo(container: HTMLElement | null): void {

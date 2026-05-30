@@ -13,14 +13,18 @@
                 {{{svgIcon "rename" class="popup__icon" alt="Rename"}}}
                 Переименовать
             </button>
+            {{#if isOnline}}
+            {{#if canShare}}
             <button class="popup__button" data-action="share">
                 {{{svgIcon "share" class="popup__icon" alt="Share"}}}
                 Поделиться
             </button>
+            {{/if}}
             <button class="popup__button" data-action="pdf">
                 {{{svgIcon "pdf" class="popup__icon" alt="PDF"}}}
                 Экспорт в PDF
             </button>
+            {{/if}}
             <button class="popup__button" data-action="delete">
                 {{{svgIcon "trash" class="popup__icon" alt="Delete"}}}
                 Удалить
